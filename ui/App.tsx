@@ -1,7 +1,7 @@
 import { useEffect, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { save } from "@tauri-apps/plugin-dialog";
+import { open, save } from "@tauri-apps/plugin-dialog";
 import { MarkdownEditor, type EditorHandle } from "./components/Editor";
 import { ErrorBanner } from "./components/ErrorBanner";
 import { TitleBar } from "./components/TitleBar";
@@ -58,19 +58,32 @@ function App() {
     await saveFile(markdown);
   }, [path, saveFile, handleSaveAs]);
 
+  const handleOpen = useCallback(async () => {
+    const selected = await open({
+      filters: [{ name: "Markdown", extensions: ["md", "markdown"] }],
+    });
+    if (selected) {
+      openFile(selected as string);
+    }
+  }, [openFile]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "s") {
+      if (!(e.metaKey || e.ctrlKey)) return;
+      if (e.shiftKey && e.key === "s") {
         e.preventDefault();
         handleSaveAs();
-      } else if ((e.metaKey || e.ctrlKey) && e.key === "s") {
+      } else if (e.key === "s") {
         e.preventDefault();
         handleSave();
+      } else if (e.key === "o") {
+        e.preventDefault();
+        handleOpen();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleSave, handleSaveAs]);
+  }, [handleSave, handleSaveAs, handleOpen]);
 
   // Check for file passed as argument on launch
   useEffect(() => {
