@@ -3,7 +3,6 @@ mod scope;
 mod validated_path;
 
 use std::sync::Mutex;
-#[cfg(target_os = "macos")]
 use tauri::Emitter;
 use tauri::Manager;
 
