@@ -2,6 +2,7 @@ import { useEffect, useCallback, useRef } from "react";
 import { save } from "@tauri-apps/plugin-dialog";
 import { MarkdownEditor, type EditorHandle } from "./components/Editor";
 import { ErrorBanner } from "./components/ErrorBanner";
+import { TitleBar } from "./components/TitleBar";
 import { useFile } from "./hooks/useFile";
 
 const PLACEHOLDER = `# Welcome to Skriv
@@ -11,7 +12,17 @@ Start writing markdown here.
 
 function App() {
   const editorRef = useRef<EditorHandle>(null);
-  const { content, path, error, markModified, clearError, saveFile, saveNewFile } = useFile();
+  const {
+    content,
+    path,
+    fileName,
+    isModified,
+    error,
+    markModified,
+    clearError,
+    saveFile,
+    saveNewFile,
+  } = useFile();
 
   const handleChange = useCallback(() => {
     markModified();
@@ -61,6 +72,7 @@ function App() {
   return (
     <div style={{ height: "100vh", display: "flex", flexDirection: "column" }}>
       <ErrorBanner message={error} onDismiss={clearError} />
+      <TitleBar fileName={fileName} isModified={isModified} />
       <div style={{ flex: 1, overflow: "auto" }}>
         <MarkdownEditor
           ref={editorRef}
