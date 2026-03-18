@@ -7,6 +7,7 @@ import { MarkdownEditor, type EditorHandle } from "./components/Editor";
 import { ErrorBanner } from "./components/ErrorBanner";
 import { useFile } from "./hooks/useFile";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
+import { useTheme } from "./hooks/useTheme";
 
 const PLACEHOLDER = `# Welcome to Skriv
 
@@ -27,6 +28,8 @@ function App() {
     saveFile,
     saveNewFile,
   } = useFile();
+
+  useTheme();
 
   const handleChange = useCallback(() => {
     markModified();

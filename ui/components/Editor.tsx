@@ -3,7 +3,6 @@ import { Crepe, CrepeFeature } from "@milkdown/crepe";
 import { Milkdown, MilkdownProvider, useEditor, useInstance } from "@milkdown/react";
 import { getMarkdown } from "@milkdown/kit/utils";
 import "@milkdown/crepe/theme/common/style.css";
-import "@milkdown/crepe/theme/frame.css";
 import "../theme/skriv.css";
 
 interface EditorProps {
