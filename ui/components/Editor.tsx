@@ -4,6 +4,7 @@ import { Milkdown, MilkdownProvider, useEditor, useInstance } from "@milkdown/re
 import { getMarkdown } from "@milkdown/kit/utils";
 import "@milkdown/crepe/theme/common/style.css";
 import "@milkdown/crepe/theme/frame.css";
+import "../theme/skriv.css";
 
 interface EditorProps {
   defaultValue: string;
