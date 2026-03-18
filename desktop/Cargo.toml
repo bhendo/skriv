@@ -2,7 +2,7 @@
 name = "skriv"
 version = "0.1.0"
 description = "A Typora-style WYSIWYG markdown editor"
-authors = ["you"]
+authors = []
 edition = "2021"
 
 [lib]

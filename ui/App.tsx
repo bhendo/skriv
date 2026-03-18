@@ -6,6 +6,7 @@ import { MarkdownEditor, type EditorHandle } from "./components/Editor";
 import { ErrorBanner } from "./components/ErrorBanner";
 import { TitleBar } from "./components/TitleBar";
 import { useFile } from "./hooks/useFile";
+import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 
 const PLACEHOLDER = `# Welcome to Skriv
 
@@ -67,23 +68,11 @@ function App() {
     }
   }, [openFile]);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (!(e.metaKey || e.ctrlKey)) return;
-      if (e.shiftKey && e.key === "s") {
-        e.preventDefault();
-        handleSaveAs();
-      } else if (e.key === "s") {
-        e.preventDefault();
-        handleSave();
-      } else if (e.key === "o") {
-        e.preventDefault();
-        handleOpen();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleSave, handleSaveAs, handleOpen]);
+  useKeyboardShortcuts({
+    onSave: handleSave,
+    onSaveAs: handleSaveAs,
+    onOpen: handleOpen,
+  });
 
   // Check for file passed as argument on launch
   useEffect(() => {

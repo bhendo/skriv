@@ -1,0 +1,64 @@
+Third-Party Software Notices
+============================
+
+This file lists the third-party dependencies used by Skriv and their licenses.
+
+JavaScript / npm Dependencies
+------------------------------
+
+@milkdown/crepe — MIT
+  https://github.com/Milkdown/milkdown
+
+@milkdown/react — MIT
+  https://github.com/Milkdown/milkdown
+
+@tauri-apps/api — MIT OR Apache-2.0
+  https://github.com/tauri-apps/tauri
+
+@tauri-apps/plugin-dialog — MIT OR Apache-2.0
+  https://github.com/tauri-apps/plugins-workspace
+
+@tauri-apps/plugin-opener — MIT OR Apache-2.0
+  https://github.com/tauri-apps/plugins-workspace
+
+react — MIT
+  https://github.com/facebook/react
+
+react-dom — MIT
+  https://github.com/facebook/react
+
+@codemirror/* — MIT
+  https://github.com/codemirror
+  (Transitive dependency via @milkdown/crepe)
+
+prosemirror-* — MIT
+  https://github.com/ProseMirror
+  (Transitive dependency via @milkdown/crepe)
+
+DOMPurify — MPL-2.0 OR Apache-2.0
+  https://github.com/cure53/DOMPurify
+  (Transitive dependency)
+
+Rust / Cargo Dependencies
+--------------------------
+
+tauri — MIT OR Apache-2.0
+  https://github.com/tauri-apps/tauri
+
+tauri-build — MIT OR Apache-2.0
+  https://github.com/tauri-apps/tauri
+
+tauri-plugin-opener — MIT OR Apache-2.0
+  https://github.com/tauri-apps/plugins-workspace
+
+tauri-plugin-dialog — MIT OR Apache-2.0
+  https://github.com/tauri-apps/plugins-workspace
+
+serde — MIT OR Apache-2.0
+  https://github.com/serde-rs/serde
+
+serde_json — MIT OR Apache-2.0
+  https://github.com/serde-rs/json
+
+notify — CC0-1.0
+  https://github.com/notify-rs/notify
