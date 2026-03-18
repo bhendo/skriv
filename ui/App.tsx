@@ -2,9 +2,9 @@ import { useEffect, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { open, save } from "@tauri-apps/plugin-dialog";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { MarkdownEditor, type EditorHandle } from "./components/Editor";
 import { ErrorBanner } from "./components/ErrorBanner";
-import { TitleBar } from "./components/TitleBar";
 import { useFile } from "./hooks/useFile";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 
@@ -93,6 +93,12 @@ function App() {
     };
   }, [openFile]);
 
+  // Update native window title with filename and modified indicator
+  useEffect(() => {
+    const title = isModified ? `${fileName} — Edited` : fileName;
+    getCurrentWindow().setTitle(title);
+  }, [fileName, isModified]);
+
   // Listen for external file changes on disk
   useEffect(() => {
     const unlisten = listen<string>("file-changed", () => {
@@ -108,7 +114,6 @@ function App() {
   return (
     <div style={{ height: "100vh", display: "flex", flexDirection: "column" }}>
       <ErrorBanner message={error} onDismiss={clearError} />
-      <TitleBar fileName={fileName} isModified={isModified} />
       <div style={{ flex: 1, overflow: "auto" }}>
         <MarkdownEditor
           ref={editorRef}

@@ -10,7 +10,6 @@ use tauri::Manager;
 #[derive(Default)]
 pub struct OpenedFile(pub Mutex<Option<String>>);
 
-#[cfg(not(target_os = "macos"))]
 fn resolve_file_path(arg: &str) -> Option<std::path::PathBuf> {
     if arg.starts_with('-') {
         return None;
@@ -20,7 +19,24 @@ fn resolve_file_path(arg: &str) -> Option<std::path::PathBuf> {
     } else {
         std::path::PathBuf::from(arg)
     };
-    path.canonicalize().ok()
+    // Try canonicalizing directly (works for absolute paths and paths
+    // relative to the current working directory)
+    if let Ok(canonical) = path.canonicalize() {
+        return Some(canonical);
+    }
+    // In Tauri dev mode, CWD may be the desktop/ directory rather than
+    // the repo root. Try resolving relative to the parent directory.
+    if path.is_relative() {
+        if let Ok(cwd) = std::env::current_dir() {
+            if let Some(parent) = cwd.parent() {
+                let from_parent = parent.join(&path);
+                if let Ok(canonical) = from_parent.canonicalize() {
+                    return Some(canonical);
+                }
+            }
+        }
+    }
+    None
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -39,14 +55,12 @@ pub fn run() {
             commands::watch_file,
             commands::unwatch_file,
         ])
-        .setup(|_app| {
-            #[cfg(not(target_os = "macos"))]
-            {
-                if let Some(file_arg) = std::env::args().nth(1) {
-                    if let Some(path) = resolve_file_path(&file_arg) {
-                        let state = _app.state::<OpenedFile>();
-                        *state.0.lock().unwrap() = Some(path.to_string_lossy().to_string());
-                    }
+        .setup(|app| {
+            for arg in std::env::args().skip(1) {
+                if let Some(path) = resolve_file_path(&arg) {
+                    let state = app.state::<OpenedFile>();
+                    *state.0.lock().unwrap() = Some(path.to_string_lossy().to_string());
+                    break;
                 }
             }
             Ok(())
