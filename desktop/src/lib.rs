@@ -1,6 +1,7 @@
 mod commands;
 mod scope;
 mod validated_path;
+mod watcher;
 
 use std::sync::Mutex;
 use tauri::Emitter;
@@ -26,6 +27,7 @@ fn resolve_file_path(arg: &str) -> Option<std::path::PathBuf> {
 pub fn run() {
     tauri::Builder::default()
         .manage(OpenedFile::default())
+        .manage(watcher::FileWatcher::new())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
@@ -34,6 +36,8 @@ pub fn run() {
             commands::write_new_file,
             commands::get_file_info,
             commands::get_opened_file,
+            commands::watch_file,
+            commands::unwatch_file,
         ])
         .setup(|_app| {
             #[cfg(not(target_os = "macos"))]

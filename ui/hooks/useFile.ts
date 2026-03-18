@@ -35,6 +35,7 @@ export function useFile() {
         fileName,
         error: null,
       });
+      await invoke("watch_file", { path });
     } catch (e) {
       setFileState((prev) => ({
         ...prev,

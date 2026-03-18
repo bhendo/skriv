@@ -17,11 +17,21 @@ pub fn read_file(path: String, app_handle: tauri::AppHandle) -> Result<String, S
         .map_err(|e| format!("Failed to read '{}': {}", validated.to_string_lossy(), e))
 }
 
-#[tauri::command]
-pub fn write_file(path: String, content: String) -> Result<(), String> {
-    let validated = ValidatedPath::new(&path)?;
-    std::fs::write(validated.as_path(), &content)
+/// Core write logic shared by the command and tests.
+fn write_file_inner(path: &str, content: &str) -> Result<(), String> {
+    let validated = ValidatedPath::new(path)?;
+    std::fs::write(validated.as_path(), content)
         .map_err(|e| format!("Failed to write '{}': {}", validated.to_string_lossy(), e))
+}
+
+#[tauri::command]
+pub fn write_file(
+    path: String,
+    content: String,
+    watcher: tauri::State<'_, crate::watcher::FileWatcher>,
+) -> Result<(), String> {
+    watcher.record_self_write();
+    write_file_inner(&path, &content)
 }
 
 #[tauri::command]
@@ -76,6 +86,22 @@ pub fn get_opened_file(state: tauri::State<'_, crate::OpenedFile>) -> Option<Str
     state.0.lock().unwrap().clone()
 }
 
+#[tauri::command]
+pub fn watch_file(
+    path: String,
+    app_handle: tauri::AppHandle,
+    watcher: tauri::State<'_, crate::watcher::FileWatcher>,
+) -> Result<(), String> {
+    // Validate path before watching (prevent using watcher as filesystem probe)
+    crate::validated_path::ValidatedPath::new(&path)?;
+    watcher.watch(&path, app_handle)
+}
+
+#[tauri::command]
+pub fn unwatch_file(watcher: tauri::State<'_, crate::watcher::FileWatcher>) -> Result<(), String> {
+    watcher.unwatch()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -111,10 +137,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let file_path = dir.path().join("output.md");
         fs::write(&file_path, "").unwrap(); // create first so ValidatedPath::new works
-        let result = write_file(
-            file_path.to_string_lossy().to_string(),
-            "# Written".to_string(),
-        );
+        let result = write_file_inner(&file_path.to_string_lossy(), "# Written");
         assert!(result.is_ok());
         assert_eq!(fs::read_to_string(&file_path).unwrap(), "# Written");
     }

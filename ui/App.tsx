@@ -91,6 +91,18 @@ function App() {
     };
   }, [openFile]);
 
+  // Listen for external file changes on disk
+  useEffect(() => {
+    const unlisten = listen<string>("file-changed", () => {
+      if (confirm("File changed on disk. Reload?")) {
+        if (path) openFile(path);
+      }
+    });
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, [path, openFile]);
+
   return (
     <div style={{ height: "100vh", display: "flex", flexDirection: "column" }}>
       <ErrorBanner message={error} onDismiss={clearError} />
