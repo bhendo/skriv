@@ -1,0 +1,3 @@
+[tools]
+node = "lts"
+rust = { version = "stable", components = "rust-analyzer" }
