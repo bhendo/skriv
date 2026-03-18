@@ -1,4 +1,6 @@
 import { useEffect, useCallback, useRef } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { save } from "@tauri-apps/plugin-dialog";
 import { MarkdownEditor, type EditorHandle } from "./components/Editor";
 import { ErrorBanner } from "./components/ErrorBanner";
@@ -18,6 +20,7 @@ function App() {
     fileName,
     isModified,
     error,
+    openFile,
     markModified,
     clearError,
     saveFile,
@@ -68,6 +71,25 @@ function App() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleSave, handleSaveAs]);
+
+  // Check for file passed as argument on launch
+  useEffect(() => {
+    invoke<string | null>("get_opened_file").then((filePath) => {
+      if (filePath) {
+        openFile(filePath);
+      }
+    });
+  }, [openFile]);
+
+  // Listen for files opened while app is running
+  useEffect(() => {
+    const unlisten = listen<string>("file-opened", (event) => {
+      openFile(event.payload);
+    });
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, [openFile]);
 
   return (
     <div style={{ height: "100vh", display: "flex", flexDirection: "column" }}>

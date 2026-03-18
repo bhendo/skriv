@@ -71,6 +71,11 @@ pub struct FileInfo {
     pub modified: u64,
 }
 
+#[tauri::command]
+pub fn get_opened_file(state: tauri::State<'_, crate::OpenedFile>) -> Option<String> {
+    state.0.lock().unwrap().clone()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
