@@ -1,8 +1,18 @@
 use crate::validated_path::ValidatedPath;
 
+/// Core read logic shared by the command and tests.
+#[cfg(test)]
+fn read_file_inner(path: &str) -> Result<String, String> {
+    let validated = ValidatedPath::new(path)?;
+    std::fs::read_to_string(validated.as_path())
+        .map_err(|e| format!("Failed to read '{}': {}", validated.to_string_lossy(), e))
+}
+
 #[tauri::command]
-pub fn read_file(path: String) -> Result<String, String> {
+pub fn read_file(path: String, app_handle: tauri::AppHandle) -> Result<String, String> {
     let validated = ValidatedPath::new(&path)?;
+    // Expand asset protocol scope to the file's directory for image loading
+    crate::scope::expand_scope_for_file(&app_handle, validated.as_path())?;
     std::fs::read_to_string(validated.as_path())
         .map_err(|e| format!("Failed to read '{}': {}", validated.to_string_lossy(), e))
 }
@@ -71,7 +81,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let file_path = dir.path().join("test.md");
         fs::write(&file_path, "# Hello").unwrap();
-        let result = read_file(file_path.to_string_lossy().to_string());
+        let result = read_file_inner(&file_path.to_string_lossy());
         assert_eq!(result.unwrap(), "# Hello");
     }
 
@@ -80,14 +90,14 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let file_path = dir.path().join("test.txt");
         fs::write(&file_path, "hello").unwrap();
-        let result = read_file(file_path.to_string_lossy().to_string());
+        let result = read_file_inner(&file_path.to_string_lossy());
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("not a markdown file"));
     }
 
     #[test]
     fn test_read_file_not_found() {
-        let result = read_file("/nonexistent/file.md".to_string());
+        let result = read_file_inner("/nonexistent/file.md");
         assert!(result.is_err());
     }
 

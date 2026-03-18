@@ -1,4 +1,5 @@
 mod commands;
+mod scope;
 mod validated_path;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
