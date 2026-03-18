@@ -26,7 +26,7 @@ export function useTheme() {
     return () => mq.removeEventListener("change", handler);
   }, []);
 
-  // Load and inject theme CSS
+  // Load and inject theme CSS, propagating variables to :root for page-level styling
   useEffect(() => {
     themeModules[theme]().then((mod) => {
       let el = document.getElementById(STYLE_ID) as HTMLStyleElement | null;
@@ -35,7 +35,11 @@ export function useTheme() {
         el.id = STYLE_ID;
         document.head.appendChild(el);
       }
-      el.textContent = mod.default;
+      // Extract CSS variable declarations from the .milkdown block and duplicate on :root
+      const css = mod.default;
+      const varMatch = css.match(/\.milkdown\s*\{([^}]+)\}/);
+      const rootBlock = varMatch ? `:root {${varMatch[1]}}\n` : "";
+      el.textContent = rootBlock + css;
     });
   }, [theme]);
 
