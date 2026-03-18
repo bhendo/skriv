@@ -9,6 +9,10 @@ interface FileState {
   error: string | null;
 }
 
+function fileNameFromPath(path: string): string {
+  return path.split("/").pop() || "Untitled";
+}
+
 const EMPTY_STATE: FileState = {
   path: null,
   content: "",
@@ -27,12 +31,11 @@ export function useFile() {
   const openFile = useCallback(async (path: string) => {
     try {
       const content = await invoke<string>("read_file", { path });
-      const fileName = path.split("/").pop() || "Untitled";
       setFileState({
         path,
         content,
         isModified: false,
-        fileName,
+        fileName: fileNameFromPath(path),
         error: null,
       });
       await invoke("watch_file", { path });
@@ -68,12 +71,11 @@ export function useFile() {
   const saveNewFile = useCallback(async (path: string, content: string) => {
     try {
       await invoke("write_new_file", { path, content });
-      const fileName = path.split("/").pop() || "Untitled";
       setFileState({
         path,
         content,
         isModified: false,
-        fileName,
+        fileName: fileNameFromPath(path),
         error: null,
       });
       return true;

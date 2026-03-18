@@ -24,12 +24,10 @@ pub fn expand_scope_for_file(app: &tauri::AppHandle, file_path: &Path) -> Result
         .allow_directory(&canonical_dir, false)
         .map_err(|e| e.to_string())?;
 
-    // Forbid sensitive subdirectories as defense-in-depth
+    // Forbid sensitive subdirectories as defense-in-depth.
+    // Always call forbid_directory regardless of existence to avoid TOCTOU races.
     for sensitive in SENSITIVE_DIRS {
-        let sensitive_path = canonical_dir.join(sensitive);
-        if sensitive_path.exists() {
-            let _ = scope.forbid_directory(&sensitive_path, true);
-        }
+        let _ = scope.forbid_directory(canonical_dir.join(sensitive), true);
     }
 
     Ok(())

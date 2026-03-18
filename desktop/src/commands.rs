@@ -1,27 +1,23 @@
 use crate::validated_path::ValidatedPath;
 
-/// Core read logic shared by the command and tests.
-#[cfg(test)]
-fn read_file_inner(path: &str) -> Result<String, String> {
-    let validated = ValidatedPath::new(path)?;
-    std::fs::read_to_string(validated.as_path())
-        .map_err(|e| format!("Failed to read '{}': {}", validated.to_string_lossy(), e))
+/// Format a file operation error with the validated path context.
+fn file_error(op: &str, path: &ValidatedPath, err: impl std::fmt::Display) -> String {
+    format!("Failed to {} '{}': {}", op, path.to_string_lossy(), err)
+}
+
+fn read_validated(validated: &ValidatedPath) -> Result<String, String> {
+    std::fs::read_to_string(validated.as_path()).map_err(|e| file_error("read", validated, e))
 }
 
 #[tauri::command]
 pub fn read_file(path: String, app_handle: tauri::AppHandle) -> Result<String, String> {
     let validated = ValidatedPath::new(&path)?;
-    // Expand asset protocol scope to the file's directory for image loading
     crate::scope::expand_scope_for_file(&app_handle, validated.as_path())?;
-    std::fs::read_to_string(validated.as_path())
-        .map_err(|e| format!("Failed to read '{}': {}", validated.to_string_lossy(), e))
+    read_validated(&validated)
 }
 
-/// Core write logic shared by the command and tests.
-fn write_file_inner(path: &str, content: &str) -> Result<(), String> {
-    let validated = ValidatedPath::new(path)?;
-    std::fs::write(validated.as_path(), content)
-        .map_err(|e| format!("Failed to write '{}': {}", validated.to_string_lossy(), e))
+fn write_validated(validated: &ValidatedPath, content: &str) -> Result<(), String> {
+    std::fs::write(validated.as_path(), content).map_err(|e| file_error("write", validated, e))
 }
 
 #[tauri::command]
@@ -30,27 +26,22 @@ pub fn write_file(
     content: String,
     watcher: tauri::State<'_, crate::watcher::FileWatcher>,
 ) -> Result<(), String> {
+    let validated = ValidatedPath::new(&path)?;
     watcher.record_self_write();
-    write_file_inner(&path, &content)
+    write_validated(&validated, &content)
 }
 
 #[tauri::command]
 pub fn write_new_file(path: String, content: String) -> Result<(), String> {
     let validated = ValidatedPath::new_for_write(&path)?;
-    std::fs::write(validated.as_path(), &content)
-        .map_err(|e| format!("Failed to write '{}': {}", validated.to_string_lossy(), e))
+    write_validated(&validated, &content)
 }
 
 #[tauri::command]
 pub fn get_file_info(path: String) -> Result<FileInfo, String> {
     let validated = ValidatedPath::new(&path)?;
-    let metadata = std::fs::metadata(validated.as_path()).map_err(|e| {
-        format!(
-            "Failed to get info for '{}': {}",
-            validated.to_string_lossy(),
-            e
-        )
-    })?;
+    let metadata = std::fs::metadata(validated.as_path())
+        .map_err(|e| file_error("get info for", &validated, e))?;
     let name = validated
         .as_path()
         .file_name()
@@ -107,12 +98,22 @@ mod tests {
     use super::*;
     use std::fs;
 
+    fn read_test_file(path: &str) -> Result<String, String> {
+        let validated = ValidatedPath::new(path)?;
+        read_validated(&validated)
+    }
+
+    fn write_test_file(path: &str, content: &str) -> Result<(), String> {
+        let validated = ValidatedPath::new(path)?;
+        write_validated(&validated, content)
+    }
+
     #[test]
     fn test_read_file_success() {
         let dir = tempfile::tempdir().unwrap();
         let file_path = dir.path().join("test.md");
         fs::write(&file_path, "# Hello").unwrap();
-        let result = read_file_inner(&file_path.to_string_lossy());
+        let result = read_test_file(&file_path.to_string_lossy());
         assert_eq!(result.unwrap(), "# Hello");
     }
 
@@ -121,14 +122,14 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let file_path = dir.path().join("test.txt");
         fs::write(&file_path, "hello").unwrap();
-        let result = read_file_inner(&file_path.to_string_lossy());
+        let result = read_test_file(&file_path.to_string_lossy());
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("not a markdown file"));
     }
 
     #[test]
     fn test_read_file_not_found() {
-        let result = read_file_inner("/nonexistent/file.md");
+        let result = read_test_file("/nonexistent/file.md");
         assert!(result.is_err());
     }
 
@@ -137,7 +138,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let file_path = dir.path().join("output.md");
         fs::write(&file_path, "").unwrap(); // create first so ValidatedPath::new works
-        let result = write_file_inner(&file_path.to_string_lossy(), "# Written");
+        let result = write_test_file(&file_path.to_string_lossy(), "# Written");
         assert!(result.is_ok());
         assert_eq!(fs::read_to_string(&file_path).unwrap(), "# Written");
     }

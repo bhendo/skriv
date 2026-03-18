@@ -33,9 +33,7 @@ impl FileWatcher {
             .canonicalize()
             .map_err(|e| format!("Failed to resolve path: {}", e))?;
 
-        let emit_path = canonical.clone();
-        // Clone the Arc (not the inner value) so the callback shares
-        // the same Mutex as record_self_write
+        let emit_path = canonical.to_string_lossy().into_owned();
         let last_self_write_ref = self.last_self_write.clone();
 
         let mut watcher = recommended_watcher(move |res: Result<Event, _>| {
@@ -49,8 +47,7 @@ impl FileWatcher {
                     };
 
                     if !suppress {
-                        let _ = app_handle
-                            .emit("file-changed", emit_path.to_string_lossy().to_string());
+                        let _ = app_handle.emit("file-changed", &emit_path);
                     }
                 }
             }

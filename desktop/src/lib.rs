@@ -59,7 +59,7 @@ pub fn run() {
             for arg in std::env::args().skip(1) {
                 if let Some(path) = resolve_file_path(&arg) {
                     let state = app.state::<OpenedFile>();
-                    *state.0.lock().unwrap() = Some(path.to_string_lossy().to_string());
+                    *state.0.lock().unwrap() = Some(path.to_string_lossy().into_owned());
                     break;
                 }
             }
@@ -67,18 +67,23 @@ pub fn run() {
         })
         .build(tauri::generate_context!())
         .expect("error while running tauri application")
-        .run(|_app, _event| {
+        .run(|app, event| {
             #[cfg(target_os = "macos")]
-            if let tauri::RunEvent::Opened { urls } = _event {
+            if let tauri::RunEvent::Opened { urls } = event {
                 if let Some(url) = urls.first() {
                     if let Ok(path) = url.to_file_path() {
-                        let state = _app.state::<OpenedFile>();
-                        *state.0.lock().unwrap() = Some(path.to_string_lossy().to_string());
-                        if let Some(window) = _app.get_webview_window("main") {
-                            let _ = window.emit("file-opened", path.to_string_lossy().to_string());
+                        let path_str = path.to_string_lossy().into_owned();
+                        let state = app.state::<OpenedFile>();
+                        *state.0.lock().unwrap() = Some(path_str.clone());
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.emit("file-opened", path_str);
                         }
                     }
                 }
+            }
+            #[cfg(not(target_os = "macos"))]
+            {
+                let _ = (app, event);
             }
         });
 }

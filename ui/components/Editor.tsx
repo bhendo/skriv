@@ -61,6 +61,7 @@ const CrepeEditor = forwardRef<EditorHandle, EditorProps>(({ defaultValue, onCha
 
   return <Milkdown />;
 });
+CrepeEditor.displayName = "CrepeEditor";
 
 export const MarkdownEditor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
   return (
@@ -69,3 +70,4 @@ export const MarkdownEditor = forwardRef<EditorHandle, EditorProps>((props, ref)
     </MilkdownProvider>
   );
 });
+MarkdownEditor.displayName = "MarkdownEditor";

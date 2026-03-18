@@ -9,6 +9,17 @@ pub struct ValidatedPath {
     inner: PathBuf,
 }
 
+fn validate_extension(path: &Path) -> Result<(), String> {
+    let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
+    if !ALLOWED_EXTENSIONS.contains(&ext) {
+        return Err(format!(
+            "File '{}' is not a markdown file (expected .md or .markdown)",
+            path.display()
+        ));
+    }
+    Ok(())
+}
+
 impl ValidatedPath {
     /// Validate and canonicalize a path string.
     /// Returns an error if:
@@ -19,13 +30,7 @@ impl ValidatedPath {
         let canonical = path
             .canonicalize()
             .map_err(|e| format!("Invalid path '{}': {}", path.display(), e))?;
-        let ext = canonical.extension().and_then(|e| e.to_str()).unwrap_or("");
-        if !ALLOWED_EXTENSIONS.contains(&ext) {
-            return Err(format!(
-                "File '{}' is not a markdown file (expected .md or .markdown)",
-                canonical.display()
-            ));
-        }
+        validate_extension(&canonical)?;
         Ok(Self { inner: canonical })
     }
 
@@ -33,13 +38,7 @@ impl ValidatedPath {
     /// Validates the parent directory exists and the extension is correct.
     pub fn new_for_write(path: &str) -> Result<Self, String> {
         let path = PathBuf::from(path);
-        let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
-        if !ALLOWED_EXTENSIONS.contains(&ext) {
-            return Err(format!(
-                "File '{}' is not a markdown file (expected .md or .markdown)",
-                path.display()
-            ));
-        }
+        validate_extension(&path)?;
         let parent = path
             .parent()
             .ok_or_else(|| format!("Invalid path: no parent directory for '{}'", path.display()))?;
