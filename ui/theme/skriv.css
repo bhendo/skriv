@@ -124,3 +124,7 @@ body,
   background: var(--crepe-color-inline-area, #f5f5f5);
   caret-color: var(--crepe-color-on-background, #333);
 }
+
+.milkdown .editor .inline-source .syntax-marker {
+  opacity: 0.4;
+}

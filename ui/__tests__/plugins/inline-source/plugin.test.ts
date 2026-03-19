@@ -596,3 +596,113 @@ describe("toggleSyntaxInRawText", () => {
     });
   });
 });
+
+describe("buildMarkerDecorations", () => {
+  it("creates decorations for strong mark (**bold**)", () => {
+    const doc = transitionSchema.node("doc", null, [
+      transitionSchema.node("paragraph", null, [
+        transitionSchema.nodes.inline_source.create(
+          { syntax: "strong" },
+          transitionSchema.text("**bold**")
+        ),
+      ]),
+    ]);
+    const state = EditorState.create({ doc, schema: transitionSchema });
+    const decoSet = buildMarkerDecorations(state);
+
+    // inline_source opens at pos 1 (after paragraph open), content starts at pos 2
+    // "**bold**" occupies positions 2-9
+    // prefix "**" at 2-4, suffix "**" at 8-10... wait let me recalculate:
+    // paragraph open = 0, content start = 1
+    // inline_source at pos 1, node open token => content starts at pos 2
+    // "**bold**" = 8 chars, content positions 2-9
+    // contentEnd = 1 + nodeSize - 1 = 1 + 10 - 1 = 10
+    // Actually: node.nodeSize for inline_source with "**bold**" (8 chars) = 8 + 2 = 10
+    // contentStart = 1 + 1 = 2, contentEnd = 1 + 10 - 1 = 10
+    // prefix deco: 2 to 4, suffix deco: 8 to 10
+    const decorations = decoSet.find();
+    expect(decorations).toHaveLength(2);
+
+    // Prefix decoration: positions 2-4
+    expect(decorations[0].from).toBe(2);
+    expect(decorations[0].to).toBe(4);
+
+    // Suffix decoration: positions 8-10
+    expect(decorations[1].from).toBe(8);
+    expect(decorations[1].to).toBe(10);
+  });
+
+  it("creates decorations for emphasis mark (*italic*)", () => {
+    const doc = transitionSchema.node("doc", null, [
+      transitionSchema.node("paragraph", null, [
+        transitionSchema.nodes.inline_source.create(
+          { syntax: "emphasis" },
+          transitionSchema.text("*italic*")
+        ),
+      ]),
+    ]);
+    const state = EditorState.create({ doc, schema: transitionSchema });
+    const decoSet = buildMarkerDecorations(state);
+
+    // inline_source at pos 1, content starts at 2
+    // "*italic*" = 8 chars, nodeSize = 10
+    // contentStart = 2, contentEnd = 10
+    // prefix "*" at 2-3, suffix "*" at 9-10
+    const decorations = decoSet.find();
+    expect(decorations).toHaveLength(2);
+
+    expect(decorations[0].from).toBe(2);
+    expect(decorations[0].to).toBe(3);
+
+    expect(decorations[1].from).toBe(9);
+    expect(decorations[1].to).toBe(10);
+  });
+
+  it("creates decorations for nested marks (***both***)", () => {
+    const doc = transitionSchema.node("doc", null, [
+      transitionSchema.node("paragraph", null, [
+        transitionSchema.nodes.inline_source.create(
+          { syntax: "strong,emphasis" },
+          transitionSchema.text("***both***")
+        ),
+      ]),
+    ]);
+    const state = EditorState.create({ doc, schema: transitionSchema });
+    const decoSet = buildMarkerDecorations(state);
+
+    // "***both***" = 10 chars, nodeSize = 12
+    // contentStart = 2, contentEnd = 12
+    // prefix "**" + "*" = 3 chars at 2-5, suffix "*" + "**" = 3 chars at 9-12
+    const decorations = decoSet.find();
+    expect(decorations).toHaveLength(2);
+
+    expect(decorations[0].from).toBe(2);
+    expect(decorations[0].to).toBe(5);
+
+    expect(decorations[1].from).toBe(9);
+    expect(decorations[1].to).toBe(12);
+  });
+
+  it("returns empty DecorationSet when no inline_source nodes exist", () => {
+    const doc = transitionSchema.node("doc", null, [
+      transitionSchema.node("paragraph", null, [transitionSchema.text("hello world")]),
+    ]);
+    const state = EditorState.create({ doc, schema: transitionSchema });
+    const decoSet = buildMarkerDecorations(state);
+
+    const decorations = decoSet.find();
+    expect(decorations).toHaveLength(0);
+  });
+
+  it("returns empty DecorationSet when schema has no inline_source type", () => {
+    // Use the basic schema which has no inline_source node type
+    const doc = schema.node("doc", null, [
+      schema.node("paragraph", null, [schema.text("hello world")]),
+    ]);
+    const state = EditorState.create({ doc, schema });
+    const decoSet = buildMarkerDecorations(state);
+
+    const decorations = decoSet.find();
+    expect(decorations).toHaveLength(0);
+  });
+});
