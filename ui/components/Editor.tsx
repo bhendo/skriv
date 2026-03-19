@@ -49,15 +49,18 @@ const CrepeEditor = forwardRef<EditorHandle, EditorProps>(({ defaultValue, onCha
     [defaultValue]
   );
 
-  const [loading, getInstance] = useInstance();
+  const [, getInstance] = useInstance();
 
-  useImperativeHandle(ref, () => ({
-    getMarkdown: () => {
-      if (loading) return undefined;
-      const editor = getInstance();
-      return editor?.action(getMarkdown());
-    },
-  }));
+  useImperativeHandle(
+    ref,
+    () => ({
+      getMarkdown: () => {
+        const editor = getInstance();
+        return editor?.action(getMarkdown());
+      },
+    }),
+    [getInstance]
+  );
 
   return <Milkdown />;
 });
