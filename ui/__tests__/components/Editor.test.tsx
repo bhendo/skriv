@@ -33,6 +33,8 @@ vi.mock("@milkdown/crepe", () => ({
 
 vi.mock("@milkdown/utils", () => ({
   getMarkdown: () => "getMarkdown-action",
+  $node: () => ({}),
+  $prose: () => ({}),
 }));
 
 vi.mock("@milkdown/crepe/theme/common/style.css", () => ({}));
