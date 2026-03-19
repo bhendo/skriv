@@ -33,6 +33,8 @@ function App() {
   useTheme();
 
   const [showReloadBanner, setShowReloadBanner] = useState(false);
+  const [syntaxToggling, setSyntaxToggling] = useState(true);
+  const [editorSnapshot, setEditorSnapshot] = useState<string | null>(null);
   const isModifiedRef = useRef(isModified);
   useEffect(() => {
     isModifiedRef.current = isModified;
@@ -81,10 +83,19 @@ function App() {
     }
   }, [openFile]);
 
+  const handleToggleSyntax = useCallback(() => {
+    const markdown = editorRef.current?.getMarkdown();
+    if (markdown !== undefined) {
+      setEditorSnapshot(markdown);
+    }
+    setSyntaxToggling((prev) => !prev);
+  }, []);
+
   useKeyboardShortcuts({
     onSave: handleSave,
     onSaveAs: handleSaveAs,
     onOpen: handleOpen,
+    onToggleSyntax: handleToggleSyntax,
   });
 
   // Check for file passed as argument on launch
@@ -126,10 +137,11 @@ function App() {
     };
   }, [path, openFile]);
 
-  // Clear reload banner when a new file is opened or reloaded
+  // Clear reload banner and editor snapshot when a new file is opened or reloaded
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- synchronizing banner visibility with file state
     setShowReloadBanner(false);
+    setEditorSnapshot(null);
   }, [path, content]);
 
   return (
@@ -146,8 +158,9 @@ function App() {
       <div style={{ flex: 1, overflow: "auto" }}>
         <MarkdownEditor
           ref={editorRef}
-          defaultValue={content || PLACEHOLDER}
+          defaultValue={editorSnapshot ?? content ?? PLACEHOLDER}
           onChange={handleChange}
+          syntaxToggling={syntaxToggling}
         />
       </div>
     </div>
