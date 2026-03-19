@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { buildRawText, parseInlineSyntax } from "../../../plugins/inline-source/syntax";
+import {
+  buildRawText,
+  parseInlineSyntax,
+  computePrefixLength,
+} from "../../../plugins/inline-source/syntax";
 
 describe("buildRawText", () => {
   it("wraps text with strong markers", () => {
@@ -85,5 +89,26 @@ describe("parseInlineSyntax", () => {
       text: "plain text",
       marks: [],
     });
+  });
+});
+
+describe("computePrefixLength", () => {
+  it("returns prefix length for strong", () => {
+    expect(computePrefixLength(["strong"])).toBe(2);
+  });
+  it("returns prefix length for emphasis", () => {
+    expect(computePrefixLength(["emphasis"])).toBe(1);
+  });
+  it("returns prefix length for nested strong + emphasis", () => {
+    expect(computePrefixLength(["strong", "emphasis"])).toBe(3);
+  });
+  it("returns prefix length for strikethrough", () => {
+    expect(computePrefixLength(["strike_through"])).toBe(2);
+  });
+  it("returns prefix length for inline code", () => {
+    expect(computePrefixLength(["inlineCode"])).toBe(1);
+  });
+  it("returns 0 for no marks", () => {
+    expect(computePrefixLength([])).toBe(0);
   });
 });
