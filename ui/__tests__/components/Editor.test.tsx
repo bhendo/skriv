@@ -35,6 +35,20 @@ vi.mock("@milkdown/utils", () => ({
   getMarkdown: () => "getMarkdown-action",
   $node: () => ({}),
   $prose: () => ({}),
+  $view: () => ({}),
+}));
+
+vi.mock("@milkdown/kit/preset/commonmark", () => ({
+  listItemSchema: { node: {} },
+}));
+
+vi.mock("@milkdown/kit/component/list-item-block", () => ({
+  listItemBlockConfig: { key: "listItemBlockConfigCtx" },
+}));
+
+vi.mock("@milkdown/kit/prose/schema-list", () => ({
+  liftListItem: () => () => false,
+  sinkListItem: () => () => false,
 }));
 
 vi.mock("@milkdown/crepe/theme/common/style.css", () => ({}));

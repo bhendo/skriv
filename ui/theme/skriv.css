@@ -128,3 +128,41 @@ body,
 .milkdown .editor .inline-source .syntax-marker {
   opacity: 0.4;
 }
+
+.milkdown .editor .heading-source .syntax-marker {
+  opacity: 0.4;
+}
+
+.milkdown .editor .milkdown-list-item-block .marker-input {
+  font-family: var(--crepe-font-code, monospace);
+  font-size: inherit;
+  border: none;
+  background: transparent;
+  color: inherit;
+  opacity: 0.4;
+  width: 24px;
+  text-align: right;
+  padding: 0;
+  outline: none;
+}
+
+.milkdown .editor .milkdown-list-item-block .marker-input:focus {
+  opacity: 0.7;
+}
+
+.milkdown .editor .code-fence {
+  font-family: "SF Mono", "Fira Code", "Fira Mono", Menlo, monospace;
+  font-size: 0.85em;
+  line-height: 1.6;
+  padding: 2px 16px;
+  color: var(--crepe-color-on-surface-variant, #666);
+  user-select: none;
+}
+
+.milkdown .editor .code-fence .syntax-marker {
+  opacity: 0.4;
+}
+
+.milkdown .editor .code-fence .fence-language {
+  opacity: 0.6;
+}
