@@ -1,7 +1,7 @@
 import { forwardRef, useImperativeHandle } from "react";
 import { Crepe, CrepeFeature } from "@milkdown/crepe";
 import { Milkdown, MilkdownProvider, useEditor, useInstance } from "@milkdown/react";
-import { getMarkdown } from "@milkdown/kit/utils";
+import { getMarkdown } from "@milkdown/utils";
 import "@milkdown/crepe/theme/common/style.css";
 import "../theme/skriv.css";
 
