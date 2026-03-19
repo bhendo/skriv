@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildRawText } from "../../../plugins/inline-source/syntax";
+import { buildRawText, parseInlineSyntax } from "../../../plugins/inline-source/syntax";
 
 describe("buildRawText", () => {
   it("wraps text with strong markers", () => {
@@ -22,5 +22,68 @@ describe("buildRawText", () => {
   });
   it("returns plain text when no marks", () => {
     expect(buildRawText("plain", [])).toBe("plain");
+  });
+});
+
+describe("parseInlineSyntax", () => {
+  it("parses strong markers", () => {
+    expect(parseInlineSyntax("**bold**")).toEqual({
+      text: "bold",
+      marks: ["strong"],
+    });
+  });
+  it("parses emphasis markers", () => {
+    expect(parseInlineSyntax("*italic*")).toEqual({
+      text: "italic",
+      marks: ["emphasis"],
+    });
+  });
+  it("parses strikethrough markers", () => {
+    expect(parseInlineSyntax("~~struck~~")).toEqual({
+      text: "struck",
+      marks: ["strike_through"],
+    });
+  });
+  it("parses inline code markers", () => {
+    expect(parseInlineSyntax("`code`")).toEqual({
+      text: "code",
+      marks: ["inlineCode"],
+    });
+  });
+  it("parses triple asterisk as strong + emphasis", () => {
+    expect(parseInlineSyntax("***both***")).toEqual({
+      text: "both",
+      marks: ["strong", "emphasis"],
+    });
+  });
+  it("parses underscore variants", () => {
+    expect(parseInlineSyntax("__bold__")).toEqual({
+      text: "bold",
+      marks: ["strong"],
+    });
+    expect(parseInlineSyntax("_italic_")).toEqual({
+      text: "italic",
+      marks: ["emphasis"],
+    });
+    expect(parseInlineSyntax("___both___")).toEqual({
+      text: "both",
+      marks: ["strong", "emphasis"],
+    });
+  });
+  it("returns plain text for incomplete syntax", () => {
+    expect(parseInlineSyntax("**bold")).toEqual({ text: "**bold", marks: [] });
+    expect(parseInlineSyntax("*italic")).toEqual({
+      text: "*italic",
+      marks: [],
+    });
+  });
+  it("returns plain text for empty input", () => {
+    expect(parseInlineSyntax("")).toEqual({ text: "", marks: [] });
+  });
+  it("returns plain text for no markers", () => {
+    expect(parseInlineSyntax("plain text")).toEqual({
+      text: "plain text",
+      marks: [],
+    });
   });
 });
