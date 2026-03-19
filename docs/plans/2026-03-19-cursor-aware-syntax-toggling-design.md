@@ -9,23 +9,26 @@ When the cursor enters a formatted inline element (bold, italic, strikethrough, 
 
 ## Scope
 
-### v1 — Inline Marks
+### Implemented — Inline Marks
 
 - **Bold** (`**text**`)
 - **Italic** (`*text*`)
 - **Strikethrough** (`~~text~~`)
 - **Inline code** (`` `text` ``)
 - Nested marks with same boundaries only (e.g., `***bold italic***`)
+- Muted syntax marker styling via inline decorations
+- Formatting shortcuts (Cmd+B/I) inside inline source nodes
+- `syntaxToggling` prop on `MarkdownEditor` for opt-out
+- Cmd+Shift+E toggle shortcut
 
 ### Future Phases
 
-- Muted marker styling (opaque nodeView with `.syntax-marker` spans)
-- Links — `[text](url)` reveal/edit
-- Headings — `##` prefix reveal/edit
-- List markers — `-`, `1.` reveal/edit
-- Fenced code blocks — ` ``` ` reveal/edit
-- Overlapping marks with different boundaries (e.g., `**bold *and italic* only**`)
-- Selection spanning multiple marks
+- Links — `[text](url)` reveal/edit (#27)
+- Headings — `##` prefix reveal/edit (#28)
+- List markers — `-`, `1.` reveal/edit (#29)
+- Fenced code blocks — ` ``` ` reveal/edit (#30)
+- Overlapping marks with different boundaries (#31)
+- Selection spanning multiple marks (#32)
 
 ## Approach: Inline Source Node with NodeView
 
@@ -52,7 +55,7 @@ inline_source: {
   content: "text*",
   marks: "",           // disallow marks inside raw source
   attrs: {
-    syntax: { default: "" }  // mark type(s) this replaced, e.g. "strong", "em"
+    syntax: { default: "" }  // mark type(s) this replaced, e.g. "strong", "strong,emphasis"
   },
   toDOM: () => ["span", { class: "inline-source" }, 0],
   parseDOM: [],        // transient — never parsed from HTML/markdown
@@ -61,8 +64,8 @@ inline_source: {
 
 Key properties:
 
-- `marks: ""` prevents formatted content from being pasted into the node.
-- The `syntax` attribute records which mark type was replaced for restoration on leave.
+- `marks: ""` prevents formatted content from being pasted into the node. Because marks are disallowed, standard Milkdown shortcuts (Cmd+B/I) can't apply marks — a custom keymap intercepts these and manipulates the raw text directly instead.
+- The `syntax` attribute records which mark type(s) were replaced (comma-separated) for restoration on leave.
 - The node is transient — it only exists while the cursor is inside it and is never serialized to markdown.
 - Registered as a Milkdown plugin via `$node()` **before** `crepe.create()`, since ProseMirror schemas are immutable after initialization.
 
@@ -107,9 +110,9 @@ const marksAfter = nodeAfter?.marks ?? [];
 
 **Boundary behavior:** Markers are visible when the cursor touches the mark boundary (not just strictly inside). This gives a forgiving feel — markers appear as the user arrows into/out of the formatted range.
 
-**Adjacent marks:** When cursor is between two different marked spans, left-bias (expand `nodeBefore`'s mark). This is a v1 limitation.
+**Adjacent marks:** When cursor is between two different marked spans, left-bias (expand `nodeBefore`'s mark). This is a known limitation.
 
-**Mark span boundaries:** Walk backward/forward through the parent node's children, collecting adjacent text nodes that share the target mark type.
+**Mark span boundaries:** Walk backward/forward through the parent node's children, collecting adjacent text nodes that share the target mark type. Only the first text node's marks are inspected — v1 only handles same-boundary marks where all marks share start/end positions.
 
 ### Cursor Position Mapping
 
@@ -121,18 +124,30 @@ const marksAfter = nodeAfter?.marks ?? [];
 
 Selection is set explicitly via `tr.setSelection(TextSelection.create(tr.doc, computedPos))`.
 
-### NodeView
+### NodeView and Marker Styling
 
 Uses the `contentDOM` approach — ProseMirror manages text content directly:
 
 - Outer wrapper: `<span class="inline-source">`
 - ProseMirror handles all text editing (typing, backspace, selection, clipboard) natively
-- v1 does not sub-wrap marker characters — the full raw text renders uniformly with a subtle background tint
-- Future iteration: switch to opaque nodeView for per-character marker styling (muted color)
+- Syntax markers (e.g., `**`) are styled with muted opacity via **inline decorations** — the plugin's `state` field builds a `DecorationSet` that applies a `.syntax-marker` CSS class to the prefix/suffix character ranges within the node
+- The decorations are rebuilt on every doc/selection change
+
+### Formatting Shortcuts Inside Inline Source
+
+Because `marks: ""` prevents ProseMirror from applying marks, the plugin intercepts formatting shortcuts via `props.handleKeyDown`:
+
+- **Cmd+B** — toggles `**` wrapping on the raw text
+- **Cmd+I** — toggles `*` wrapping on the raw text
+- If there's a text selection inside the node, wraps/unwraps the selection
+- If cursor is collapsed, wraps/unwraps the entire node text
+- Shortcuts pass through to normal Milkdown handlers when cursor is outside `inline_source`
+
+The `isWrappedWith` function prevents false-positive unwrapping (e.g., `**text**` is not considered wrapped with `*` because the adjacent character is also `*`).
 
 ### Inline Parsing (Raw → Marks on Leave)
 
-Lightweight regex-based parser, scoped to v1 mark types only:
+Lightweight regex-based parser, scoped to supported mark types only:
 
 1. `***text***` → `strong` + `em` marks
 2. `**text**` or `__text__` → `strong` mark
@@ -149,7 +164,7 @@ A remark node serializer is registered alongside the `inline_source` node spec. 
 
 ### IME / Composition Guard
 
-All enter/leave transitions are skipped during IME composition to avoid breaking CJK input. Composing state is tracked via `compositionstart`/`compositionend` events in the plugin's `view()` method and stored in plugin state for `appendTransaction` to read.
+All enter/leave transitions are skipped during IME composition to avoid breaking CJK input. Composing state is tracked via `compositionstart`/`compositionend` events in the plugin's `props.handleDOMEvents` and read by `appendTransaction`.
 
 ### Undo/Redo
 
@@ -157,20 +172,34 @@ All enter/leave transitions are skipped during IME composition to avoid breaking
 - Text edits within the `inline_source` node go into history normally.
 - If undo restores content to invalid syntax, the leave transition handles it gracefully (converts to plain text).
 
+### Toggling
+
+The feature can be toggled on/off:
+
+- **`syntaxToggling` prop** on `MarkdownEditor` (defaults to `true`) — conditionally registers the inline source plugins. The prop is intended for user settings.
+- **Cmd+Shift+E** keyboard shortcut — runtime toggle that snapshots current editor content before recreating the editor with/without the plugin.
+
 ## Styling
 
 ```css
-.inline-source {
+.milkdown .editor .inline-source {
   font-family: inherit;
   border-radius: 2px;
-  background: var(--crepe-color-inline-area);
+  background: var(--crepe-color-inline-area, #f5f5f5);
+  caret-color: var(--crepe-color-on-background, #333);
+}
+
+.milkdown .editor .inline-source .syntax-marker {
+  opacity: 0.4;
 }
 ```
 
-v1 uses a subtle background tint. No per-character marker styling.
-
 ## Files
 
-- **New:** `ui/plugins/inlineSource.ts` — ProseMirror plugin, nodeView, inline parser, node spec + serializer
-- **Modified:** `ui/components/Editor.tsx` — register plugin with `crepe.editor.use()` before create
-- **Modified:** `ui/theme/skriv.css` — `.inline-source` styles
+- `ui/plugins/inline-source/syntax.ts` — pure functions: `buildRawText`, `parseInlineSyntax`, `computePrefixLength`, constants
+- `ui/plugins/inline-source/node.ts` — `inline_source` node schema via `$node()` with remark serializer
+- `ui/plugins/inline-source/plugin.ts` — ProseMirror plugin: `findMarkSpan`, `handleInlineSourceTransition` (appendTransaction), `buildMarkerDecorations`, `toggleSyntaxInRawText`, `isWrappedWith`, IME guard, formatting keymap
+- `ui/plugins/inline-source/index.ts` — barrel exports
+- `ui/components/Editor.tsx` — register plugins with `crepe.editor.use()`, `syntaxToggling` prop
+- `ui/hooks/useKeyboardShortcuts.ts` — Cmd+Shift+E toggle shortcut
+- `ui/theme/skriv.css` — `.inline-source` and `.syntax-marker` styles
