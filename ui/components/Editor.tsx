@@ -3,6 +3,9 @@ import { Crepe, CrepeFeature } from "@milkdown/crepe";
 import { Milkdown, MilkdownProvider, useEditor, useInstance } from "@milkdown/react";
 import { getMarkdown } from "@milkdown/utils";
 import { inlineSourceNode, inlineSourcePlugin } from "../plugins/inline-source";
+import { headingSourceNode, headingSourcePlugin } from "../plugins/heading-source";
+import { listSourceView } from "../plugins/list-source";
+import { codeBlockSourcePlugin } from "../plugins/code-block-source";
 import "@milkdown/crepe/theme/common/style.css";
 import "../theme/skriv.css";
 
@@ -38,7 +41,13 @@ const CrepeEditor = forwardRef<EditorHandle, EditorProps>(
         });
 
         if (syntaxToggling) {
-          crepe.editor.use(inlineSourceNode).use(inlineSourcePlugin);
+          crepe.editor
+            .use(inlineSourceNode)
+            .use(inlineSourcePlugin)
+            .use(headingSourceNode)
+            .use(headingSourcePlugin)
+            .use(listSourceView)
+            .use(codeBlockSourcePlugin);
         }
 
         if (onChange) {
