@@ -34,27 +34,29 @@ docs/plans/       # Design doc and implementation plan
 ## Commands
 
 ```bash
-# Dev dependencies
-mise install
+make setup          # install all dependencies (run once after clone)
+make dev            # run the app with hot reload
+make build          # create a distributable binary
 
-# Run the app
-npm run tauri dev
+make check          # run all checks (format, lint, test)
+make test           # run all tests
+make lint           # run all linters
+make format         # auto-format all code
 
-# Rust
-cd desktop && cargo test
-cd desktop && cargo fmt --check
-cd desktop && cargo clippy -- -D warnings
-
-# Frontend
-npm run lint
-npm run format:check
+# Granular targets (also used by CI)
+make test-ui  # npm test (Vitest)
+make test-desktop      # cargo test
+make lint-ui  # ESLint
+make lint-desktop      # cargo clippy
+make format-ui # Prettier
+make format-desktop    # cargo fmt
 ```
 
 ## Formatting & Linting
 
 - **Rust:** `cargo fmt` + `clippy` (config in `desktop/rustfmt.toml`)
 - **TypeScript:** ESLint (`eslint.config.js`) + Prettier (`.prettierrc`)
-- Run both before committing
+- Run `make check` before committing
 
 ## Plans
 
