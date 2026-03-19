@@ -52,7 +52,10 @@ function App() {
 
   const handleSave = useCallback(async () => {
     const markdown = editorRef.current?.getMarkdown();
-    if (markdown === undefined) return;
+    if (markdown === undefined) {
+      console.warn("Save skipped: editor not ready");
+      return;
+    }
 
     if (!path) {
       handleSaveAs(markdown);
