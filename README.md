@@ -42,7 +42,7 @@ make clean     # Remove build artifacts
 ## Project Structure
 
 ```
-desktop/       Rust/Tauri desktop shell
+src-tauri/     Rust/Tauri desktop shell
 ui/            React frontend (Milkdown Crepe editor)
 docs/plans/    Design document and implementation plan
 ```

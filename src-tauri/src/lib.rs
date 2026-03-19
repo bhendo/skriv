@@ -25,7 +25,7 @@ fn resolve_file_path(arg: &str) -> Option<std::path::PathBuf> {
     if let Ok(canonical) = path.canonicalize() {
         return Some(canonical);
     }
-    // In Tauri dev mode, CWD may be the desktop/ directory rather than
+    // In Tauri dev mode, CWD may be the src-tauri/ directory rather than
     // the repo root. Try resolving relative to the parent directory.
     if path.is_relative() {
         if let Ok(cwd) = std::env::current_dir() {

@@ -167,7 +167,7 @@ Milkdown Crepe bundles DOMPurify for link URL and HTML content sanitization, pro
 
 ```
 skriv/
-├── desktop/                    # Rust/Tauri desktop shell
+├── src-tauri/                  # Rust/Tauri desktop shell
 │   ├── src/
 │   │   ├── main.rs            # App entry point
 │   │   ├── lib.rs             # Tauri builder, plugin registration, event handling
