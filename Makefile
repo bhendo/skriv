@@ -1,4 +1,8 @@
-.PHONY: setup dev build clean lint format check test
+.PHONY: setup dev build clean \
+	lint lint-ui lint-desktop \
+	format format-ui format-desktop \
+	check check-ui check-desktop \
+	test test-ui test-desktop
 
 ## Setup — install all dependencies (run once after clone)
 setup:
@@ -13,25 +17,45 @@ dev:
 build:
 	npm run tauri build
 
-## Test — run Rust unit tests
-test:
+## Test
+test: test-ui test-desktop
+
+test-ui:
+	npm test
+
+test-desktop:
 	cd desktop && cargo test
 
-## Lint — check both frontend and backend
-lint:
+## Lint
+lint: lint-ui lint-desktop
+
+lint-ui:
 	npm run lint
+
+lint-desktop:
 	cd desktop && cargo clippy -- -D warnings
 
 ## Format — auto-format all code
-format:
+format: format-ui format-desktop
+
+format-ui:
 	npm run format
+
+format-desktop:
 	cd desktop && cargo fmt
 
-## Check — verify everything compiles, lints, and is formatted
-check: lint
+## Check — verify formatting, linting, and tests
+check: check-ui check-desktop
+
+check-ui:
 	npm run format:check
+	npm run lint
+	npm test
+
+check-desktop:
 	cd desktop && cargo fmt --check
-	npm run build
+	cd desktop && cargo clippy -- -D warnings
+	cd desktop && cargo test
 
 ## Clean — remove build artifacts
 clean:
