@@ -57,7 +57,12 @@ export function parseInlineSyntax(raw: string): ParsedSyntax {
   return { text: raw, marks: [] };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function computePrefixLength(_markNames: string[]): number {
-  throw new Error("Not implemented");
+export function computePrefixLength(markNames: string[]): number {
+  const sorted = [...markNames].sort((a, b) => (MARK_PRIORITY[a] ?? 99) - (MARK_PRIORITY[b] ?? 99));
+  let length = 0;
+  for (const name of sorted) {
+    const syntax = MARK_SYNTAX[name];
+    if (syntax) length += syntax.prefix.length;
+  }
+  return length;
 }
