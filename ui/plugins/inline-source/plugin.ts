@@ -7,7 +7,15 @@ import {
   TextSelection,
   type Transaction,
 } from "@milkdown/kit/prose/state";
-import { buildRawText, computePrefixLength, parseInlineSyntax, SUPPORTED_MARKS } from "./syntax";
+import { Decoration, DecorationSet } from "@milkdown/kit/prose/view";
+import type { EditorView } from "@milkdown/kit/prose/view";
+import {
+  buildRawText,
+  computePrefixLength,
+  MARK_SYNTAX,
+  parseInlineSyntax,
+  SUPPORTED_MARKS,
+} from "./syntax";
 
 export function findMarkSpan(
   doc: Node,
@@ -198,6 +206,126 @@ export function handleInlineSourceTransition(
   return tr;
 }
 
+/**
+ * Check whether `text` is wrapped with the given `marker` (e.g. `**`)
+ * without being wrapped with a longer run of the same character
+ * (e.g. `**hello**` is NOT considered wrapped with `*`).
+ */
+export function isWrappedWith(text: string, marker: string): boolean {
+  if (!text.startsWith(marker) || !text.endsWith(marker)) return false;
+  if (text.length <= marker.length * 2) return false;
+  const markerChar = marker[0];
+  const afterPrefix = text[marker.length];
+  const beforeSuffix = text[text.length - marker.length - 1];
+  // If the char adjacent to the marker is the same char, it's a longer marker
+  if (afterPrefix === markerChar) return false;
+  if (beforeSuffix === markerChar) return false;
+  return true;
+}
+
+/**
+ * Toggle markdown syntax markers around the raw text inside an inline_source
+ * node that contains the current selection / cursor.
+ *
+ * - If there is a text selection within the node, wrap/unwrap that selection.
+ * - If the cursor is collapsed (no selection), wrap/unwrap the entire node text.
+ */
+export function toggleSyntaxInRawText(view: EditorView, marker: string): void {
+  const { state } = view;
+  const { $from, $to } = state.selection;
+  const parent = $from.parent;
+
+  const nodeStart = $from.start(); // start of parent content
+  const nodeEnd = nodeStart + parent.content.size;
+
+  const hasSelection = $from.pos !== $to.pos && $to.parentOffset !== $from.parentOffset;
+
+  if (hasSelection) {
+    // Operate on the selected range within the node
+    const selFrom = $from.pos;
+    const selTo = $to.pos;
+    const selectedText = state.doc.textBetween(selFrom, selTo);
+
+    const tr = state.tr;
+    if (isWrappedWith(selectedText, marker)) {
+      const unwrapped = selectedText.slice(marker.length, -marker.length);
+      tr.replaceWith(selFrom, selTo, state.schema.text(unwrapped));
+    } else {
+      const wrapped = marker + selectedText + marker;
+      tr.replaceWith(selFrom, selTo, state.schema.text(wrapped));
+    }
+    view.dispatch(tr);
+  } else {
+    // No selection — operate on entire node text
+    const rawText = parent.textContent;
+
+    const tr = state.tr;
+    if (isWrappedWith(rawText, marker)) {
+      const unwrapped = rawText.slice(marker.length, -marker.length);
+      tr.replaceWith(nodeStart, nodeEnd, state.schema.text(unwrapped));
+    } else {
+      const wrapped = marker + rawText + marker;
+      tr.replaceWith(nodeStart, nodeEnd, state.schema.text(wrapped));
+    }
+    view.dispatch(tr);
+  }
+}
+
+/**
+ * Build inline decorations that apply the `syntax-marker` CSS class to the
+ * prefix and suffix marker characters inside every `inline_source` node.
+ *
+ * For example, in an `inline_source` with syntax="strong" containing
+ * `**bold**`, decorations cover positions 0–2 (prefix `**`) and 6–8
+ * (suffix `**`) within the node content.
+ */
+export function buildMarkerDecorations(state: EditorState): DecorationSet {
+  const inlineSourceType = state.schema.nodes.inline_source;
+  if (!inlineSourceType) return DecorationSet.empty;
+
+  const decorations: Decoration[] = [];
+
+  state.doc.descendants((node, pos) => {
+    if (node.type === inlineSourceType) {
+      const syntax = node.attrs.syntax as string;
+      const markNames = syntax ? syntax.split(",") : [];
+
+      let prefixLen = 0;
+      let suffixLen = 0;
+      for (const name of markNames) {
+        const s = MARK_SYNTAX[name];
+        if (s) {
+          prefixLen += s.prefix.length;
+          suffixLen += s.suffix.length;
+        }
+      }
+
+      const contentStart = pos + 1; // after node open token
+      const contentEnd = pos + node.nodeSize - 1; // before node close token
+
+      if (prefixLen > 0 && contentStart + prefixLen <= contentEnd) {
+        decorations.push(
+          Decoration.inline(contentStart, contentStart + prefixLen, {
+            class: "syntax-marker",
+          })
+        );
+      }
+      if (suffixLen > 0 && contentEnd - suffixLen >= contentStart) {
+        decorations.push(
+          Decoration.inline(contentEnd - suffixLen, contentEnd, {
+            class: "syntax-marker",
+          })
+        );
+      }
+
+      return false; // don't descend into inline_source
+    }
+    return true;
+  });
+
+  return DecorationSet.create(state.doc, decorations);
+}
+
 const inlineSourcePluginKey = new PluginKey("inline-source");
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -206,11 +334,46 @@ export const inlineSourcePlugin = $prose((_ctx) => {
 
   return new Plugin({
     key: inlineSourcePluginKey,
+    state: {
+      init(_, state) {
+        return buildMarkerDecorations(state);
+      },
+      apply(tr, oldDecorations, _oldState, newState) {
+        if (tr.docChanged || tr.selectionSet) {
+          return buildMarkerDecorations(newState);
+        }
+        return oldDecorations;
+      },
+    },
     appendTransaction(transactions, oldState, newState) {
       if (composing) return null;
       return handleInlineSourceTransition(transactions, oldState, newState);
     },
     props: {
+      decorations(state) {
+        return this.getState(state);
+      },
+      handleKeyDown(view: EditorView, event: KeyboardEvent) {
+        if (!(event.metaKey || event.ctrlKey)) return false;
+
+        const inlineSourceType = view.state.schema.nodes.inline_source;
+        if (!inlineSourceType) return false;
+
+        const { $from } = view.state.selection;
+        if ($from.parent.type !== inlineSourceType) return false;
+
+        if (event.key === "b") {
+          event.preventDefault();
+          toggleSyntaxInRawText(view, "**");
+          return true;
+        }
+        if (event.key === "i") {
+          event.preventDefault();
+          toggleSyntaxInRawText(view, "*");
+          return true;
+        }
+        return false;
+      },
       handleDOMEvents: {
         compositionstart: () => {
           composing = true;

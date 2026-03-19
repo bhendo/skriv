@@ -1,7 +1,14 @@
 import { describe, it, expect } from "vitest";
 import { Schema } from "@milkdown/kit/prose/model";
 import { EditorState, TextSelection } from "@milkdown/kit/prose/state";
-import { findMarkSpan, handleInlineSourceTransition } from "../../../plugins/inline-source/plugin";
+import { EditorView } from "@milkdown/kit/prose/view";
+import {
+  buildMarkerDecorations,
+  findMarkSpan,
+  handleInlineSourceTransition,
+  isWrappedWith,
+  toggleSyntaxInRawText,
+} from "../../../plugins/inline-source/plugin";
 
 // Minimal schema with marks for testing
 const schema = new Schema({
@@ -73,8 +80,15 @@ describe("findMarkSpan", () => {
 // Extended schema with inline_source node for transition tests
 const transitionSchema = new Schema({
   nodes: {
-    doc: { content: "block+" },
-    paragraph: { group: "block", content: "inline*" },
+    doc: {
+      content: "block+",
+      toDOM: () => ["div", 0] as const,
+    },
+    paragraph: {
+      group: "block",
+      content: "inline*",
+      toDOM: () => ["p", 0] as const,
+    },
     text: { group: "inline" },
     inline_source: {
       group: "inline",
@@ -370,6 +384,215 @@ describe("handleInlineSourceTransition", () => {
         });
         expect(foundInlineSource).toBe(false);
       }
+    });
+  });
+});
+
+describe("isWrappedWith", () => {
+  it("detects text wrapped with **", () => {
+    expect(isWrappedWith("**hello**", "**")).toBe(true);
+  });
+
+  it("detects text wrapped with *", () => {
+    expect(isWrappedWith("*hello*", "*")).toBe(true);
+  });
+
+  it("returns false when text is not wrapped", () => {
+    expect(isWrappedWith("hello", "**")).toBe(false);
+  });
+
+  it("returns false when only prefix is present", () => {
+    expect(isWrappedWith("**hello", "**")).toBe(false);
+  });
+
+  it("returns false when only suffix is present", () => {
+    expect(isWrappedWith("hello**", "**")).toBe(false);
+  });
+
+  it("returns false for text that is too short (just markers)", () => {
+    expect(isWrappedWith("****", "**")).toBe(false);
+  });
+
+  it("returns false when marker is * but text is wrapped with **", () => {
+    // **hello** starts with * but the char after * is also *, so it's a longer marker
+    expect(isWrappedWith("**hello**", "*")).toBe(false);
+  });
+
+  it("returns false when marker is * but text is wrapped with ***", () => {
+    expect(isWrappedWith("***hello***", "*")).toBe(false);
+  });
+
+  it("returns true when marker is ** and text is ***hello***", () => {
+    // ***hello*** — starts with **, char after ** is *, not * again at position 2
+    // Wait: marker is **, markerChar is *, afterPrefix is text[2] = "*"
+    // So this should return false because afterPrefix === markerChar
+    expect(isWrappedWith("***hello***", "**")).toBe(false);
+  });
+
+  it("detects text wrapped with ~~", () => {
+    expect(isWrappedWith("~~hello~~", "~~")).toBe(true);
+  });
+
+  it("detects text wrapped with `", () => {
+    expect(isWrappedWith("`hello`", "`")).toBe(true);
+  });
+});
+
+describe("toggleSyntaxInRawText", () => {
+  /** Helper: create an EditorView with cursor inside an inline_source node */
+  function createViewWithInlineSource(rawText: string, cursorOffset?: number): EditorView {
+    const doc = transitionSchema.node("doc", null, [
+      transitionSchema.node("paragraph", null, [
+        transitionSchema.nodes.inline_source.create(
+          { syntax: "strong" },
+          transitionSchema.text(rawText)
+        ),
+      ]),
+    ]);
+
+    // inline_source opens at 1 (after paragraph open), content starts at 2
+    const contentStart = 2;
+    const pos = contentStart + (cursorOffset ?? 0);
+
+    const state = EditorState.create({
+      doc,
+      schema: transitionSchema,
+      selection: TextSelection.create(doc, pos),
+    });
+
+    const el = document.createElement("div");
+    return new EditorView(el, { state });
+  }
+
+  /** Helper: create an EditorView with a range selection inside an inline_source node */
+  function createViewWithInlineSourceSelection(
+    rawText: string,
+    selFrom: number,
+    selTo: number
+  ): EditorView {
+    const doc = transitionSchema.node("doc", null, [
+      transitionSchema.node("paragraph", null, [
+        transitionSchema.nodes.inline_source.create(
+          { syntax: "strong" },
+          transitionSchema.text(rawText)
+        ),
+      ]),
+    ]);
+
+    const contentStart = 2;
+
+    const state = EditorState.create({
+      doc,
+      schema: transitionSchema,
+      selection: TextSelection.create(doc, contentStart + selFrom, contentStart + selTo),
+    });
+
+    const el = document.createElement("div");
+    return new EditorView(el, { state });
+  }
+
+  describe("cursor (no selection) — operates on entire node text", () => {
+    it("wraps unwrapped text with **", () => {
+      const view = createViewWithInlineSource("hello");
+      toggleSyntaxInRawText(view, "**");
+
+      const paragraph = view.state.doc.firstChild!;
+      let inlineText = "";
+      paragraph.forEach((node) => {
+        if (node.type.name === "inline_source") {
+          inlineText = node.textContent;
+        }
+      });
+      expect(inlineText).toBe("**hello**");
+    });
+
+    it("unwraps text already wrapped with **", () => {
+      const view = createViewWithInlineSource("**hello**");
+      toggleSyntaxInRawText(view, "**");
+
+      const paragraph = view.state.doc.firstChild!;
+      let inlineText = "";
+      paragraph.forEach((node) => {
+        if (node.type.name === "inline_source") {
+          inlineText = node.textContent;
+        }
+      });
+      expect(inlineText).toBe("hello");
+    });
+
+    it("wraps unwrapped text with * (italic)", () => {
+      const view = createViewWithInlineSource("hello");
+      toggleSyntaxInRawText(view, "*");
+
+      const paragraph = view.state.doc.firstChild!;
+      let inlineText = "";
+      paragraph.forEach((node) => {
+        if (node.type.name === "inline_source") {
+          inlineText = node.textContent;
+        }
+      });
+      expect(inlineText).toBe("*hello*");
+    });
+
+    it("unwraps text already wrapped with * (italic)", () => {
+      const view = createViewWithInlineSource("*hello*");
+      toggleSyntaxInRawText(view, "*");
+
+      const paragraph = view.state.doc.firstChild!;
+      let inlineText = "";
+      paragraph.forEach((node) => {
+        if (node.type.name === "inline_source") {
+          inlineText = node.textContent;
+        }
+      });
+      expect(inlineText).toBe("hello");
+    });
+
+    it("does not unwrap ** when toggling * (different marker length)", () => {
+      const view = createViewWithInlineSource("**hello**");
+      toggleSyntaxInRawText(view, "*");
+
+      const paragraph = view.state.doc.firstChild!;
+      let inlineText = "";
+      paragraph.forEach((node) => {
+        if (node.type.name === "inline_source") {
+          inlineText = node.textContent;
+        }
+      });
+      // Should wrap with * around the whole thing, not unwrap
+      expect(inlineText).toBe("***hello***");
+    });
+  });
+
+  describe("range selection — operates on selected text", () => {
+    it("wraps selected text with **", () => {
+      // Raw text is "hello world", select "world" (indices 6-11)
+      const view = createViewWithInlineSourceSelection("hello world", 6, 11);
+      toggleSyntaxInRawText(view, "**");
+
+      const paragraph = view.state.doc.firstChild!;
+      let inlineText = "";
+      paragraph.forEach((node) => {
+        if (node.type.name === "inline_source") {
+          inlineText = node.textContent;
+        }
+      });
+      expect(inlineText).toBe("hello **world**");
+    });
+
+    it("unwraps selected text already wrapped with **", () => {
+      // Raw text "hello **world**", select "**world**" (indices 6-15)
+      const view = createViewWithInlineSourceSelection("hello **world**", 6, 15);
+      toggleSyntaxInRawText(view, "**");
+
+      const paragraph = view.state.doc.firstChild!;
+      let inlineText = "";
+      paragraph.forEach((node) => {
+        if (node.type.name === "inline_source") {
+          inlineText = node.textContent;
+        }
+      });
+      expect(inlineText).toBe("hello world");
     });
   });
 });
