@@ -187,6 +187,29 @@ describe("handleInlineSourceTransition", () => {
       expect(result).toBeNull();
     });
 
+    it("returns null for range selection", () => {
+      const doc = transitionSchema.node("doc", null, [
+        transitionSchema.node("paragraph", null, [
+          transitionSchema.text("hello "),
+          transitionSchema.text("bold", [transitionSchema.marks.strong.create()]),
+          transitionSchema.text(" world"),
+        ]),
+      ]);
+
+      const oldState = EditorState.create({
+        doc,
+        schema: transitionSchema,
+        selection: TextSelection.create(doc, 3),
+      });
+
+      // Create a range selection (not cursor)
+      const tr = oldState.tr.setSelection(TextSelection.create(doc, 7, 11));
+      const newState = oldState.apply(tr);
+
+      const result = handleInlineSourceTransition([tr], oldState, newState);
+      expect(result).toBeNull();
+    });
+
     it("handles nested same-boundary marks (strong + emphasis)", () => {
       const doc = transitionSchema.node("doc", null, [
         transitionSchema.node("paragraph", null, [
@@ -222,6 +245,130 @@ describe("handleInlineSourceTransition", () => {
           }
         });
         expect(foundInlineSource).toBe(true);
+      }
+    });
+  });
+
+  describe("leave transition", () => {
+    it("replaces inline_source with marked text when cursor leaves", () => {
+      const doc = transitionSchema.node("doc", null, [
+        transitionSchema.node("paragraph", null, [
+          transitionSchema.text("hello "),
+          transitionSchema.nodes.inline_source.create(
+            { syntax: "strong" },
+            transitionSchema.text("**bold**")
+          ),
+          transitionSchema.text(" world"),
+        ]),
+      ]);
+
+      // Cursor inside inline_source (position inside the "**bold**" text)
+      // paragraph opens at 0, content starts at 1
+      // "hello " = pos 1-6, inline_source opens at 7, content starts at 8
+      // "**bold**" = pos 8-15, inline_source closes at 16, " world" = 17-22
+      const oldState = EditorState.create({
+        doc,
+        schema: transitionSchema,
+        selection: TextSelection.create(doc, 12),
+      });
+
+      // Move cursor to " world" area (pos 19)
+      const tr = oldState.tr.setSelection(TextSelection.create(doc, 19));
+      const newState = oldState.apply(tr);
+
+      const result = handleInlineSourceTransition([tr], oldState, newState);
+      expect(result).not.toBeNull();
+
+      if (result) {
+        const resultState = newState.apply(result);
+        const paragraph = resultState.doc.firstChild!;
+        let foundStrong = false;
+        paragraph.forEach((node) => {
+          if (node.isText && node.marks.some((m) => m.type.name === "strong")) {
+            foundStrong = true;
+            expect(node.text).toBe("bold");
+          }
+        });
+        expect(foundStrong).toBe(true);
+        // inline_source should be gone
+        let foundInlineSource = false;
+        paragraph.forEach((node) => {
+          if (node.type.name === "inline_source") foundInlineSource = true;
+        });
+        expect(foundInlineSource).toBe(false);
+      }
+    });
+
+    it("converts incomplete syntax to plain text on leave", () => {
+      const doc = transitionSchema.node("doc", null, [
+        transitionSchema.node("paragraph", null, [
+          transitionSchema.text("before "),
+          transitionSchema.nodes.inline_source.create(
+            { syntax: "strong" },
+            transitionSchema.text("**bol")
+          ),
+        ]),
+      ]);
+
+      // "before " = pos 1-7, inline_source opens at 8, content starts at 9
+      // "**bol" = pos 9-13, inline_source closes at 14
+      const oldState = EditorState.create({
+        doc,
+        schema: transitionSchema,
+        selection: TextSelection.create(doc, 11),
+      });
+
+      // Move cursor to "before"
+      const tr = oldState.tr.setSelection(TextSelection.create(doc, 3));
+      const newState = oldState.apply(tr);
+
+      const result = handleInlineSourceTransition([tr], oldState, newState);
+      expect(result).not.toBeNull();
+
+      if (result) {
+        const resultState = newState.apply(result);
+        const paragraph = resultState.doc.firstChild!;
+        expect(paragraph.textContent).toBe("before **bol");
+        paragraph.forEach((node) => {
+          if (node.isText) {
+            expect(node.marks.length).toBe(0);
+          }
+        });
+      }
+    });
+
+    it("removes node entirely when content is empty on leave", () => {
+      const doc = transitionSchema.node("doc", null, [
+        transitionSchema.node("paragraph", null, [
+          transitionSchema.text("hello "),
+          transitionSchema.nodes.inline_source.create({ syntax: "strong" }),
+          transitionSchema.text(" world"),
+        ]),
+      ]);
+
+      // "hello " = pos 1-6, inline_source opens at 7, closes at 8 (empty)
+      // " world" = pos 9-14
+      // Cursor right at inline_source boundary
+      const oldState = EditorState.create({
+        doc,
+        schema: transitionSchema,
+        selection: TextSelection.create(doc, 8),
+      });
+
+      const tr = oldState.tr.setSelection(TextSelection.create(doc, 3));
+      const newState = oldState.apply(tr);
+
+      const result = handleInlineSourceTransition([tr], oldState, newState);
+      expect(result).not.toBeNull();
+
+      if (result) {
+        const resultState = newState.apply(result);
+        const paragraph = resultState.doc.firstChild!;
+        let foundInlineSource = false;
+        paragraph.forEach((node) => {
+          if (node.type.name === "inline_source") foundInlineSource = true;
+        });
+        expect(foundInlineSource).toBe(false);
       }
     });
   });

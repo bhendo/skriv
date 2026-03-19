@@ -1,6 +1,6 @@
-import type { Node, MarkType } from "@milkdown/kit/prose/model";
+import type { Node, Mark, MarkType } from "@milkdown/kit/prose/model";
 import { EditorState, TextSelection, type Transaction } from "@milkdown/kit/prose/state";
-import { buildRawText, computePrefixLength, SUPPORTED_MARKS } from "./syntax";
+import { buildRawText, computePrefixLength, parseInlineSyntax, SUPPORTED_MARKS } from "./syntax";
 
 export function findMarkSpan(
   doc: Node,
@@ -84,7 +84,47 @@ export function handleInlineSourceTransition(
   // If cursor is already inside an inline_source node, no transition needed
   if ($cursor.parent.type === inlineSourceType) return null;
 
-  // TODO: LEAVE logic will go here in Task 7
+  // LEAVE: Check if there's an inline_source node elsewhere that cursor has left
+  let inlineSourcePos: number | null = null;
+  let inlineSourceNode: Node | null = null;
+  newState.doc.descendants((node, pos) => {
+    if (node.type === inlineSourceType) {
+      inlineSourcePos = pos;
+      inlineSourceNode = node;
+      return false; // stop traversal
+    }
+    return true;
+  });
+
+  if (inlineSourcePos !== null && inlineSourceNode !== null) {
+    const raw = (inlineSourceNode as Node).textContent;
+    const nodeFrom = inlineSourcePos;
+    const nodeTo = inlineSourcePos + (inlineSourceNode as Node).nodeSize;
+
+    const tr = newState.tr;
+
+    if (!raw) {
+      // Empty content — just remove the node
+      tr.delete(nodeFrom, nodeTo);
+    } else {
+      const parsed = parseInlineSyntax(raw);
+      if (parsed.marks.length > 0) {
+        // Reconstruct marked text
+        const marks = parsed.marks
+          .map((name) => schema.marks[name]?.create())
+          .filter((m): m is Mark => m != null);
+        const textNode = schema.text(parsed.text, marks);
+        tr.replaceWith(nodeFrom, nodeTo, textNode);
+      } else {
+        // No valid syntax — insert as plain text
+        const textNode = schema.text(raw);
+        tr.replaceWith(nodeFrom, nodeTo, textNode);
+      }
+    }
+
+    tr.setMeta("addToHistory", false);
+    return tr;
+  }
 
   // ENTER: Check if cursor is adjacent to a supported mark
   const nodeBefore = $cursor.nodeBefore;
