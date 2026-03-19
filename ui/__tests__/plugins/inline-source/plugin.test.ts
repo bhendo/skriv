@@ -705,4 +705,73 @@ describe("buildMarkerDecorations", () => {
     const decorations = decoSet.find();
     expect(decorations).toHaveLength(0);
   });
+
+  it("derives decorations from content, not stale attrs (#35)", () => {
+    // attrs says "strong" (prefix=2, suffix=2) but content was toggled
+    // to strong+emphasis (prefix=3, suffix=3)
+    const doc = transitionSchema.node("doc", null, [
+      transitionSchema.node("paragraph", null, [
+        transitionSchema.nodes.inline_source.create(
+          { syntax: "strong" }, // stale attr
+          transitionSchema.text("***bold***") // actual content: strong+emphasis
+        ),
+      ]),
+    ]);
+    const state = EditorState.create({ doc, schema: transitionSchema });
+    const decoSet = buildMarkerDecorations(state);
+
+    const decorations = decoSet.find();
+    expect(decorations).toHaveLength(2);
+    // Should match content (*** = 3 chars), not attrs (** = 2 chars)
+    expect(decorations[0].to - decorations[0].from).toBe(3);
+    expect(decorations[1].to - decorations[1].from).toBe(3);
+  });
+});
+
+describe("handleInlineSourceTransition — #34 non-cursor selection leave", () => {
+  it("triggers leave when range selection is outside inline_source", () => {
+    const doc = transitionSchema.node("doc", null, [
+      transitionSchema.node("paragraph", null, [
+        transitionSchema.text("hello "),
+        transitionSchema.nodes.inline_source.create(
+          { syntax: "strong" },
+          transitionSchema.text("**bold**")
+        ),
+        transitionSchema.text(" world"),
+      ]),
+    ]);
+
+    // Cursor was inside inline_source
+    const oldState = EditorState.create({
+      doc,
+      schema: transitionSchema,
+      selection: TextSelection.create(doc, 12),
+    });
+
+    // Range selection in "hello " (outside inline_source)
+    const tr = oldState.tr.setSelection(TextSelection.create(doc, 1, 6));
+    const newState = oldState.apply(tr);
+
+    const result = handleInlineSourceTransition([tr], oldState, newState);
+    expect(result).not.toBeNull();
+
+    if (result) {
+      const resultState = newState.apply(result);
+      const paragraph = resultState.doc.firstChild!;
+      let foundInlineSource = false;
+      paragraph.forEach((node) => {
+        if (node.type.name === "inline_source") foundInlineSource = true;
+      });
+      expect(foundInlineSource).toBe(false);
+      // Should have restored "bold" as strong-marked text
+      let foundStrong = false;
+      paragraph.forEach((node) => {
+        if (node.isText && node.marks.some((m) => m.type.name === "strong")) {
+          foundStrong = true;
+          expect(node.text).toBe("bold");
+        }
+      });
+      expect(foundStrong).toBe(true);
+    }
+  });
 });
