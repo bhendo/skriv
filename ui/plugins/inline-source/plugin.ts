@@ -156,7 +156,10 @@ export function handleInlineSourceTransition(
   const span = findMarkSpan(newState.doc, $cursor.pos, targetMarkType);
   if (!span) return null;
 
-  // Collect ALL supported mark names on the text at this span
+  // Collect supported mark names from the first text node in the span.
+  // v1 only handles same-boundary marks (all marks share start/end positions),
+  // so inspecting the first child is sufficient. Overlapping marks with different
+  // boundaries are out of scope — see design doc for future phases.
   const $spanStart = newState.doc.resolve(span.from);
   const firstChild = $spanStart.nodeAfter;
   if (!firstChild) return null;
