@@ -58,8 +58,8 @@ npm run format:check
 
 ## Plans
 
-- Design doc: `docs/plans/2026-03-18-skriv-design.md`
-- Implementation plan: `docs/plans/2026-03-18-skriv-implementation.md`
+- Design docs live in `docs/plans/` and should be committed
+- **Never commit implementation plans** — they are ephemeral working documents, not permanent artifacts
 
 ## License
 

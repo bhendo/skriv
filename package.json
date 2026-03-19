@@ -11,7 +11,9 @@
     "lint": "eslint ui/",
     "lint:fix": "eslint ui/ --fix",
     "format": "prettier --write ui/",
-    "format:check": "prettier --check ui/"
+    "format:check": "prettier --check ui/",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@milkdown/crepe": "^7.19.0",
@@ -25,14 +27,18 @@
   "devDependencies": {
     "@eslint/js": "^9.39.4",
     "@tauri-apps/cli": "^2",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^6.0.1",
     "eslint": "^9.39.4",
     "eslint-plugin-react-hooks": "^7.0.1",
+    "jsdom": "^29.0.0",
     "prettier": "^3.8.1",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.57.1",
-    "vite": "^8.0.0"
+    "vite": "^8.0.0",
+    "vitest": "^4.1.0"
   }
 }
