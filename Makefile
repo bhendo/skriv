@@ -1,58 +1,58 @@
 .PHONY: setup dev build clean \
-	lint lint-ui lint-desktop \
-	format format-ui format-desktop \
-	check check-ui check-desktop \
-	test test-ui test-desktop
+	lint lint-ui lint-tauri \
+	format format-ui format-tauri \
+	check check-ui check-tauri \
+	test test-ui test-tauri
 
 ## Setup — install all dependencies (run once after clone)
 setup:
 	mise install
-	npm install
+	pnpm install
 
 ## Dev — run the app with hot reload
 dev:
-	npm run tauri dev
+	pnpm tauri dev
 
 ## Build — create a distributable binary
 build:
-	npm run tauri build
+	pnpm tauri build
 
 ## Test
-test: test-ui test-desktop
+test: test-ui test-tauri
 
 test-ui:
-	npm test
+	pnpm test
 
-test-desktop:
+test-tauri:
 	cd src-tauri && cargo test
 
 ## Lint
-lint: lint-ui lint-desktop
+lint: lint-ui lint-tauri
 
 lint-ui:
-	npm run lint
+	pnpm lint
 
-lint-desktop:
+lint-tauri:
 	cd src-tauri && cargo clippy -- -D warnings
 
 ## Format — auto-format all code
-format: format-ui format-desktop
+format: format-ui format-tauri
 
 format-ui:
-	npm run format
+	pnpm format
 
-format-desktop:
+format-tauri:
 	cd src-tauri && cargo fmt
 
 ## Check — verify formatting, linting, and tests
-check: check-ui check-desktop
+check: check-ui check-tauri
 
 check-ui:
-	npm run format:check
-	npm run lint
-	npm test
+	pnpm format:check
+	pnpm lint
+	pnpm test
 
-check-desktop:
+check-tauri:
 	cd src-tauri && cargo fmt --check
 	cd src-tauri && cargo clippy -- -D warnings
 	cd src-tauri && cargo test
