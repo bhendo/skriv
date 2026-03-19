@@ -33,9 +33,28 @@ export interface ParsedSyntax {
   marks: string[];
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function parseInlineSyntax(_raw: string): ParsedSyntax {
-  throw new Error("Not implemented");
+export function parseInlineSyntax(raw: string): ParsedSyntax {
+  if (!raw) return { text: "", marks: [] };
+
+  const patterns: { regex: RegExp; marks: string[] }[] = [
+    { regex: /^\*\*\*(.+)\*\*\*$/, marks: ["strong", "emphasis"] },
+    { regex: /^___(.+)___$/, marks: ["strong", "emphasis"] },
+    { regex: /^\*\*(.+)\*\*$/, marks: ["strong"] },
+    { regex: /^__(.+)__$/, marks: ["strong"] },
+    { regex: /^~~(.+)~~$/, marks: ["strike_through"] },
+    { regex: /^\*(.+)\*$/, marks: ["emphasis"] },
+    { regex: /^_(.+)_$/, marks: ["emphasis"] },
+    { regex: /^`(.+)`$/, marks: ["inlineCode"] },
+  ];
+
+  for (const { regex, marks } of patterns) {
+    const match = raw.match(regex);
+    if (match) {
+      return { text: match[1]!, marks };
+    }
+  }
+
+  return { text: raw, marks: [] };
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
