@@ -83,56 +83,54 @@ export function handleInlineSourceTransition(
   oldState: EditorState,
   newState: EditorState
 ): Transaction | null {
-  // Only act if selection or doc changed
   const selectionChanged = !oldState.selection.eq(newState.selection);
   const docChanged = !oldState.doc.eq(newState.doc);
   if (!selectionChanged && !docChanged) return null;
-
-  // Only handle cursor selections (not range selections)
-  const sel = newState.selection as TextSelection;
-  if (!sel.$cursor) return null;
-  const $cursor = sel.$cursor;
 
   const schema = newState.schema;
   const inlineSourceType = schema.nodes.inline_source;
   if (!inlineSourceType) return null;
 
-  // If cursor is already inside an inline_source node, no transition needed
-  if ($cursor.parent.type === inlineSourceType) return null;
+  const sel = newState.selection as TextSelection;
+  const $cursor = sel.$cursor;
 
-  // LEAVE: Check if there's an inline_source node elsewhere that cursor has left
+  // If cursor is inside an inline_source node, no transition needed
+  if ($cursor && $cursor.parent.type === inlineSourceType) return null;
+
+  // LEAVE runs for any selection type (cursor, range, node, all) so that
+  // non-cursor selections outside the node trigger leave (#34).
   let inlineSourcePos: number | null = null;
   let inlineSourceNode: Node | null = null;
   newState.doc.descendants((node, pos) => {
     if (node.type === inlineSourceType) {
       inlineSourcePos = pos;
       inlineSourceNode = node;
-      return false; // stop traversal
+      return false;
     }
     return true;
   });
 
   if (inlineSourcePos !== null && inlineSourceNode !== null) {
-    const raw = (inlineSourceNode as Node).textContent;
     const nodeFrom = inlineSourcePos;
     const nodeTo = inlineSourcePos + (inlineSourceNode as Node).nodeSize;
 
+    // If selection is still inside the inline_source node, skip leave
+    if (sel.from >= nodeFrom && sel.to <= nodeTo) return null;
+
+    const raw = (inlineSourceNode as Node).textContent;
     const tr = newState.tr;
 
     if (!raw) {
-      // Empty content — just remove the node
       tr.delete(nodeFrom, nodeTo);
     } else {
       const parsed = parseInlineSyntax(raw);
       if (parsed.marks.length > 0) {
-        // Reconstruct marked text
         const marks = parsed.marks
           .map((name) => schema.marks[name]?.create())
           .filter((m): m is Mark => m != null);
         const textNode = schema.text(parsed.text, marks);
         tr.replaceWith(nodeFrom, nodeTo, textNode);
       } else {
-        // No valid syntax — insert as plain text
         const textNode = schema.text(raw);
         tr.replaceWith(nodeFrom, nodeTo, textNode);
       }
@@ -141,6 +139,9 @@ export function handleInlineSourceTransition(
     tr.setMeta("addToHistory", false);
     return tr;
   }
+
+  // ENTER requires a collapsed cursor
+  if (!$cursor) return null;
 
   // ENTER: Check if cursor is adjacent to a supported mark
   const nodeBefore = $cursor.nodeBefore;
@@ -267,11 +268,11 @@ export function buildMarkerDecorations(state: EditorState): DecorationSet {
 
   state.doc.descendants((node, pos) => {
     if (node.type === inlineSourceType) {
-      const syntax = node.attrs.syntax as string;
-      const markNames = syntax ? syntax.split(",") : [];
-
-      const prefixLen = computePrefixLength(markNames);
-      const suffixLen = computeSuffixLength(markNames);
+      // Derive prefix/suffix from actual text content (#35) so decorations
+      // stay correct even when attrs.syntax is stale after a toggle.
+      const parsed = parseInlineSyntax(node.textContent);
+      const prefixLen = computePrefixLength(parsed.marks);
+      const suffixLen = computeSuffixLength(parsed.marks);
 
       const contentStart = pos + 1; // after node open token
       const contentEnd = pos + node.nodeSize - 1; // before node close token
