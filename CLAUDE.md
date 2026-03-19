@@ -54,6 +54,11 @@ make format-ui # Prettier
 make format-tauri      # cargo fmt
 ```
 
+## Git Workflow
+
+- When working on a GitHub issue/ticket, create a new branch from `main` before making changes
+- Branch naming: `<type>/<issue-number>-<short-description>` where type is `feature`, `bug`, `chore`, `refactor`, `docs`, etc. (e.g., `feature/42-add-dark-mode`, `bug/15-fix-save-crash`)
+
 ## Formatting & Linting
 
 - **Rust:** `cargo fmt` + `clippy` (config in `src-tauri/rustfmt.toml`)
