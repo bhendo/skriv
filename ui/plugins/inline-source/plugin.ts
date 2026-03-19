@@ -1,5 +1,12 @@
+import { $prose } from "@milkdown/utils";
 import type { Node, Mark, MarkType } from "@milkdown/kit/prose/model";
-import { EditorState, TextSelection, type Transaction } from "@milkdown/kit/prose/state";
+import {
+  EditorState,
+  Plugin,
+  PluginKey,
+  TextSelection,
+  type Transaction,
+} from "@milkdown/kit/prose/state";
 import { buildRawText, computePrefixLength, parseInlineSyntax, SUPPORTED_MARKS } from "./syntax";
 
 export function findMarkSpan(
@@ -187,3 +194,30 @@ export function handleInlineSourceTransition(
 
   return tr;
 }
+
+const inlineSourcePluginKey = new PluginKey("inline-source");
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export const inlineSourcePlugin = $prose((_ctx) => {
+  let composing = false;
+
+  return new Plugin({
+    key: inlineSourcePluginKey,
+    appendTransaction(transactions, oldState, newState) {
+      if (composing) return null;
+      return handleInlineSourceTransition(transactions, oldState, newState);
+    },
+    props: {
+      handleDOMEvents: {
+        compositionstart: () => {
+          composing = true;
+          return false;
+        },
+        compositionend: () => {
+          composing = false;
+          return false;
+        },
+      },
+    },
+  });
+});
