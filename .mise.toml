@@ -1,3 +1,4 @@
 [tools]
 node = "lts"
+pnpm = "latest"
 rust = { version = "stable", components = "rust-analyzer" }

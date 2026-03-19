@@ -9,7 +9,9 @@ Typora-style WYSIWYG markdown editor built with Tauri, React, and Milkdown Crepe
 - **Milkdown Crepe v7** (`@milkdown/crepe`, `@milkdown/react`) — WYSIWYG editor with CodeMirror, toolbar, tables, image blocks, DOMPurify
 - **Vite** — frontend build tool
 - **Rust stable** — backend (notify v8, tauri-plugin-dialog)
-- **mise** — dev dependency management (Node, Rust versions pinned in `.mise.toml`)
+- **sccache** — Rust compilation cache (configured in `src-tauri/.cargo/config.toml`)
+- **pnpm** — fast, disk-efficient package manager (content-addressable store, hard-linked `node_modules`)
+- **mise** — dev dependency management (Node, Rust, pnpm versions pinned in `.mise.toml`)
 
 ## Directory Structure
 
@@ -45,17 +47,17 @@ make format         # auto-format all code
 
 # Granular targets (also used by CI)
 make test-ui  # npm test (Vitest)
-make test-desktop      # cargo test
+make test-tauri        # cargo test
 make lint-ui  # ESLint
-make lint-desktop      # cargo clippy
+make lint-tauri        # cargo clippy
 make format-ui # Prettier
-make format-desktop    # cargo fmt
+make format-tauri      # cargo fmt
 ```
 
 ## Formatting & Linting
 
 - **Rust:** `cargo fmt` + `clippy` (config in `src-tauri/rustfmt.toml`)
-- **TypeScript:** ESLint (`eslint.config.js`) + Prettier (`.prettierrc`)
+- **TypeScript:** ESLint (`eslint.config.js`) + Prettier (`.prettierrc`), managed by pnpm
 - Run `make check` before committing
 
 ## Plans
