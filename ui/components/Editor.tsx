@@ -9,64 +9,69 @@ import "../theme/skriv.css";
 interface EditorProps {
   defaultValue: string;
   onChange?: (markdown: string) => void;
+  syntaxToggling?: boolean;
 }
 
 export interface EditorHandle {
   getMarkdown: () => string | undefined;
 }
 
-const CrepeEditor = forwardRef<EditorHandle, EditorProps>(({ defaultValue, onChange }, ref) => {
-  useEditor(
-    (root) => {
-      const crepe = new Crepe({
-        root,
-        defaultValue,
-        features: {
-          [CrepeFeature.CodeMirror]: true,
-          [CrepeFeature.Toolbar]: true,
-          [CrepeFeature.BlockEdit]: true,
-          [CrepeFeature.LinkTooltip]: true,
-          [CrepeFeature.ImageBlock]: true,
-          [CrepeFeature.Table]: true,
-          [CrepeFeature.ListItem]: true,
-          [CrepeFeature.Placeholder]: true,
-          [CrepeFeature.Cursor]: true,
-          [CrepeFeature.Latex]: false,
-        },
-      });
-
-      crepe.editor.use(inlineSourceNode).use(inlineSourcePlugin);
-
-      if (onChange) {
-        crepe.on((listener) => {
-          listener.markdownUpdated((_ctx, markdown, prevMarkdown) => {
-            if (markdown !== prevMarkdown) {
-              onChange(markdown);
-            }
-          });
+const CrepeEditor = forwardRef<EditorHandle, EditorProps>(
+  ({ defaultValue, onChange, syntaxToggling = true }, ref) => {
+    useEditor(
+      (root) => {
+        const crepe = new Crepe({
+          root,
+          defaultValue,
+          features: {
+            [CrepeFeature.CodeMirror]: true,
+            [CrepeFeature.Toolbar]: true,
+            [CrepeFeature.BlockEdit]: true,
+            [CrepeFeature.LinkTooltip]: true,
+            [CrepeFeature.ImageBlock]: true,
+            [CrepeFeature.Table]: true,
+            [CrepeFeature.ListItem]: true,
+            [CrepeFeature.Placeholder]: true,
+            [CrepeFeature.Cursor]: true,
+            [CrepeFeature.Latex]: false,
+          },
         });
-      }
 
-      return crepe;
-    },
-    [defaultValue]
-  );
+        if (syntaxToggling) {
+          crepe.editor.use(inlineSourceNode).use(inlineSourcePlugin);
+        }
 
-  const [, getInstance] = useInstance();
+        if (onChange) {
+          crepe.on((listener) => {
+            listener.markdownUpdated((_ctx, markdown, prevMarkdown) => {
+              if (markdown !== prevMarkdown) {
+                onChange(markdown);
+              }
+            });
+          });
+        }
 
-  useImperativeHandle(
-    ref,
-    () => ({
-      getMarkdown: () => {
-        const editor = getInstance();
-        return editor?.action(getMarkdown());
+        return crepe;
       },
-    }),
-    [getInstance]
-  );
+      [defaultValue, syntaxToggling]
+    );
 
-  return <Milkdown />;
-});
+    const [, getInstance] = useInstance();
+
+    useImperativeHandle(
+      ref,
+      () => ({
+        getMarkdown: () => {
+          const editor = getInstance();
+          return editor?.action(getMarkdown());
+        },
+      }),
+      [getInstance]
+    );
+
+    return <Milkdown />;
+  }
+);
 CrepeEditor.displayName = "CrepeEditor";
 
 export const MarkdownEditor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
