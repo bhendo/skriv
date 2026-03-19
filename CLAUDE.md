@@ -14,20 +14,20 @@ Typora-style WYSIWYG markdown editor built with Tauri, React, and Milkdown Crepe
 ## Directory Structure
 
 ```
-desktop/          # Rust/Tauri desktop shell (was src-tauri — renamed for clarity)
+src-tauri/          # Rust/Tauri desktop shell (Tauri desktop shell (Rust backend))
 ui/               # React frontend source (was src/)
 docs/plans/       # Design doc and implementation plan
 ```
 
-- `desktop/` contains all Rust code, `tauri.conf.json`, and `capabilities/`
+- `src-tauri/` contains all Rust code, `tauri.conf.json`, and `capabilities/`
 - `ui/` contains all React components, hooks, theme CSS, and `index.html`
 - Frontend config (`package.json`, `vite.config.ts`, `tsconfig.json`) stays at root
 
 ## Key Architecture Decisions
 
 - **Milkdown Crepe** (not raw Milkdown Kit) — provides CodeMirror code blocks, floating toolbar, slash commands, tables, image blocks, and DOMPurify sanitization out of the box
-- **ValidatedPath** (`desktop/src/validated_path.rs`) — all file I/O commands validate and canonicalize paths, restricting to `.md`/`.markdown` files only
-- **Dynamic asset scoping** (`desktop/src/scope.rs`) — asset protocol scope starts empty; directories are added when files are opened, with sensitive dirs (`.ssh`, `.gnupg`, etc.) explicitly forbidden
+- **ValidatedPath** (`src-tauri/src/validated_path.rs`) — all file I/O commands validate and canonicalize paths, restricting to `.md`/`.markdown` files only
+- **Dynamic asset scoping** (`src-tauri/src/scope.rs`) — asset protocol scope starts empty; directories are added when files are opened, with sensitive dirs (`.ssh`, `.gnupg`, etc.) explicitly forbidden
 - **Self-write suppression** in file watcher — prevents save from triggering spurious "reload?" prompts
 - **Cursor-aware Typora-style syntax toggling is post-MVP** — ProseMirror is not well-suited for this pattern
 
@@ -54,7 +54,7 @@ make format-desktop    # cargo fmt
 
 ## Formatting & Linting
 
-- **Rust:** `cargo fmt` + `clippy` (config in `desktop/rustfmt.toml`)
+- **Rust:** `cargo fmt` + `clippy` (config in `src-tauri/rustfmt.toml`)
 - **TypeScript:** ESLint (`eslint.config.js`) + Prettier (`.prettierrc`)
 - Run `make check` before committing
 

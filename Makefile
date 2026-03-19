@@ -24,7 +24,7 @@ test-ui:
 	npm test
 
 test-desktop:
-	cd desktop && cargo test
+	cd src-tauri && cargo test
 
 ## Lint
 lint: lint-ui lint-desktop
@@ -33,7 +33,7 @@ lint-ui:
 	npm run lint
 
 lint-desktop:
-	cd desktop && cargo clippy -- -D warnings
+	cd src-tauri && cargo clippy -- -D warnings
 
 ## Format — auto-format all code
 format: format-ui format-desktop
@@ -42,7 +42,7 @@ format-ui:
 	npm run format
 
 format-desktop:
-	cd desktop && cargo fmt
+	cd src-tauri && cargo fmt
 
 ## Check — verify formatting, linting, and tests
 check: check-ui check-desktop
@@ -53,11 +53,11 @@ check-ui:
 	npm test
 
 check-desktop:
-	cd desktop && cargo fmt --check
-	cd desktop && cargo clippy -- -D warnings
-	cd desktop && cargo test
+	cd src-tauri && cargo fmt --check
+	cd src-tauri && cargo clippy -- -D warnings
+	cd src-tauri && cargo test
 
 ## Clean — remove build artifacts
 clean:
 	rm -rf ui/dist
-	cd desktop && cargo clean
+	cd src-tauri && cargo clean

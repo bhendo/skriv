@@ -26,8 +26,8 @@ export default defineConfig(() => ({
         }
       : undefined,
     watch: {
-      // 3. tell Vite to ignore watching `desktop`
-      ignored: ["**/desktop/**"],
+      // 3. tell Vite to ignore watching `src-tauri`
+      ignored: ["**/src-tauri/**"],
     },
   },
 }));
