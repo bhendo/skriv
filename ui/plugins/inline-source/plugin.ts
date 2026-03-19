@@ -12,6 +12,7 @@ import type { EditorView } from "@milkdown/kit/prose/view";
 import {
   buildRawText,
   computePrefixLength,
+  computeSuffixLength,
   MARK_SYNTAX,
   parseInlineSyntax,
   SUPPORTED_MARKS,
@@ -235,49 +236,28 @@ export function toggleSyntaxInRawText(view: EditorView, marker: string): void {
   const { $from, $to } = state.selection;
   const parent = $from.parent;
 
-  const nodeStart = $from.start(); // start of parent content
+  const nodeStart = $from.start();
   const nodeEnd = nodeStart + parent.content.size;
 
   const hasSelection = $from.pos !== $to.pos && $to.parentOffset !== $from.parentOffset;
 
-  if (hasSelection) {
-    // Operate on the selected range within the node
-    const selFrom = $from.pos;
-    const selTo = $to.pos;
-    const selectedText = state.doc.textBetween(selFrom, selTo);
+  // Resolve the text range to operate on
+  const from = hasSelection ? $from.pos : nodeStart;
+  const to = hasSelection ? $to.pos : nodeEnd;
+  const text = state.doc.textBetween(from, to);
 
-    const tr = state.tr;
-    if (isWrappedWith(selectedText, marker)) {
-      const unwrapped = selectedText.slice(marker.length, -marker.length);
-      tr.replaceWith(selFrom, selTo, state.schema.text(unwrapped));
-    } else {
-      const wrapped = marker + selectedText + marker;
-      tr.replaceWith(selFrom, selTo, state.schema.text(wrapped));
-    }
-    view.dispatch(tr);
+  const tr = state.tr;
+  if (isWrappedWith(text, marker)) {
+    tr.replaceWith(from, to, state.schema.text(text.slice(marker.length, -marker.length)));
   } else {
-    // No selection — operate on entire node text
-    const rawText = parent.textContent;
-
-    const tr = state.tr;
-    if (isWrappedWith(rawText, marker)) {
-      const unwrapped = rawText.slice(marker.length, -marker.length);
-      tr.replaceWith(nodeStart, nodeEnd, state.schema.text(unwrapped));
-    } else {
-      const wrapped = marker + rawText + marker;
-      tr.replaceWith(nodeStart, nodeEnd, state.schema.text(wrapped));
-    }
-    view.dispatch(tr);
+    tr.replaceWith(from, to, state.schema.text(marker + text + marker));
   }
+  view.dispatch(tr);
 }
 
 /**
  * Build inline decorations that apply the `syntax-marker` CSS class to the
  * prefix and suffix marker characters inside every `inline_source` node.
- *
- * For example, in an `inline_source` with syntax="strong" containing
- * `**bold**`, decorations cover positions 0–2 (prefix `**`) and 6–8
- * (suffix `**`) within the node content.
  */
 export function buildMarkerDecorations(state: EditorState): DecorationSet {
   const inlineSourceType = state.schema.nodes.inline_source;
@@ -290,15 +270,8 @@ export function buildMarkerDecorations(state: EditorState): DecorationSet {
       const syntax = node.attrs.syntax as string;
       const markNames = syntax ? syntax.split(",") : [];
 
-      let prefixLen = 0;
-      let suffixLen = 0;
-      for (const name of markNames) {
-        const s = MARK_SYNTAX[name];
-        if (s) {
-          prefixLen += s.prefix.length;
-          suffixLen += s.suffix.length;
-        }
-      }
+      const prefixLen = computePrefixLength(markNames);
+      const suffixLen = computeSuffixLength(markNames);
 
       const contentStart = pos + 1; // after node open token
       const contentEnd = pos + node.nodeSize - 1; // before node close token
@@ -326,6 +299,14 @@ export function buildMarkerDecorations(state: EditorState): DecorationSet {
   return DecorationSet.create(state.doc, decorations);
 }
 
+/** Map of keyboard shortcut keys to their syntax markers. */
+const SHORTCUT_MAP: Record<string, { marker: string; needsAlt?: boolean }> = {
+  b: { marker: MARK_SYNTAX.strong.prefix },
+  i: { marker: MARK_SYNTAX.emphasis.prefix },
+  e: { marker: MARK_SYNTAX.inlineCode.prefix },
+  x: { marker: MARK_SYNTAX.strike_through.prefix, needsAlt: true },
+};
+
 const inlineSourcePluginKey = new PluginKey("inline-source");
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -339,7 +320,7 @@ export const inlineSourcePlugin = $prose((_ctx) => {
         return buildMarkerDecorations(state);
       },
       apply(tr, oldDecorations, _oldState, newState) {
-        if (tr.docChanged || tr.selectionSet) {
+        if (tr.docChanged) {
           return buildMarkerDecorations(newState);
         }
         return oldDecorations;
@@ -362,17 +343,13 @@ export const inlineSourcePlugin = $prose((_ctx) => {
         const { $from } = view.state.selection;
         if ($from.parent.type !== inlineSourceType) return false;
 
-        if (event.key === "b") {
-          event.preventDefault();
-          toggleSyntaxInRawText(view, "**");
-          return true;
-        }
-        if (event.key === "i") {
-          event.preventDefault();
-          toggleSyntaxInRawText(view, "*");
-          return true;
-        }
-        return false;
+        const shortcut = SHORTCUT_MAP[event.key];
+        if (!shortcut) return false;
+        if (shortcut.needsAlt && !event.altKey) return false;
+
+        event.preventDefault();
+        toggleSyntaxInRawText(view, shortcut.marker);
+        return true;
       },
       handleDOMEvents: {
         compositionstart: () => {

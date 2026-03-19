@@ -1,5 +1,5 @@
 import { $node } from "@milkdown/utils";
-import { parseInlineSyntax } from "./syntax";
+import { MARK_SYNTAX, parseInlineSyntax } from "./syntax";
 
 export const inlineSourceNode = $node("inline_source", () => ({
   group: "inline",
@@ -21,17 +21,12 @@ export const inlineSourceNode = $node("inline_source", () => ({
       const raw = node.textContent;
       const parsed = parseInlineSyntax(raw);
       if (parsed.marks.length > 0) {
-        const remarkTypeMap: Record<string, string> = {
-          strong: "strong",
-          emphasis: "emphasis",
-          strike_through: "delete",
-          inlineCode: "inlineCode",
-        };
         if (parsed.marks.length === 1 && parsed.marks[0] === "inlineCode") {
           state.addNode("inlineCode", undefined, parsed.text);
         } else {
           for (const markName of parsed.marks) {
-            state.openNode(remarkTypeMap[markName] ?? markName);
+            const remarkType = MARK_SYNTAX[markName]?.remarkType ?? markName;
+            state.openNode(remarkType);
           }
           state.addNode("text", undefined, parsed.text);
           for (let i = parsed.marks.length - 1; i >= 0; i--) {
