@@ -11,22 +11,22 @@ import type { EditorHandle } from "../types/editor";
 
 const skrivTheme = EditorView.theme({
   "&": {
-    backgroundColor: "var(--crepe-color-background, #fff)",
-    color: "var(--crepe-color-on-background, #333)",
+    backgroundColor: "var(--crepe-color-background)",
+    color: "var(--crepe-color-on-background)",
   },
   ".cm-content": {
-    caretColor: "var(--crepe-color-on-background, #333)",
+    caretColor: "var(--crepe-color-on-background)",
   },
   ".cm-cursor, .cm-dropCursor": {
-    borderLeftColor: "var(--crepe-color-on-background, #333) !important",
+    borderLeftColor: "var(--crepe-color-on-background) !important",
   },
   ".cm-gutters": {
-    backgroundColor: "var(--crepe-color-surface-low, #f8f8f8)",
-    borderRight: "1px solid var(--crepe-color-outline, #eee)",
-    color: "var(--crepe-color-on-surface-variant, #666)",
+    backgroundColor: "var(--crepe-color-surface-low)",
+    borderRight: "1px solid var(--crepe-color-outline)",
+    color: "var(--crepe-color-on-surface-variant)",
   },
   ".cm-activeLineGutter, .cm-activeLine": {
-    backgroundColor: "var(--crepe-color-surface-low, #f8f8f8)",
+    backgroundColor: "var(--crepe-color-surface-low)",
   },
 });
 
