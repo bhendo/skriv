@@ -79,3 +79,91 @@ export function computeSuffixLength(markNames: string[]): number {
   }
   return length;
 }
+
+export interface SyntaxSplit {
+  /** Inner text without markers (e.g. "test") */
+  innerText: string;
+  /** Mark names parsed from the syntax portion */
+  marks: string[];
+  /** Trailing text after the closing markers (e.g. " x") */
+  trailing: string;
+}
+
+/**
+ * Candidate patterns for prefix-based splitting, ordered so that longer
+ * (more-specific) prefixes are tried first.  Each entry specifies the
+ * literal prefix and suffix strings and the mark names they represent.
+ */
+const SPLIT_CANDIDATES: { prefix: string; suffix: string; marks: string[] }[] = [
+  { prefix: "***", suffix: "***", marks: ["strong", "emphasis"] },
+  { prefix: "___", suffix: "___", marks: ["strong", "emphasis"] },
+  { prefix: "**", suffix: "**", marks: ["strong"] },
+  { prefix: "__", suffix: "__", marks: ["strong"] },
+  { prefix: "~~", suffix: "~~", marks: ["strike_through"] },
+  { prefix: "*", suffix: "*", marks: ["emphasis"] },
+  { prefix: "_", suffix: "_", marks: ["emphasis"] },
+  { prefix: "`", suffix: "`", marks: ["inlineCode"] },
+];
+
+/**
+ * Find text that trails after closed syntax markers within a raw string.
+ *
+ * For example, given `**test** x`:
+ * - innerText: `test`
+ * - marks: `["strong"]`
+ * - trailing: ` x`
+ *
+ * Returns `null` if the entire string is a valid closed syntax pattern
+ * (no trailing text) or if no syntax pattern is found at all.
+ *
+ * The algorithm first checks `parseInlineSyntax` — if the whole string is
+ * a valid, fully-closed pattern there is no trailing text and we return
+ * `null`.  Otherwise we search for each candidate prefix/suffix pair,
+ * scanning for the *last* occurrence of the suffix that still leaves
+ * trailing characters, to avoid false positives with short non-greedy
+ * matches (e.g. `**b**old**` should not split into `**b**` + `old**`).
+ */
+export function findTrailingSplit(raw: string): SyntaxSplit | null {
+  if (!raw) return null;
+
+  // If the whole string is already a valid closed pattern, no split needed.
+  const full = parseInlineSyntax(raw);
+  if (full.marks.length > 0) return null;
+
+  for (const { prefix, suffix, marks } of SPLIT_CANDIDATES) {
+    if (!raw.startsWith(prefix)) continue;
+
+    // The inner text must start after the prefix and be at least 1 char.
+    const searchStart = prefix.length + 1;
+    if (searchStart > raw.length) continue;
+
+    // Find the last occurrence of the suffix that leaves trailing text.
+    // We search from the end backwards so that we get the longest valid
+    // inner content (avoiding the non-greedy problem).
+    const lastSuffixStart = raw.lastIndexOf(suffix, raw.length - 2);
+    if (lastSuffixStart < prefix.length) continue;
+
+    // Ensure the suffix doesn't overlap with the prefix
+    if (lastSuffixStart < searchStart - 1) continue;
+
+    const splitPos = lastSuffixStart + suffix.length;
+    if (splitPos >= raw.length) continue; // no trailing text
+
+    const innerText = raw.slice(prefix.length, lastSuffixStart);
+    if (innerText.length === 0) continue; // empty inner text
+
+    // Guard against matching a shorter marker when a longer one applies.
+    // E.g. for `***test*** x`, the `**` candidate would find `*test**` as
+    // inner text and `* x` as trailing — wrong.  Verify that the character
+    // adjacent to the prefix/suffix is NOT the same marker character.
+    const markerChar = prefix[0];
+    if (raw[prefix.length] === markerChar) continue;
+    if (lastSuffixStart > 0 && raw[lastSuffixStart - 1] === markerChar) continue;
+
+    const trailing = raw.slice(splitPos);
+
+    return { innerText, marks, trailing };
+  }
+
+  return null;
+}

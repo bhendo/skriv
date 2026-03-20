@@ -351,6 +351,262 @@ describe("handleInlineSourceTransition", () => {
       }
     });
 
+    it("splits node when text trails past closing markers (space)", () => {
+      // inline_source contains "**test** " — user typed a space after **test**
+      const doc = transitionSchema.node("doc", null, [
+        transitionSchema.node("paragraph", null, [
+          transitionSchema.text("hello "),
+          transitionSchema.nodes.inline_source.create(
+            { syntax: "strong" },
+            transitionSchema.text("**test** ")
+          ),
+        ]),
+      ]);
+
+      // "hello " = pos 1-6, inline_source opens at 7, content starts at 8
+      // "**test** " = 9 chars at pos 8-16, inline_source closes at 17
+      // Cursor at end of the inline_source content (pos 17 = inside node)
+      const oldState = EditorState.create({
+        doc,
+        schema: transitionSchema,
+        selection: TextSelection.create(doc, 16),
+      });
+
+      // Simulate a doc change (typing the space)
+      const tr = oldState.tr.setSelection(TextSelection.create(doc, 17));
+      const newState = oldState.apply(tr);
+
+      const result = handleInlineSourceTransition([tr], oldState, newState);
+      expect(result).not.toBeNull();
+
+      if (result) {
+        const resultState = newState.apply(result);
+        const paragraph = resultState.doc.firstChild!;
+
+        // inline_source should be gone
+        let foundInlineSource = false;
+        paragraph.forEach((node) => {
+          if (node.type.name === "inline_source") foundInlineSource = true;
+        });
+        expect(foundInlineSource).toBe(false);
+
+        // Should have "test" with strong mark
+        let foundStrong = false;
+        paragraph.forEach((node) => {
+          if (node.isText && node.marks.some((m) => m.type.name === "strong")) {
+            foundStrong = true;
+            expect(node.text).toBe("test");
+          }
+        });
+        expect(foundStrong).toBe(true);
+
+        // Total text content should be "hello test " (with space at end)
+        expect(paragraph.textContent).toBe("hello test ");
+      }
+    });
+
+    it("splits node when text trails past closing markers (character)", () => {
+      // inline_source contains "**test**x" — user typed 'x' after **test**
+      const doc = transitionSchema.node("doc", null, [
+        transitionSchema.node("paragraph", null, [
+          transitionSchema.nodes.inline_source.create(
+            { syntax: "strong" },
+            transitionSchema.text("**test**x")
+          ),
+        ]),
+      ]);
+
+      // inline_source opens at 1, content starts at 2
+      // "**test**x" = 9 chars at pos 2-10, inline_source closes at 11
+      const oldState = EditorState.create({
+        doc,
+        schema: transitionSchema,
+        selection: TextSelection.create(doc, 10),
+      });
+
+      const tr = oldState.tr.setSelection(TextSelection.create(doc, 11));
+      const newState = oldState.apply(tr);
+
+      const result = handleInlineSourceTransition([tr], oldState, newState);
+      expect(result).not.toBeNull();
+
+      if (result) {
+        const resultState = newState.apply(result);
+        const paragraph = resultState.doc.firstChild!;
+
+        // inline_source should be gone
+        let foundInlineSource = false;
+        paragraph.forEach((node) => {
+          if (node.type.name === "inline_source") foundInlineSource = true;
+        });
+        expect(foundInlineSource).toBe(false);
+
+        // Should have "test" with strong mark and "x" as plain text
+        let foundStrong = false;
+        let foundPlainX = false;
+        paragraph.forEach((node) => {
+          if (node.isText && node.marks.some((m) => m.type.name === "strong")) {
+            foundStrong = true;
+            expect(node.text).toBe("test");
+          }
+          if (node.isText && node.marks.length === 0 && node.text === "x") {
+            foundPlainX = true;
+          }
+        });
+        expect(foundStrong).toBe(true);
+        expect(foundPlainX).toBe(true);
+      }
+    });
+
+    it("splits node with emphasis trailing text", () => {
+      const doc = transitionSchema.node("doc", null, [
+        transitionSchema.node("paragraph", null, [
+          transitionSchema.nodes.inline_source.create(
+            { syntax: "emphasis" },
+            transitionSchema.text("*italic* more")
+          ),
+        ]),
+      ]);
+
+      const oldState = EditorState.create({
+        doc,
+        schema: transitionSchema,
+        selection: TextSelection.create(doc, 10),
+      });
+
+      const tr = oldState.tr.setSelection(TextSelection.create(doc, 15));
+      const newState = oldState.apply(tr);
+
+      const result = handleInlineSourceTransition([tr], oldState, newState);
+      expect(result).not.toBeNull();
+
+      if (result) {
+        const resultState = newState.apply(result);
+        const paragraph = resultState.doc.firstChild!;
+
+        let foundInlineSource = false;
+        paragraph.forEach((node) => {
+          if (node.type.name === "inline_source") foundInlineSource = true;
+        });
+        expect(foundInlineSource).toBe(false);
+
+        let foundEmphasis = false;
+        paragraph.forEach((node) => {
+          if (node.isText && node.marks.some((m) => m.type.name === "emphasis")) {
+            foundEmphasis = true;
+            expect(node.text).toBe("italic");
+          }
+        });
+        expect(foundEmphasis).toBe(true);
+        expect(paragraph.textContent).toBe("italic more");
+      }
+    });
+
+    it("splits node with nested strong+emphasis trailing text", () => {
+      const doc = transitionSchema.node("doc", null, [
+        transitionSchema.node("paragraph", null, [
+          transitionSchema.nodes.inline_source.create(
+            { syntax: "strong,emphasis" },
+            transitionSchema.text("***both*** x")
+          ),
+        ]),
+      ]);
+
+      const oldState = EditorState.create({
+        doc,
+        schema: transitionSchema,
+        selection: TextSelection.create(doc, 12),
+      });
+
+      const tr = oldState.tr.setSelection(TextSelection.create(doc, 14));
+      const newState = oldState.apply(tr);
+
+      const result = handleInlineSourceTransition([tr], oldState, newState);
+      expect(result).not.toBeNull();
+
+      if (result) {
+        const resultState = newState.apply(result);
+        const paragraph = resultState.doc.firstChild!;
+
+        let foundInlineSource = false;
+        paragraph.forEach((node) => {
+          if (node.type.name === "inline_source") foundInlineSource = true;
+        });
+        expect(foundInlineSource).toBe(false);
+
+        let foundBothMarks = false;
+        paragraph.forEach((node) => {
+          if (
+            node.isText &&
+            node.marks.some((m) => m.type.name === "strong") &&
+            node.marks.some((m) => m.type.name === "emphasis")
+          ) {
+            foundBothMarks = true;
+            expect(node.text).toBe("both");
+          }
+        });
+        expect(foundBothMarks).toBe(true);
+        expect(paragraph.textContent).toBe("both x");
+      }
+    });
+
+    it("positions cursor after trailing text on split-leave", () => {
+      const doc = transitionSchema.node("doc", null, [
+        transitionSchema.node("paragraph", null, [
+          transitionSchema.nodes.inline_source.create(
+            { syntax: "strong" },
+            transitionSchema.text("**test** ")
+          ),
+        ]),
+      ]);
+
+      const oldState = EditorState.create({
+        doc,
+        schema: transitionSchema,
+        selection: TextSelection.create(doc, 10),
+      });
+
+      const tr = oldState.tr.setSelection(TextSelection.create(doc, 11));
+      const newState = oldState.apply(tr);
+
+      const result = handleInlineSourceTransition([tr], oldState, newState);
+      expect(result).not.toBeNull();
+
+      if (result) {
+        const resultState = newState.apply(result);
+        // After split: paragraph contains "test" (strong, 4 chars) + " " (1 char)
+        // Paragraph starts at 0, content starts at 1
+        // "test" = pos 1-4, " " = pos 5
+        // Cursor should be at pos 6 (after the space)
+        expect(resultState.selection.from).toBe(6);
+      }
+    });
+
+    it("returns null when cursor is inside inline_source with no trailing text", () => {
+      const doc = transitionSchema.node("doc", null, [
+        transitionSchema.node("paragraph", null, [
+          transitionSchema.text("hello "),
+          transitionSchema.nodes.inline_source.create(
+            { syntax: "strong" },
+            transitionSchema.text("**bold**")
+          ),
+          transitionSchema.text(" world"),
+        ]),
+      ]);
+
+      const oldState = EditorState.create({
+        doc,
+        schema: transitionSchema,
+        selection: TextSelection.create(doc, 10),
+      });
+
+      const tr = oldState.tr.setSelection(TextSelection.create(doc, 12));
+      const newState = oldState.apply(tr);
+
+      const result = handleInlineSourceTransition([tr], oldState, newState);
+      expect(result).toBeNull();
+    });
+
     it("removes node entirely when content is empty on leave", () => {
       const doc = transitionSchema.node("doc", null, [
         transitionSchema.node("paragraph", null, [

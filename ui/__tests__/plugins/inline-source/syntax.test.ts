@@ -3,6 +3,7 @@ import {
   buildRawText,
   parseInlineSyntax,
   computePrefixLength,
+  findTrailingSplit,
 } from "../../../plugins/inline-source/syntax";
 
 describe("buildRawText", () => {
@@ -110,5 +111,90 @@ describe("computePrefixLength", () => {
   });
   it("returns 0 for no marks", () => {
     expect(computePrefixLength([])).toBe(0);
+  });
+});
+
+describe("findTrailingSplit", () => {
+  it("returns null for empty string", () => {
+    expect(findTrailingSplit("")).toBeNull();
+  });
+
+  it("returns null for complete strong syntax (no trailing)", () => {
+    expect(findTrailingSplit("**bold**")).toBeNull();
+  });
+
+  it("returns null for complete emphasis syntax (no trailing)", () => {
+    expect(findTrailingSplit("*italic*")).toBeNull();
+  });
+
+  it("returns null for plain text with no syntax", () => {
+    expect(findTrailingSplit("plain text")).toBeNull();
+  });
+
+  it("returns null for incomplete syntax", () => {
+    expect(findTrailingSplit("**bold")).toBeNull();
+  });
+
+  it("splits strong syntax with trailing space", () => {
+    const result = findTrailingSplit("**test** ");
+    expect(result).toEqual({
+      innerText: "test",
+      marks: ["strong"],
+      trailing: " ",
+    });
+  });
+
+  it("splits strong syntax with trailing character", () => {
+    const result = findTrailingSplit("**test**x");
+    expect(result).toEqual({
+      innerText: "test",
+      marks: ["strong"],
+      trailing: "x",
+    });
+  });
+
+  it("splits strong syntax with trailing text", () => {
+    const result = findTrailingSplit("**test** hello world");
+    expect(result).toEqual({
+      innerText: "test",
+      marks: ["strong"],
+      trailing: " hello world",
+    });
+  });
+
+  it("splits emphasis syntax with trailing space", () => {
+    const result = findTrailingSplit("*italic* ");
+    expect(result).toEqual({
+      innerText: "italic",
+      marks: ["emphasis"],
+      trailing: " ",
+    });
+  });
+
+  it("splits strikethrough syntax with trailing text", () => {
+    const result = findTrailingSplit("~~struck~~ more");
+    expect(result).toEqual({
+      innerText: "struck",
+      marks: ["strike_through"],
+      trailing: " more",
+    });
+  });
+
+  it("splits inline code syntax with trailing text", () => {
+    const result = findTrailingSplit("`code` more");
+    expect(result).toEqual({
+      innerText: "code",
+      marks: ["inlineCode"],
+      trailing: " more",
+    });
+  });
+
+  it("splits nested strong+emphasis syntax with trailing text", () => {
+    const result = findTrailingSplit("***both*** x");
+    expect(result).toEqual({
+      innerText: "both",
+      marks: ["strong", "emphasis"],
+      trailing: " x",
+    });
   });
 });
