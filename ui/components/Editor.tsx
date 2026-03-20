@@ -2,6 +2,7 @@ import { forwardRef, useImperativeHandle } from "react";
 import { Crepe, CrepeFeature } from "@milkdown/crepe";
 import { Milkdown, MilkdownProvider, useEditor, useInstance } from "@milkdown/react";
 import { getMarkdown } from "@milkdown/utils";
+import type { EditorHandle } from "../types/editor";
 import { inlineSourceNode, inlineSourcePlugin } from "../plugins/inline-source";
 import { headingSourceNode, headingSourcePlugin } from "../plugins/heading-source";
 import { listSourceView, listCursorPlugin } from "../plugins/list-source";
@@ -9,14 +10,12 @@ import { codeBlockSourcePlugin } from "../plugins/code-block-source";
 import "@milkdown/crepe/theme/common/style.css";
 import "../theme/skriv.css";
 
+export type { EditorHandle } from "../types/editor";
+
 interface EditorProps {
   defaultValue: string;
   onChange?: (markdown: string) => void;
   syntaxToggling?: boolean;
-}
-
-export interface EditorHandle {
-  getMarkdown: () => string | undefined;
 }
 
 const CrepeEditor = forwardRef<EditorHandle, EditorProps>(
