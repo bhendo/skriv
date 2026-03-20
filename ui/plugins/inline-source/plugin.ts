@@ -19,6 +19,39 @@ import {
   SUPPORTED_MARKS,
 } from "./syntax";
 
+/** Build Mark[] from mark names, filtering any that don't exist in the schema. */
+function createMarks(schema: { marks: Record<string, MarkType> }, markNames: string[]): Mark[] {
+  return markNames.map((name) => schema.marks[name]?.create()).filter((m): m is Mark => m != null);
+}
+
+/**
+ * Replace an inline_source node with its parsed marked text (or plain
+ * text if the syntax is incomplete).  Shared by the LEAVE path in
+ * handleInlineSourceTransition and the backspace-exit handler.
+ *
+ * Returns false if the node was empty and was deleted instead.
+ */
+export function leaveInlineSource(
+  tr: Transaction,
+  schema: EditorState["schema"],
+  nodeFrom: number,
+  nodeTo: number,
+  raw: string
+): boolean {
+  if (!raw) {
+    tr.delete(nodeFrom, nodeTo);
+    return false;
+  }
+  const parsed = parseInlineSyntax(raw);
+  if (parsed.marks.length > 0) {
+    const marks = createMarks(schema, parsed.marks);
+    tr.replaceWith(nodeFrom, nodeTo, schema.text(parsed.text, marks));
+  } else {
+    tr.replaceWith(nodeFrom, nodeTo, schema.text(raw));
+  }
+  return true;
+}
+
 export function findMarkSpan(
   doc: Node,
   pos: number,
@@ -82,8 +115,7 @@ export function findMarkSpan(
 export function handleInlineSourceTransition(
   _transactions: readonly Transaction[],
   oldState: EditorState,
-  newState: EditorState,
-  suppressEnter?: boolean
+  newState: EditorState
 ): Transaction | null {
   const selectionChanged = !oldState.selection.eq(newState.selection);
   const docChanged = !oldState.doc.eq(newState.doc);
@@ -112,10 +144,7 @@ export function handleInlineSourceTransition(
     const tr = newState.tr;
 
     // Build the marked text node from the syntax portion
-    const marks = split.marks
-      .map((name) => schema.marks[name]?.create())
-      .filter((m): m is Mark => m != null);
-    const markedNode = schema.text(split.innerText, marks);
+    const markedNode = schema.text(split.innerText, createMarks(schema, split.marks));
     const trailingNode = schema.text(split.trailing);
 
     tr.replaceWith(nodeStart, nodeEnd, [markedNode, trailingNode]);
@@ -152,36 +181,19 @@ export function handleInlineSourceTransition(
     // and after the closing tokens — those positions are outside the node.
     if (sel.from > nodeFrom && sel.to < nodeTo) return null;
 
-    const raw = (inlineSourceNode as Node).textContent;
     const tr = newState.tr;
-
-    if (!raw) {
-      tr.delete(nodeFrom, nodeTo);
-    } else {
-      const parsed = parseInlineSyntax(raw);
-      if (parsed.marks.length > 0) {
-        const marks = parsed.marks
-          .map((name) => schema.marks[name]?.create())
-          .filter((m): m is Mark => m != null);
-        const textNode = schema.text(parsed.text, marks);
-        tr.replaceWith(nodeFrom, nodeTo, textNode);
-      } else {
-        const textNode = schema.text(raw);
-        tr.replaceWith(nodeFrom, nodeTo, textNode);
-      }
-    }
-
+    leaveInlineSource(tr, schema, nodeFrom, nodeTo, (inlineSourceNode as Node).textContent);
     tr.setMeta("addToHistory", false);
     return tr;
   }
 
-  // ENTER requires a collapsed cursor, no doc change in this transaction,
-  // and no suppression from recent doc changes (#38).  suppressEnter is
-  // set by the plugin after any doc change and cleared on the next genuine
-  // user interaction (mousedown / navigation key).  This prevents ENTER
-  // from firing on ProseMirror DOM-observer reconciliation transactions
-  // that follow input-rule conversions or structural operations.
-  if (!$cursor || docChanged || suppressEnter) return null;
+  // ENTER requires a collapsed cursor and a selection-only change.
+  // When the document changed (input rules, structural lifts, undo/redo),
+  // skip ENTER to prevent source mode activating during typing and to
+  // break ENTER-LEAVE cycles (#38).  The plugin wrapper additionally
+  // suppresses ENTER via an early return for DOM-observer reconciliation
+  // transactions that follow doc changes.
+  if (!$cursor || docChanged) return null;
 
   // ENTER: Check if cursor is adjacent to a supported mark
   const nodeBefore = $cursor.nodeBefore;
@@ -387,8 +399,24 @@ export const inlineSourcePlugin = $prose((_ctx) => {
     },
     appendTransaction(transactions, oldState, newState) {
       if (composing) return null;
-      if (!oldState.doc.eq(newState.doc)) suppressEnter = true;
-      return handleInlineSourceTransition(transactions, oldState, newState, suppressEnter);
+      const docChanged = !oldState.doc.eq(newState.doc);
+      if (docChanged) suppressEnter = true;
+      // When suppressEnter is active, only allow LEAVE and SPLIT
+      // transitions (which handle existing inline_source nodes).
+      // Skip the call entirely when there is no inline_source to
+      // clean up and ENTER would be the only possible outcome.
+      if (suppressEnter && !docChanged) {
+        let hasInlineSource = false;
+        newState.doc.descendants((node) => {
+          if (node.type === newState.schema.nodes.inline_source) {
+            hasInlineSource = true;
+            return false;
+          }
+          return !hasInlineSource;
+        });
+        if (!hasInlineSource) return null;
+      }
+      return handleInlineSourceTransition(transactions, oldState, newState);
     },
     props: {
       decorations(state) {
@@ -427,19 +455,8 @@ export const inlineSourcePlugin = $prose((_ctx) => {
         ) {
           const nodeStart = $from.start() - 1;
           const nodeEnd = nodeStart + $from.parent.nodeSize;
-          const raw = $from.parent.textContent;
-          const parsed = parseInlineSyntax(raw);
           const tr = view.state.tr;
-
-          if (parsed.marks.length > 0) {
-            const marks = parsed.marks
-              .map((name) => view.state.schema.marks[name]?.create())
-              .filter((m): m is Mark => m != null);
-            tr.replaceWith(nodeStart, nodeEnd, view.state.schema.text(parsed.text, marks));
-          } else {
-            tr.replaceWith(nodeStart, nodeEnd, view.state.schema.text(raw));
-          }
-
+          leaveInlineSource(tr, view.state.schema, nodeStart, nodeEnd, $from.parent.textContent);
           tr.setSelection(TextSelection.create(tr.doc, nodeStart));
           tr.setMeta("addToHistory", false);
           view.dispatch(tr);
