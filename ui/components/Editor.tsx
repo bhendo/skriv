@@ -1,5 +1,6 @@
 import { forwardRef, useImperativeHandle } from "react";
 import { Crepe, CrepeFeature } from "@milkdown/crepe";
+import { remarkStringifyOptionsCtx } from "@milkdown/core";
 import { Milkdown, MilkdownProvider, useEditor, useInstance } from "@milkdown/react";
 import { getMarkdown } from "@milkdown/utils";
 import type { EditorHandle } from "../types/editor";
@@ -37,6 +38,13 @@ const CrepeEditor = forwardRef<EditorHandle, EditorProps>(
             [CrepeFeature.Cursor]: true,
             [CrepeFeature.Latex]: false,
           },
+        });
+
+        crepe.editor.config((ctx) => {
+          ctx.update(remarkStringifyOptionsCtx, (options) => ({
+            ...options,
+            bullet: "-" as const,
+          }));
         });
 
         if (syntaxToggling) {

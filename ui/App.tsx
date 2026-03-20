@@ -4,6 +4,7 @@ import { listen } from "@tauri-apps/api/event";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { MarkdownEditor, type EditorHandle } from "./components/Editor";
+import { SourceEditor } from "./components/SourceEditor";
 import { ErrorBanner } from "./components/ErrorBanner";
 import { ReloadBanner } from "./components/ReloadBanner";
 import { useFile } from "./hooks/useFile";
@@ -34,6 +35,7 @@ function App() {
 
   const [showReloadBanner, setShowReloadBanner] = useState(false);
   const [syntaxToggling, setSyntaxToggling] = useState(true);
+  const [sourceMode, setSourceMode] = useState(false);
   const [editorSnapshot, setEditorSnapshot] = useState<string | null>(null);
   const isModifiedRef = useRef(isModified);
   useEffect(() => {
@@ -91,11 +93,18 @@ function App() {
     setSyntaxToggling((prev) => !prev);
   }, []);
 
+  const handleToggleSourceMode = useCallback(() => {
+    const markdown = editorRef.current?.getMarkdown();
+    setEditorSnapshot(markdown || null);
+    setSourceMode((prev) => !prev);
+  }, []);
+
   useKeyboardShortcuts({
     onSave: handleSave,
     onSaveAs: handleSaveAs,
     onOpen: handleOpen,
     onToggleSyntax: handleToggleSyntax,
+    onToggleSourceMode: handleToggleSourceMode,
   });
 
   // Check for file passed as argument on launch
@@ -142,6 +151,7 @@ function App() {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- synchronizing banner visibility with file state
     setShowReloadBanner(false);
     setEditorSnapshot(null);
+    setSourceMode(false);
   }, [path, content]);
 
   return (
@@ -156,12 +166,20 @@ function App() {
         onDismiss={() => setShowReloadBanner(false)}
       />
       <div style={{ flex: 1, overflow: "auto" }}>
-        <MarkdownEditor
-          ref={editorRef}
-          defaultValue={editorSnapshot ?? content ?? PLACEHOLDER}
-          onChange={handleChange}
-          syntaxToggling={syntaxToggling}
-        />
+        {sourceMode ? (
+          <SourceEditor
+            ref={editorRef}
+            defaultValue={editorSnapshot ?? content ?? PLACEHOLDER}
+            onChange={handleChange}
+          />
+        ) : (
+          <MarkdownEditor
+            ref={editorRef}
+            defaultValue={editorSnapshot ?? content ?? PLACEHOLDER}
+            onChange={handleChange}
+            syntaxToggling={syntaxToggling}
+          />
+        )}
       </div>
     </div>
   );

@@ -166,3 +166,21 @@ body,
 .milkdown .editor .code-fence .fence-language {
   opacity: 0.6;
 }
+
+.source-editor {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 20px 60px;
+  height: 100%;
+}
+
+.source-editor .cm-editor {
+  height: 100%;
+  outline: none;
+}
+
+.source-editor .cm-scroller {
+  font-family: "SF Mono", "Fira Code", "Fira Mono", Menlo, monospace;
+  font-size: 0.9em;
+  line-height: 1.7;
+}
