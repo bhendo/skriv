@@ -70,6 +70,36 @@ make format-tauri      # cargo fmt
 - Design docs live in `docs/plans/` and should be committed
 - **Never commit implementation plans** — they are ephemeral working documents, not permanent artifacts
 
+## Project Memory System
+
+This project maintains institutional knowledge in `docs/project_notes/` for consistency across sessions.
+
+### Memory Files
+
+- **bugs.md** - Bug log with dates, solutions, and prevention notes
+- **decisions.md** - Architectural Decision Records (ADRs) with context and trade-offs
+- **key_facts.md** - Project configuration, ProseMirror internals, debugging tips
+- **issues.md** - Work log with ticket IDs, descriptions, and URLs
+
+### Memory-Aware Protocols
+
+**Before proposing architectural changes:**
+- Check `docs/project_notes/decisions.md` for existing decisions
+- Verify the proposed approach doesn't conflict with past choices
+
+**When encountering errors or bugs:**
+- Search `docs/project_notes/bugs.md` for similar issues
+- Apply known solutions if found
+- Document new bugs and solutions when resolved
+
+**When debugging ProseMirror plugins:**
+- Check `docs/project_notes/key_facts.md` for internals gotchas
+- Always instrument with logging before attempting fixes
+- Verify fixes are running (check webview DevTools, not terminal)
+
+**When completing work on tickets:**
+- Log completed work in `docs/project_notes/issues.md`
+
 ## License
 
 MIT. All dependencies are permissive (MIT, Apache-2.0, CC0, or MPL-2.0/Apache-2.0 dual).
