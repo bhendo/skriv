@@ -82,7 +82,8 @@ export function findMarkSpan(
 export function handleInlineSourceTransition(
   _transactions: readonly Transaction[],
   oldState: EditorState,
-  newState: EditorState
+  newState: EditorState,
+  suppressEnter?: boolean
 ): Transaction | null {
   const selectionChanged = !oldState.selection.eq(newState.selection);
   const docChanged = !oldState.doc.eq(newState.doc);
@@ -146,8 +147,10 @@ export function handleInlineSourceTransition(
     const nodeFrom = inlineSourcePos;
     const nodeTo = inlineSourcePos + (inlineSourceNode as Node).nodeSize;
 
-    // If selection is still inside the inline_source node, skip leave
-    if (sel.from >= nodeFrom && sel.to <= nodeTo) return null;
+    // If selection is still inside the inline_source node, skip leave.
+    // Strict inequality: nodeFrom/nodeTo are positions before the opening
+    // and after the closing tokens — those positions are outside the node.
+    if (sel.from > nodeFrom && sel.to < nodeTo) return null;
 
     const raw = (inlineSourceNode as Node).textContent;
     const tr = newState.tr;
@@ -172,8 +175,13 @@ export function handleInlineSourceTransition(
     return tr;
   }
 
-  // ENTER requires a collapsed cursor
-  if (!$cursor) return null;
+  // ENTER requires a collapsed cursor, no doc change in this transaction,
+  // and no suppression from recent doc changes (#38).  suppressEnter is
+  // set by the plugin after any doc change and cleared on the next genuine
+  // user interaction (mousedown / navigation key).  This prevents ENTER
+  // from firing on ProseMirror DOM-observer reconciliation transactions
+  // that follow input-rule conversions or structural operations.
+  if (!$cursor || docChanged || suppressEnter) return null;
 
   // ENTER: Check if cursor is adjacent to a supported mark
   const nodeBefore = $cursor.nodeBefore;
@@ -342,9 +350,27 @@ const SHORTCUT_MAP: Record<string, { marker: string; needsAlt?: boolean }> = {
 
 const inlineSourcePluginKey = new PluginKey("inline-source");
 
+/** Keys that represent intentional cursor navigation. */
+const NAV_KEYS = new Set([
+  "ArrowLeft",
+  "ArrowRight",
+  "ArrowUp",
+  "ArrowDown",
+  "Home",
+  "End",
+  "PageUp",
+  "PageDown",
+]);
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const inlineSourcePlugin = $prose((_ctx) => {
   let composing = false;
+
+  // Suppress ENTER after doc changes until the user deliberately navigates.
+  // ProseMirror's DOM observer fires selection-only transactions after
+  // input-rule conversions; without this flag those would trigger ENTER
+  // and flash source mode immediately after typing (**text**) (#38).
+  let suppressEnter = false;
 
   return new Plugin({
     key: inlineSourcePluginKey,
@@ -361,20 +387,70 @@ export const inlineSourcePlugin = $prose((_ctx) => {
     },
     appendTransaction(transactions, oldState, newState) {
       if (composing) return null;
-      return handleInlineSourceTransition(transactions, oldState, newState);
+      if (!oldState.doc.eq(newState.doc)) suppressEnter = true;
+      return handleInlineSourceTransition(transactions, oldState, newState, suppressEnter);
     },
     props: {
       decorations(state) {
         return this.getState(state);
       },
+      handleTextInput(view: EditorView, from: number, to: number, text: string) {
+        // When typing inside an inline_source node, insert text directly
+        // to bypass Milkdown/ProseMirror input rules.  Without this,
+        // input rules pattern-match on the raw syntax (e.g. **bold**)
+        // and try to apply marks, but the node's marks:"" spec strips
+        // them, destroying the asterisks (#38).
+        const $from = view.state.doc.resolve(from);
+        const inlineSourceType = view.state.schema.nodes.inline_source;
+        if (inlineSourceType && $from.parent.type === inlineSourceType) {
+          view.dispatch(view.state.tr.insertText(text, from, to));
+          return true;
+        }
+        return false;
+      },
       handleKeyDown(view: EditorView, event: KeyboardEvent) {
-        if (!(event.metaKey || event.ctrlKey)) return false;
+        // Navigation keys indicate intentional cursor movement — allow ENTER.
+        if (NAV_KEYS.has(event.key)) suppressEnter = false;
 
         const inlineSourceType = view.state.schema.nodes.inline_source;
         if (!inlineSourceType) return false;
 
         const { $from } = view.state.selection;
+
+        // Backspace at the start of inline_source content: exit source
+        // mode first (restore marks) so the subsequent paragraph join
+        // preserves formatting instead of leaking raw syntax (#38).
+        if (
+          event.key === "Backspace" &&
+          $from.parent.type === inlineSourceType &&
+          $from.parentOffset === 0
+        ) {
+          const nodeStart = $from.start() - 1;
+          const nodeEnd = nodeStart + $from.parent.nodeSize;
+          const raw = $from.parent.textContent;
+          const parsed = parseInlineSyntax(raw);
+          const tr = view.state.tr;
+
+          if (parsed.marks.length > 0) {
+            const marks = parsed.marks
+              .map((name) => view.state.schema.marks[name]?.create())
+              .filter((m): m is Mark => m != null);
+            tr.replaceWith(nodeStart, nodeEnd, view.state.schema.text(parsed.text, marks));
+          } else {
+            tr.replaceWith(nodeStart, nodeEnd, view.state.schema.text(raw));
+          }
+
+          tr.setSelection(TextSelection.create(tr.doc, nodeStart));
+          tr.setMeta("addToHistory", false);
+          view.dispatch(tr);
+          // Return false so ProseMirror's keymap handles the backspace
+          // (e.g. joinBackward) on the now-mark-restored state.
+          return false;
+        }
+
         if ($from.parent.type !== inlineSourceType) return false;
+
+        if (!(event.metaKey || event.ctrlKey)) return false;
 
         const shortcut = SHORTCUT_MAP[event.key];
         if (!shortcut) return false;
@@ -391,6 +467,10 @@ export const inlineSourcePlugin = $prose((_ctx) => {
         },
         compositionend: () => {
           composing = false;
+          return false;
+        },
+        mousedown: () => {
+          suppressEnter = false;
           return false;
         },
       },
