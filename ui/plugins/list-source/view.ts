@@ -1,12 +1,13 @@
 import type { Node } from "@milkdown/kit/prose/model";
-import { TextSelection } from "@milkdown/kit/prose/state";
+import { type EditorState, Plugin, PluginKey, TextSelection } from "@milkdown/kit/prose/state";
+import { Decoration, DecorationSet } from "@milkdown/kit/prose/view";
 import type { NodeViewConstructor } from "@milkdown/kit/prose/view";
 import { listItemSchema } from "@milkdown/kit/preset/commonmark";
 import {
   listItemBlockConfig,
   type ListItemBlockConfig,
 } from "@milkdown/kit/component/list-item-block";
-import { $view } from "@milkdown/utils";
+import { $prose, $view } from "@milkdown/utils";
 import { findAncestorOfType } from "../block-source/cursor";
 import { markerForListItem, parseMarker } from "./marker";
 import { convertListType, unwrapListItem } from "./convert";
@@ -310,4 +311,44 @@ export const listSourceView = $view(listItemSchema.node, (ctx): NodeViewConstruc
       },
     };
   };
+});
+
+/**
+ * Companion plugin that produces a node decoration on the list_item
+ * containing the cursor. This forces ProseMirror to call `update()`
+ * on the affected NodeViews when the cursor moves between list items,
+ * even if the node content hasn't changed.
+ */
+const listCursorKey = new PluginKey<DecorationSet>("list-cursor");
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export const listCursorPlugin = $prose((_ctx) => {
+  function buildDecorations(state: EditorState) {
+    const ancestor = findAncestorOfType(state, "list_item");
+    if (!ancestor) return DecorationSet.empty;
+
+    return DecorationSet.create(state.doc, [
+      Decoration.node(ancestor.pos, ancestor.pos + ancestor.node.nodeSize, {
+        class: "list-item-active",
+      }),
+    ]);
+  }
+
+  return new Plugin({
+    key: listCursorKey,
+    state: {
+      init(_, state) {
+        return buildDecorations(state);
+      },
+      apply(tr, oldDecorations, _oldState, newState) {
+        if (!tr.docChanged && !tr.selectionSet) return oldDecorations;
+        return buildDecorations(newState);
+      },
+    },
+    props: {
+      decorations(state) {
+        return listCursorKey.getState(state) ?? DecorationSet.empty;
+      },
+    },
+  });
 });
