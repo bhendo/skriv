@@ -13,6 +13,7 @@ import {
   buildRawText,
   computePrefixLength,
   computeSuffixLength,
+  findTrailingSplit,
   MARK_SYNTAX,
   parseInlineSyntax,
   SUPPORTED_MARKS,
@@ -94,8 +95,39 @@ export function handleInlineSourceTransition(
   const sel = newState.selection as TextSelection;
   const $cursor = sel.$cursor;
 
-  // If cursor is inside an inline_source node, no transition needed
-  if ($cursor && $cursor.parent.type === inlineSourceType) return null;
+  // If cursor is inside an inline_source node, check for trailing text
+  // past the closing syntax markers (e.g. "**test** x" — the " x" is trailing).
+  // If found, split the node: syntax portion becomes marked text, trailing
+  // text becomes plain text in the parent.
+  if ($cursor && $cursor.parent.type === inlineSourceType) {
+    const raw = $cursor.parent.textContent;
+    const split = findTrailingSplit(raw);
+    if (!split) return null;
+
+    // Find the position of the inline_source node in the document
+    const nodeStart = $cursor.start() - 1; // -1 for the node open token
+    const nodeEnd = nodeStart + $cursor.parent.nodeSize;
+
+    const tr = newState.tr;
+
+    // Build the marked text node from the syntax portion
+    const marks = split.marks
+      .map((name) => schema.marks[name]?.create())
+      .filter((m): m is Mark => m != null);
+    const markedNode = schema.text(split.innerText, marks);
+    const trailingNode = schema.text(split.trailing);
+
+    tr.replaceWith(nodeStart, nodeEnd, [markedNode, trailingNode]);
+
+    // Position cursor at the end of the trailing text
+    // After replacement: nodeStart is where markedNode starts,
+    // trailingNode starts at nodeStart + markedNode.nodeSize
+    const cursorPos = nodeStart + markedNode.nodeSize + trailingNode.nodeSize;
+    tr.setSelection(TextSelection.create(tr.doc, cursorPos));
+
+    tr.setMeta("addToHistory", false);
+    return tr;
+  }
 
   // LEAVE runs for any selection type (cursor, range, node, all) so that
   // non-cursor selections outside the node trigger leave (#34).
