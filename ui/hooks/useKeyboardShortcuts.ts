@@ -5,6 +5,7 @@ interface ShortcutHandlers {
   onSaveAs: () => void;
   onOpen: () => void;
   onToggleSyntax?: () => void;
+  onToggleSourceMode?: () => void;
 }
 
 export function useKeyboardShortcuts({
@@ -12,6 +13,7 @@ export function useKeyboardShortcuts({
   onSaveAs,
   onOpen,
   onToggleSyntax,
+  onToggleSourceMode,
 }: ShortcutHandlers) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -29,10 +31,13 @@ export function useKeyboardShortcuts({
       } else if (e.shiftKey && e.key === "e") {
         e.preventDefault();
         onToggleSyntax?.();
+      } else if (e.key === "/") {
+        e.preventDefault();
+        onToggleSourceMode?.();
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onSave, onSaveAs, onOpen, onToggleSyntax]);
+  }, [onSave, onSaveAs, onOpen, onToggleSyntax, onToggleSourceMode]);
 }

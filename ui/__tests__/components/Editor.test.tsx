@@ -51,6 +51,10 @@ vi.mock("@milkdown/kit/prose/schema-list", () => ({
   sinkListItem: () => () => false,
 }));
 
+vi.mock("@milkdown/core", () => ({
+  remarkStringifyOptionsCtx: { key: "remarkStringifyOptions" },
+}));
+
 vi.mock("@milkdown/crepe/theme/common/style.css", () => ({}));
 vi.mock("../../theme/skriv.css", () => ({}));
 
