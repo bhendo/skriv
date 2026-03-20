@@ -71,9 +71,20 @@ export const listSourceView = $view(listItemSchema.node, (ctx): NodeViewConstruc
       labelWrapper.appendChild(span);
     }
 
+    /** Resolve the parent list wrapper type ("bullet" or "ordered") from the document. */
+    function parentListType(): string | undefined {
+      const pos = getPos();
+      if (pos == null) return undefined;
+      const $pos = view.state.doc.resolve(pos);
+      const parent = $pos.parent;
+      if (parent.type.name === "ordered_list") return "ordered";
+      if (parent.type.name === "bullet_list") return "bullet";
+      return undefined;
+    }
+
     // --- Marker input rendering ---
     function renderMarkerInput() {
-      const marker = markerForListItem(node);
+      const marker = markerForListItem(node, parentListType());
       savedMarker = marker;
 
       labelWrapper.removeAttribute("aria-hidden");
@@ -248,8 +259,12 @@ export const listSourceView = $view(listItemSchema.node, (ctx): NodeViewConstruc
       }
     }
 
-    // Initial render
+    // Initial render — start with the static label, then immediately
+    // check whether the cursor is inside this item so that list items
+    // created by input rules (typing "- " or "1. ") show the editable
+    // marker right away instead of requiring a click-away-and-back.
     renderStaticLabel();
+    checkCursor();
 
     return {
       dom,
@@ -261,12 +276,17 @@ export const listSourceView = $view(listItemSchema.node, (ctx): NodeViewConstruc
         node = updatedNode;
 
         if (editing) {
-          // If the node changed while editing (e.g. undo), update the input
-          const input = getInput();
-          if (input && !input.matches(":focus")) {
-            const newMarker = markerForListItem(node);
-            input.value = newMarker;
-            savedMarker = newMarker;
+          // Refresh the marker when node attrs change (e.g. sync plugin
+          // correcting listType from "bullet" to "ordered" after input
+          // rules create the list).  Skip only if the input is focused
+          // AND the value already matches — the user may be mid-edit.
+          const newMarker = markerForListItem(node, parentListType());
+          if (newMarker !== savedMarker) {
+            const input = getInput();
+            if (input) {
+              input.value = newMarker;
+              savedMarker = newMarker;
+            }
           }
         } else {
           const newLabel = updatedNode.attrs.label as string;

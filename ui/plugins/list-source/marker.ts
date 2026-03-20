@@ -23,13 +23,23 @@ export function parseMarker(value: string): ParsedMarker {
 }
 
 /**
- * Derive the raw markdown marker text from a list_item node's attributes.
- * Returns e.g. `-` for bullet items, `1.` for ordered items.
+ * Derive the raw markdown marker text from a list_item node.
+ *
+ * When `parentListType` is provided it takes precedence over
+ * `node.attrs.listType`, because Milkdown's input rules create
+ * list_item nodes with default `listType:"bullet"` even inside an
+ * `ordered_list` wrapper — the attrs are only corrected later by
+ * the sync plugin (if at all).
  */
-export function markerForListItem(node: Node): string {
-  const listType = node.attrs.listType as string;
+export function markerForListItem(node: Node, parentListType?: string): string {
+  const listType = parentListType ?? (node.attrs.listType as string);
   if (listType === "ordered") {
-    return (node.attrs.label as string) || "1.";
+    const label = node.attrs.label as string;
+    // Only use the label if it looks like an ordered marker (e.g. "1.").
+    // When Milkdown's input rules create an ordered list the list_item
+    // attrs are still bullet defaults (label:"•"), so we fall back to "1.".
+    if (label && /^\d+\.$/.test(label)) return label;
+    return "1.";
   }
   return "-";
 }
