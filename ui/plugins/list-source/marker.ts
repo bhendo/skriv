@@ -31,7 +31,7 @@ export function parseMarker(value: string): ParsedMarker {
  * `ordered_list` wrapper — the attrs are only corrected later by
  * the sync plugin (if at all).
  */
-export function markerForListItem(node: Node, parentListType?: string): string {
+export function markerForListItem(node: Node, parentListType?: "bullet" | "ordered"): string {
   const listType = parentListType ?? (node.attrs.listType as string);
   if (listType === "ordered") {
     const label = node.attrs.label as string;

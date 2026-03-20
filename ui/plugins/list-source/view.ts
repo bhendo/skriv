@@ -71,8 +71,8 @@ export const listSourceView = $view(listItemSchema.node, (ctx): NodeViewConstruc
       labelWrapper.appendChild(span);
     }
 
-    /** Resolve the parent list wrapper type ("bullet" or "ordered") from the document. */
-    function parentListType(): string | undefined {
+    /** Resolve the parent list wrapper type from the document. */
+    function parentListType(): "bullet" | "ordered" | undefined {
       const pos = getPos();
       if (pos == null) return undefined;
       const $pos = view.state.doc.resolve(pos);
@@ -103,12 +103,8 @@ export const listSourceView = $view(listItemSchema.node, (ctx): NodeViewConstruc
 
       input.addEventListener("keydown", handleInputKeydown);
       input.addEventListener("blur", handleInputBlur);
-      input.addEventListener("compositionstart", () => {
-        composing = true;
-      });
-      input.addEventListener("compositionend", () => {
-        composing = false;
-      });
+      input.addEventListener("compositionstart", handleCompositionStart);
+      input.addEventListener("compositionend", handleCompositionEnd);
 
       labelWrapper.appendChild(input);
     }
@@ -224,6 +220,14 @@ export const listSourceView = $view(listItemSchema.node, (ctx): NodeViewConstruc
       commitMarkerEdit();
     }
 
+    function handleCompositionStart() {
+      composing = true;
+    }
+
+    function handleCompositionEnd() {
+      composing = false;
+    }
+
     // --- NodeView interface ---
     function enterEditing() {
       if (editing) return;
@@ -283,7 +287,8 @@ export const listSourceView = $view(listItemSchema.node, (ctx): NodeViewConstruc
           const newMarker = markerForListItem(node, parentListType());
           if (newMarker !== savedMarker) {
             const input = getInput();
-            if (input) {
+            // Skip overwrite if the user is actively editing the input
+            if (input && document.activeElement !== input) {
               input.value = newMarker;
               savedMarker = newMarker;
             }
@@ -325,6 +330,8 @@ export const listSourceView = $view(listItemSchema.node, (ctx): NodeViewConstruc
         if (input) {
           input.removeEventListener("keydown", handleInputKeydown);
           input.removeEventListener("blur", handleInputBlur);
+          input.removeEventListener("compositionstart", handleCompositionStart);
+          input.removeEventListener("compositionend", handleCompositionEnd);
         }
         dom.remove();
         contentDOM.remove();
