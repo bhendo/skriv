@@ -309,7 +309,9 @@ export const listSourceView = $view(listItemSchema.node, (ctx): NodeViewConstruc
         return true;
       },
 
-      ignoreMutation(mutation: MutationRecord): boolean {
+      ignoreMutation(
+        mutation: MutationRecord | { type: "selection"; target: globalThis.Node }
+      ): boolean {
         if (!dom || !contentDOM) return true;
         if ((mutation.type as string) === "selection") return false;
         if (contentDOM === mutation.target && mutation.type === "attributes") return true;
