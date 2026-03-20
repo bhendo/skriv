@@ -85,19 +85,23 @@ function App() {
     }
   }, [openFile]);
 
-  const handleToggleSyntax = useCallback(() => {
+  const snapshotAndToggle = useCallback((toggle: React.Dispatch<React.SetStateAction<boolean>>) => {
     const markdown = editorRef.current?.getMarkdown();
     if (markdown !== undefined) {
       setEditorSnapshot(markdown);
     }
-    setSyntaxToggling((prev) => !prev);
+    toggle((prev) => !prev);
   }, []);
 
-  const handleToggleSourceMode = useCallback(() => {
-    const markdown = editorRef.current?.getMarkdown();
-    setEditorSnapshot(markdown || null);
-    setSourceMode((prev) => !prev);
-  }, []);
+  const handleToggleSyntax = useCallback(
+    () => snapshotAndToggle(setSyntaxToggling),
+    [snapshotAndToggle]
+  );
+
+  const handleToggleSourceMode = useCallback(
+    () => snapshotAndToggle(setSourceMode),
+    [snapshotAndToggle]
+  );
 
   useKeyboardShortcuts({
     onSave: handleSave,

@@ -39,6 +39,8 @@ export const SourceEditor = forwardRef<EditorHandle, SourceEditorProps>(
   ({ defaultValue, onChange }, ref) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const viewRef = useRef<EditorView | null>(null);
+    const onChangeRef = useRef(onChange);
+    onChangeRef.current = onChange;
 
     useImperativeHandle(
       ref,
@@ -59,6 +61,7 @@ export const SourceEditor = forwardRef<EditorHandle, SourceEditorProps>(
             history(),
             closeBrackets(),
             keymap.of([
+              // Consume Cmd+/ so CodeMirror's toggleComment doesn't insert <!-- -->
               { key: "Mod-/", run: () => true },
               ...closeBracketsKeymap,
               ...defaultKeymap,
@@ -70,7 +73,7 @@ export const SourceEditor = forwardRef<EditorHandle, SourceEditorProps>(
             skrivTheme,
             EditorView.updateListener.of((update) => {
               if (update.docChanged) {
-                onChange();
+                onChangeRef.current();
               }
             }),
           ],
