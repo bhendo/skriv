@@ -57,24 +57,43 @@ export function buildFenceDecorations(state: EditorState): DecorationSet {
   return DecorationSet.create(state.doc, decorations);
 }
 
-const codeBlockSourceKey = new PluginKey<DecorationSet>("code-block-source");
+interface CodeBlockDecoState {
+  decorations: DecorationSet;
+  activePos: number | null;
+}
+
+const codeBlockSourceKey = new PluginKey<CodeBlockDecoState>("code-block-source");
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const codeBlockSourcePlugin = $prose((_ctx) => {
-  return new Plugin<DecorationSet>({
+  function buildState(state: EditorState): CodeBlockDecoState {
+    const active = getActiveCodeBlock(state);
+    return {
+      decorations: active ? buildFenceDecorations(state) : DecorationSet.empty,
+      activePos: active?.pos ?? null,
+    };
+  }
+
+  return new Plugin<CodeBlockDecoState>({
     key: codeBlockSourceKey,
     state: {
-      init(_, state): DecorationSet {
-        return buildFenceDecorations(state);
+      init(_, state) {
+        return buildState(state);
       },
-      apply(tr, oldDecorations, _oldState, newState): DecorationSet {
-        if (!tr.docChanged && !tr.selectionSet) return oldDecorations;
-        return buildFenceDecorations(newState);
+      apply(tr, old, _oldState, newState) {
+        if (!tr.docChanged && !tr.selectionSet) return old;
+        const active = getActiveCodeBlock(newState);
+        const newPos = active?.pos ?? null;
+        if (newPos === old.activePos && !tr.docChanged) return old;
+        return {
+          decorations: active ? buildFenceDecorations(newState) : DecorationSet.empty,
+          activePos: newPos,
+        };
       },
     },
     props: {
       decorations(state) {
-        return codeBlockSourceKey.getState(state) ?? DecorationSet.empty;
+        return codeBlockSourceKey.getState(state)?.decorations ?? DecorationSet.empty;
       },
     },
   });

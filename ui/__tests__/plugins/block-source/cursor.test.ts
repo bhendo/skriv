@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { Schema } from "@milkdown/kit/prose/model";
-import { EditorState, NodeSelection, TextSelection } from "@milkdown/kit/prose/state";
-import { findAncestorOfType, isInsideBlockType } from "../../../plugins/block-source/cursor";
+import { EditorState, TextSelection } from "@milkdown/kit/prose/state";
+import { findAncestorOfType, findFirstNodeOfType } from "../../../plugins/block-source/cursor";
 
 // Schema with list nodes for list-related tests
 const listSchema = new Schema({
@@ -190,86 +190,42 @@ describe("findAncestorOfType (code blocks)", () => {
   });
 });
 
-describe("isInsideBlockType (lists)", () => {
-  it("returns true when cursor is inside the specified block type", () => {
-    const doc = listSchema.node("doc", null, [
-      listSchema.nodes.bullet_list.create(null, [
-        listSchema.nodes.list_item.create(null, [
-          listSchema.nodes.paragraph.create(null, [listSchema.text("hello")]),
-        ]),
-      ]),
-    ]);
-    const state = listStateAt(doc, 4);
-    expect(isInsideBlockType(state, "list_item")).toBe(true);
-  });
-
-  it("returns true for bullet_list when cursor is inside a list", () => {
-    const doc = listSchema.node("doc", null, [
-      listSchema.nodes.bullet_list.create(null, [
-        listSchema.nodes.list_item.create(null, [
-          listSchema.nodes.paragraph.create(null, [listSchema.text("hello")]),
-        ]),
-      ]),
-    ]);
-    const state = listStateAt(doc, 4);
-    expect(isInsideBlockType(state, "bullet_list")).toBe(true);
-  });
-
-  it("returns false when cursor is not inside the type at all", () => {
-    const doc = listSchema.node("doc", null, [
-      listSchema.nodes.paragraph.create(null, [listSchema.text("hello")]),
-    ]);
-    const state = listStateAt(doc, 2);
-    expect(isInsideBlockType(state, "list_item")).toBe(false);
-  });
-});
-
-describe("isInsideBlockType (code blocks)", () => {
-  it("returns true for TextSelection inside the block type", () => {
+describe("findFirstNodeOfType", () => {
+  it("finds the first node of the given type", () => {
     const doc = codeSchema.node("doc", null, [
+      codeSchema.node("paragraph", null, [codeSchema.text("hello")]),
       codeSchema.node("code_block", { language: "js" }, [codeSchema.text("code")]),
     ]);
-    const state = EditorState.create({
-      doc,
-      selection: TextSelection.create(doc, 2),
-    });
-
-    expect(isInsideBlockType(state, "code_block")).toBe(true);
+    const result = findFirstNodeOfType(doc, "code_block");
+    expect(result).not.toBeNull();
+    expect(result!.node.type.name).toBe("code_block");
+    expect(result!.pos).toBe(7);
   });
 
-  it("returns true for NodeSelection on the block type", () => {
-    const doc = codeSchema.node("doc", null, [
-      codeSchema.node("code_block", { language: "js" }, [codeSchema.text("code")]),
-    ]);
-    const state = EditorState.create({
-      doc,
-      selection: NodeSelection.create(doc, 0),
-    });
-
-    expect(isInsideBlockType(state, "code_block")).toBe(true);
-  });
-
-  it("returns false when selection is outside the block type", () => {
+  it("returns null when no node of the type exists", () => {
     const doc = codeSchema.node("doc", null, [
       codeSchema.node("paragraph", null, [codeSchema.text("hello")]),
     ]);
-    const state = EditorState.create({
-      doc,
-      selection: TextSelection.create(doc, 3),
-    });
-
-    expect(isInsideBlockType(state, "code_block")).toBe(false);
+    const result = findFirstNodeOfType(doc, "code_block");
+    expect(result).toBeNull();
   });
 
-  it("returns false for NodeSelection on a different type", () => {
+  it("returns null for unknown type names", () => {
     const doc = codeSchema.node("doc", null, [
       codeSchema.node("paragraph", null, [codeSchema.text("hello")]),
     ]);
-    const state = EditorState.create({
-      doc,
-      selection: NodeSelection.create(doc, 0),
-    });
+    const result = findFirstNodeOfType(doc, "nonexistent_type");
+    expect(result).toBeNull();
+  });
 
-    expect(isInsideBlockType(state, "code_block")).toBe(false);
+  it("finds nested nodes", () => {
+    const doc = codeSchema.node("doc", null, [
+      codeSchema.node("blockquote", null, [
+        codeSchema.node("code_block", { language: "" }, [codeSchema.text("nested")]),
+      ]),
+    ]);
+    const result = findFirstNodeOfType(doc, "code_block");
+    expect(result).not.toBeNull();
+    expect(result!.node.type.name).toBe("code_block");
   });
 });

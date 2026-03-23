@@ -17,8 +17,9 @@ import { mermaidBlockNode } from "./node";
 import { buildMermaidThemeConfig } from "./theme";
 import { createFenceOpen, createFenceClose } from "../code-block-source/plugin";
 
+let mermaidIdCounter = 0;
 function nextId(): string {
-  return `mermaid-diagram-${crypto.randomUUID()}`;
+  return `mermaid-diagram-${++mermaidIdCounter}`;
 }
 
 let mermaidInitialized = false;
