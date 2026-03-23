@@ -1,34 +1,11 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
-import { EditorView, keymap } from "@codemirror/view";
+import { EditorView } from "@codemirror/view";
 import { EditorState } from "@codemirror/state";
 import { markdown } from "@codemirror/lang-markdown";
 import { languages } from "@codemirror/language-data";
-import { syntaxHighlighting, defaultHighlightStyle } from "@codemirror/language";
-import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
-import { searchKeymap } from "@codemirror/search";
-import { closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
+import { basicSetup } from "codemirror";
+import { oneDark } from "@codemirror/theme-one-dark";
 import type { EditorHandle } from "../types/editor";
-
-const skrivTheme = EditorView.theme({
-  "&": {
-    backgroundColor: "var(--crepe-color-background)",
-    color: "var(--crepe-color-on-background)",
-  },
-  ".cm-content": {
-    caretColor: "var(--crepe-color-on-background)",
-  },
-  ".cm-cursor, .cm-dropCursor": {
-    borderLeftColor: "var(--crepe-color-on-background) !important",
-  },
-  ".cm-gutters": {
-    backgroundColor: "var(--crepe-color-surface-low)",
-    borderRight: "1px solid var(--crepe-color-outline)",
-    color: "var(--crepe-color-on-surface-variant)",
-  },
-  ".cm-activeLineGutter, .cm-activeLine": {
-    backgroundColor: "var(--crepe-color-surface-low)",
-  },
-});
 
 interface SourceEditorProps {
   defaultValue: string;
@@ -57,20 +34,10 @@ export const SourceEditor = forwardRef<EditorHandle, SourceEditorProps>(
         state: EditorState.create({
           doc: defaultValue,
           extensions: [
+            basicSetup,
             EditorView.lineWrapping,
-            history(),
-            closeBrackets(),
-            keymap.of([
-              // Consume Cmd+/ so CodeMirror's toggleComment doesn't insert <!-- -->
-              { key: "Mod-/", run: () => true },
-              ...closeBracketsKeymap,
-              ...defaultKeymap,
-              ...searchKeymap,
-              ...historyKeymap,
-            ]),
             markdown({ codeLanguages: languages }),
-            syntaxHighlighting(defaultHighlightStyle),
-            skrivTheme,
+            oneDark,
             EditorView.updateListener.of((update) => {
               if (update.docChanged) {
                 onChangeRef.current();

@@ -2,15 +2,10 @@ import type { Node } from "@milkdown/kit/prose/model";
 import type { EditorView as PMEditorView, NodeViewConstructor } from "@milkdown/kit/prose/view";
 import { TextSelection } from "@milkdown/kit/prose/state";
 import { $view } from "@milkdown/utils";
-import {
-  EditorView as CMEditorView,
-  type ViewUpdate,
-  keymap,
-  drawSelection,
-} from "@codemirror/view";
+import { EditorView as CMEditorView, type ViewUpdate, keymap } from "@codemirror/view";
 import { EditorState as CMEditorState } from "@codemirror/state";
-import { defaultKeymap, indentWithTab } from "@codemirror/commands";
 import { basicSetup } from "codemirror";
+import { oneDark } from "@codemirror/theme-one-dark";
 import createPanZoom, { type PanZoom } from "panzoom";
 import mermaid from "mermaid";
 import { mermaidBlockNode } from "./node";
@@ -89,7 +84,7 @@ export const mermaidBlockView = $view(mermaidBlockNode, (): NodeViewConstructor 
 
     // Editing container with fence markers
     const editContainer = document.createElement("div");
-    editContainer.className = "mermaid-edit-container";
+    editContainer.className = "mermaid-edit-container milkdown-code-block";
     editContainer.style.display = "none";
 
     const cmContainer = document.createElement("div");
@@ -221,8 +216,7 @@ export const mermaidBlockView = $view(mermaidBlockNode, (): NodeViewConstructor 
         state: CMEditorState.create({
           doc: content,
           extensions: [
-            // Match Crepe's CodeMirrorBlock extensions
-            drawSelection(),
+            basicSetup,
             keymap.of([
               {
                 key: "Escape",
@@ -232,9 +226,12 @@ export const mermaidBlockView = $view(mermaidBlockNode, (): NodeViewConstructor 
                   return true;
                 },
               },
-              ...defaultKeymap.concat(indentWithTab),
             ]),
-            basicSetup,
+            oneDark,
+            // Provide mermaid comment tokens so Cmd+/ works (mermaid has no CM language mode)
+            CMEditorState.languageData.of(() => [
+              { commentTokens: { line: "%%", block: { open: "%%{", close: "}%%" } } },
+            ]),
             CMEditorView.lineWrapping,
             CMEditorView.updateListener.of(forwardUpdate),
             CMEditorView.domEventHandlers({

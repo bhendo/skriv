@@ -17,6 +17,28 @@ Project configuration and important reference information.
 - **`$view()` first argument:** Expects `$Node | $Mark`, not a slice or node type.
 - **Crepe's CodeMirrorBlock:** Uses `basicSetup` from `codemirror` package + `drawSelection()` + `keymap.of(defaultKeymap.concat(indentWithTab))` + config extensions. Source at `@milkdown/components/src/code-block/view/node-view.ts`.
 
+## CodeMirror Theming — Two Layers
+
+Crepe's code block styling uses two layers that must both be present for custom CM instances to match:
+
+1. **`oneDark` extension** (`@codemirror/theme-one-dark`) — provides syntax highlighting colors. Crepe passes this via `defaultConfig[CodeMirror].theme`. Used in both light and dark mode.
+2. **CSS on `.milkdown-code-block`** — overrides oneDark's dark background with `--crepe-color-surface` (warm cream in light, dark in dark). Defined in Crepe's `code-mirror.css`.
+
+**For inline editors** (mermaid, etc.): add `oneDark` as a CM extension + add `milkdown-code-block` class to the container div.
+
+**For full-page editors** (source mode): add `oneDark` as a CM extension + use CSS on the wrapper (e.g., `.source-editor .cm-editor { background: var(--crepe-color-surface) }`) to override backgrounds.
+
+**Keyboard shortcuts:** Source mode toggle is `Cmd+M`. `Cmd+/` is free for CodeMirror's `toggleComment`.
+
+## E2E Style Testing
+
+When adding or modifying custom components that should visually match library-provided ones (code blocks, editors, etc.), **write Playwright e2e tests that compare computed styles** against the reference component. This catches styling drift that unit tests can't detect.
+
+- **Helpers in `e2e/fixtures/index.ts`:** `getComputedStyles(locator, props)` extracts computed CSS values; `dumpStyleDiagnostics(locator, props)` dumps classes, styles, and ancestor chain for debugging.
+- **Test both light and dark mode** using `page.emulateMedia({ colorScheme })`.
+- **Compare against the working component** rather than hardcoding expected values — this way tests stay valid when Crepe's theme changes.
+- See `e2e/tests/mermaid.spec.ts` "Mermaid editor style consistency" and `e2e/tests/source-mode.spec.ts` "Source editor style consistency" for examples.
+
 ## Debugging ProseMirror Plugins
 
 - **Always instrument first**: Add console.log to appendTransaction showing decision path, sel positions, docChanged, and transaction metas before attempting fixes
