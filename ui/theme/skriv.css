@@ -183,9 +183,30 @@ body,
   height: 100%;
 }
 
+/* Background overrides for source editor — oneDark provides syntax colors,
+   CSS variables handle light/dark backgrounds (same pattern as Crepe's
+   .milkdown-code-block overrides in code-mirror.css). */
 .source-editor .cm-editor {
   height: 100%;
   outline: none;
+  background: var(--crepe-color-surface);
+  color: var(--crepe-color-on-surface);
+}
+
+.source-editor .cm-gutters {
+  background: var(--crepe-color-surface);
+  border-right: none;
+  color: var(--crepe-color-on-surface-variant);
+}
+
+.source-editor .cm-activeLineGutter,
+.source-editor .cm-activeLine {
+  background: var(--crepe-color-surface-low);
+}
+
+.source-editor .cm-cursor,
+.source-editor .cm-dropCursor {
+  border-left-color: var(--crepe-color-on-surface);
 }
 
 .source-editor .cm-scroller {
@@ -236,20 +257,11 @@ body,
   height: auto;
 }
 
-/* Editing container — let CodeMirror handle its own styling */
+/* Editing container — milkdown-code-block class handles background/padding via Crepe CSS.
+   Only keep border-radius (Crepe code blocks don't have it) and overflow for long lines. */
 .milkdown .editor .mermaid-edit-container {
   border-radius: 6px;
   overflow-x: auto;
-}
-
-.milkdown .editor .mermaid-cm-container .cm-editor {
-  outline: none;
-}
-
-.milkdown .editor .mermaid-cm-container .cm-scroller {
-  font-family: var(--skriv-font-mono);
-  font-size: 0.85em;
-  line-height: 1.6;
 }
 
 .milkdown .editor .mermaid-placeholder {

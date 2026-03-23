@@ -50,19 +50,19 @@ describe("useKeyboardShortcuts", () => {
     expect(handlers.onOpen).toHaveBeenCalledOnce();
   });
 
-  it("Cmd+/ fires onToggleSourceMode", () => {
+  it("Cmd+M fires onToggleSourceMode", () => {
     const onToggleSourceMode = vi.fn();
     renderHook(() => useKeyboardShortcuts({ ...handlers, onToggleSourceMode }));
 
-    fireKey("/", { metaKey: true });
+    fireKey("m", { metaKey: true });
 
     expect(onToggleSourceMode).toHaveBeenCalledOnce();
   });
 
-  it("Cmd+/ does nothing when handler not provided", () => {
+  it("Cmd+M does nothing when handler not provided", () => {
     renderHook(() => useKeyboardShortcuts(handlers));
 
     // Should not throw
-    fireKey("/", { metaKey: true });
+    fireKey("m", { metaKey: true });
   });
 });

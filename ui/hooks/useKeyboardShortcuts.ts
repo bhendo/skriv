@@ -30,7 +30,7 @@ export function useKeyboardShortcuts(handlers: ShortcutHandlers) {
       } else if (e.shiftKey && e.key === "e") {
         e.preventDefault();
         ref.current.onToggleSyntax?.();
-      } else if (e.key === "/") {
+      } else if (e.key === "m") {
         e.preventDefault();
         ref.current.onToggleSourceMode?.();
       }
