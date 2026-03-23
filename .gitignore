@@ -16,6 +16,9 @@ dist-ssr
 .claude/*
 !.claude/skills/
 
+# Superpowers brainstorming artifacts
+.superpowers/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
