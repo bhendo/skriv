@@ -10,6 +10,7 @@ import {
 import { Decoration, DecorationSet } from "@milkdown/kit/prose/view";
 import type { EditorView } from "@milkdown/kit/prose/view";
 import { findFirstNodeOfType } from "../block-source/cursor";
+import { makeDecorationPlugin } from "../block-source/decoration";
 import {
   buildRawText,
   computePrefixLength,
@@ -352,7 +353,12 @@ const SHORTCUT_MAP: Record<string, { marker: string; needsAlt?: boolean }> = {
   x: { marker: MARK_SYNTAX.strike_through.prefix, needsAlt: true },
 };
 
-const inlineSourcePluginKey = new PluginKey("inline-source");
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const inlineSourceDecoPlugin = $prose((_ctx) =>
+  makeDecorationPlugin("inline-source-deco", buildMarkerDecorations)
+);
+
+const inlineSourceBehaviorKey = new PluginKey("inline-source-behavior");
 
 /** Keys that represent intentional cursor navigation. */
 const NAV_KEYS = new Set([
@@ -367,7 +373,7 @@ const NAV_KEYS = new Set([
 ]);
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export const inlineSourcePlugin = $prose((_ctx) => {
+const inlineSourceBehaviorPlugin = $prose((_ctx) => {
   let composing = false;
 
   // Suppress ENTER after doc changes until the user deliberately navigates.
@@ -377,41 +383,19 @@ export const inlineSourcePlugin = $prose((_ctx) => {
   let suppressEnter = false;
 
   return new Plugin({
-    key: inlineSourcePluginKey,
-    state: {
-      init(_, state) {
-        return buildMarkerDecorations(state);
-      },
-      apply(tr, oldDecorations, _oldState, newState) {
-        if (tr.docChanged) {
-          return buildMarkerDecorations(newState);
-        }
-        return oldDecorations;
-      },
-    },
+    key: inlineSourceBehaviorKey,
     appendTransaction(transactions, oldState, newState) {
       if (composing) return null;
       const docChanged = !oldState.doc.eq(newState.doc);
       if (docChanged) suppressEnter = true;
-      // When suppressEnter is active, only allow LEAVE and SPLIT
-      // transitions (which handle existing inline_source nodes).
-      // Skip the call entirely when there is no inline_source to
-      // clean up and ENTER would be the only possible outcome.
       if (suppressEnter && !docChanged) {
         if (!findFirstNodeOfType(newState.doc, "inline_source")) return null;
       }
       return handleInlineSourceTransition(transactions, oldState, newState);
     },
     props: {
-      decorations(state) {
-        return this.getState(state);
-      },
       handleTextInput(view: EditorView, from: number, to: number, text: string) {
-        // When typing inside an inline_source node, insert text directly
-        // to bypass Milkdown/ProseMirror input rules.  Without this,
-        // input rules pattern-match on the raw syntax (e.g. **bold**)
-        // and try to apply marks, but the node's marks:"" spec strips
-        // them, destroying the asterisks (#38).
+        // Bypass Milkdown/ProseMirror input rules inside inline_source (#38).
         const $from = view.state.doc.resolve(from);
         const inlineSourceType = view.state.schema.nodes.inline_source;
         if (inlineSourceType && $from.parent.type === inlineSourceType) {
@@ -421,7 +405,6 @@ export const inlineSourcePlugin = $prose((_ctx) => {
         return false;
       },
       handleKeyDown(view: EditorView, event: KeyboardEvent) {
-        // Navigation keys indicate intentional cursor movement — allow ENTER.
         if (NAV_KEYS.has(event.key)) suppressEnter = false;
 
         const inlineSourceType = view.state.schema.nodes.inline_source;
@@ -444,8 +427,6 @@ export const inlineSourcePlugin = $prose((_ctx) => {
           tr.setSelection(TextSelection.create(tr.doc, nodeStart));
           tr.setMeta("addToHistory", false);
           view.dispatch(tr);
-          // Return false so ProseMirror's keymap handles the backspace
-          // (e.g. joinBackward) on the now-mark-restored state.
           return false;
         }
 
@@ -478,3 +459,5 @@ export const inlineSourcePlugin = $prose((_ctx) => {
     },
   });
 });
+
+export const inlineSourcePlugin = [inlineSourceDecoPlugin, inlineSourceBehaviorPlugin].flat();
