@@ -208,7 +208,6 @@ body,
   overflow: hidden;
   cursor: grab;
   min-height: 60px;
-  max-height: 500px;
   border: 1px solid var(--crepe-color-outline, #ddd);
   border-radius: 6px;
   background: var(--crepe-color-background, #ffffff);
@@ -220,9 +219,17 @@ body,
 }
 
 .milkdown .editor .mermaid-svg-wrapper {
-  display: flex;
-  justify-content: center;
-  padding: 16px;
+  transform-origin: 0 0;
+}
+
+/* Prevent mermaid foreignObject (htmlLabels:true) from clipping node content */
+.milkdown .editor .mermaid-svg-wrapper foreignObject {
+  overflow: visible;
+}
+
+/* Shrink edge labels to reduce overlap on dense diagrams */
+.milkdown .editor .mermaid-svg-wrapper .edgeLabel {
+  font-size: 0.85em;
 }
 
 .milkdown .editor .mermaid-svg-wrapper svg {
