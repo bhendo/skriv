@@ -14,7 +14,8 @@
     "format": "prettier --write ui/",
     "format:check": "prettier --check ui/",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:e2e": "playwright test --config e2e/playwright.config.ts"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.20.1",
@@ -41,6 +42,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
+    "@playwright/test": "^1.58.2",
     "@tauri-apps/cli": "^2",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
