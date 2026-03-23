@@ -36,6 +36,7 @@ vi.mock("@milkdown/utils", () => ({
   $node: () => ({}),
   $prose: () => ({}),
   $view: () => ({}),
+  $remark: () => ({}),
 }));
 
 vi.mock("@milkdown/kit/preset/commonmark", () => ({

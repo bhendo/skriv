@@ -10,6 +10,7 @@ import { ReloadBanner } from "./components/ReloadBanner";
 import { useFile } from "./hooks/useFile";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { useTheme } from "./hooks/useTheme";
+import { reinitMermaid } from "./plugins/mermaid-block";
 
 const PLACEHOLDER = `# Welcome to Skriv
 
@@ -31,7 +32,11 @@ function App() {
     saveNewFile,
   } = useFile();
 
-  useTheme();
+  const { theme } = useTheme();
+
+  useEffect(() => {
+    reinitMermaid();
+  }, [theme]);
 
   const [showReloadBanner, setShowReloadBanner] = useState(false);
   const [syntaxToggling, setSyntaxToggling] = useState(true);

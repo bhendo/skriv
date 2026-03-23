@@ -193,3 +193,59 @@ body,
   font-size: var(--skriv-code-font-size);
   line-height: var(--skriv-line-height);
 }
+
+/* Mermaid diagram blocks */
+.milkdown .editor .mermaid-block {
+  margin: 0.8em 0;
+}
+
+.milkdown .editor .mermaid-block.ProseMirror-selectednode {
+  outline: 2px solid var(--crepe-color-primary, #4183c4);
+  outline-offset: 2px;
+}
+
+.milkdown .editor .mermaid-svg-container {
+  padding: 16px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  min-height: 60px;
+  border: 1px solid var(--crepe-color-outline, #ddd);
+  border-radius: 6px;
+  background: var(--crepe-color-background, #ffffff);
+}
+
+.milkdown .editor .mermaid-svg-container svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Editing container — let CodeMirror handle its own styling */
+.milkdown .editor .mermaid-edit-container {
+  border-radius: 6px;
+  overflow-x: auto;
+}
+
+.milkdown .editor .mermaid-cm-container .cm-editor {
+  outline: none;
+}
+
+.milkdown .editor .mermaid-cm-container .cm-scroller {
+  font-family: var(--skriv-font-mono);
+  font-size: 0.85em;
+  line-height: 1.6;
+}
+
+.milkdown .editor .mermaid-placeholder {
+  color: var(--crepe-color-on-surface-variant, #999);
+  font-style: italic;
+}
+
+.milkdown .editor .mermaid-error {
+  color: #c0392b;
+  font-family: var(--skriv-font-mono);
+  font-size: 0.85em;
+  white-space: pre-wrap;
+  padding: 8px;
+}
