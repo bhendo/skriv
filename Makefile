@@ -2,7 +2,7 @@
 	lint lint-ui lint-tauri \
 	format format-ui format-tauri \
 	check check-ui check-tauri \
-	test test-ui test-tauri
+	test test-ui test-tauri test-e2e
 
 ## Setup — install all dependencies (run once after clone)
 setup:
@@ -18,13 +18,16 @@ build:
 	pnpm tauri build
 
 ## Test
-test: test-ui test-tauri
+test: test-ui test-tauri test-e2e
 
 test-ui:
 	pnpm test
 
 test-tauri:
 	cd src-tauri && cargo test
+
+test-e2e:
+	pnpm test:e2e
 
 ## Lint
 lint: lint-ui lint-tauri
