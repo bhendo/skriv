@@ -4,13 +4,13 @@ test.describe("Formatting keyboard shortcuts", () => {
   test("Cmd+B toggles bold on selected text", async ({ page, loadApp }) => {
     await loadApp({
       openedFile: "/tmp/test.md",
-      fileContent: "hello world\n",
+      fileContent: "hello\n",
     });
     const editor = page.locator(".milkdown .editor");
     await editor.click();
 
-    const paragraph = editor.locator("p").first();
-    await paragraph.dblclick();
+    // Select all text with keyboard (deterministic regardless of slowMo)
+    await page.keyboard.press(`${MOD}+a`);
     await page.keyboard.press(`${MOD}+b`);
 
     await expect(editor.locator("strong")).toContainText("hello");
@@ -19,13 +19,12 @@ test.describe("Formatting keyboard shortcuts", () => {
   test("Cmd+I toggles italic on selected text", async ({ page, loadApp }) => {
     await loadApp({
       openedFile: "/tmp/test.md",
-      fileContent: "hello world\n",
+      fileContent: "hello\n",
     });
     const editor = page.locator(".milkdown .editor");
     await editor.click();
 
-    const paragraph = editor.locator("p").first();
-    await paragraph.dblclick();
+    await page.keyboard.press(`${MOD}+a`);
     await page.keyboard.press(`${MOD}+i`);
 
     await expect(editor.locator("em")).toContainText("hello");
