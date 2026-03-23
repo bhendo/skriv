@@ -1,7 +1,6 @@
 import { test, expect } from "../fixtures";
 
-// Use Meta for macOS
-const MOD = "Meta";
+const MOD = process.platform === "darwin" ? "Meta" : "Control";
 
 test.describe("Formatting keyboard shortcuts", () => {
   test("Cmd+B toggles bold on selected text", async ({ page, loadApp }) => {
