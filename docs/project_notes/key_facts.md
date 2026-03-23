@@ -10,6 +10,13 @@ Project configuration and important reference information.
 - **Node positions**: For inline node at pos P with nodeSize N: P is BEFORE the opening token (outside), P+1 to P+N-1 is inside, P+N is AFTER the closing token (outside). Use strict inequality (`>` / `<`) for "inside" checks.
 - **Milkdown custom input rules**: Tagged with `MILKDOWN_CUSTOM_INPUTRULES$` meta on their transactions.
 
+## Milkdown Plugin Registration
+
+- **Remark plugins:** Use `$remark()` from `@milkdown/utils` and register with `.use()`. Do NOT manually update `remarkPluginsCtx` via `config()` — Crepe's initialization overwrites it.
+- **`$node()` return type:** Returns `$Node` directly (has `.type(ctx)` method and `.id`). Pass directly to `$view()`, not `.node` — the `.node` pattern is from Milkdown preset schemas, not `$node()`.
+- **`$view()` first argument:** Expects `$Node | $Mark`, not a slice or node type.
+- **Crepe's CodeMirrorBlock:** Uses `basicSetup` from `codemirror` package + `drawSelection()` + `keymap.of(defaultKeymap.concat(indentWithTab))` + config extensions. Source at `@milkdown/components/src/code-block/view/node-view.ts`.
+
 ## Debugging ProseMirror Plugins
 
 - **Always instrument first**: Add console.log to appendTransaction showing decision path, sel positions, docChanged, and transaction metas before attempting fixes
