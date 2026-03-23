@@ -205,19 +205,27 @@ body,
 }
 
 .milkdown .editor .mermaid-svg-container {
-  padding: 16px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  cursor: pointer;
+  overflow: hidden;
+  cursor: grab;
   min-height: 60px;
+  max-height: 500px;
   border: 1px solid var(--crepe-color-outline, #ddd);
   border-radius: 6px;
   background: var(--crepe-color-background, #ffffff);
+  position: relative;
 }
 
-.milkdown .editor .mermaid-svg-container svg {
-  max-width: 100%;
+.milkdown .editor .mermaid-svg-container:active {
+  cursor: grabbing;
+}
+
+.milkdown .editor .mermaid-svg-wrapper {
+  display: flex;
+  justify-content: center;
+  padding: 16px;
+}
+
+.milkdown .editor .mermaid-svg-wrapper svg {
   height: auto;
 }
 
