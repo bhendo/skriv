@@ -202,7 +202,7 @@ export const mermaidBlockView = $view(mermaidBlockNode, (): NodeViewConstructor 
       let offset = (getPos() ?? 0) + 1;
       const tr = view.state.tr;
       update.changes.iterChanges(
-        (fromA: number, toA: number, _fromB: number, toB: number, text: { toString(): string }) => {
+        (fromA: number, toA: number, _fromB: number, toB: number, text) => {
           if (text.length) {
             tr.replaceWith(offset + fromA, offset + toA, view.state.schema.text(text.toString()));
           } else {

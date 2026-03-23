@@ -50,6 +50,7 @@ check: check-ui check-tauri
 check-ui:
 	pnpm format:check
 	pnpm lint
+	pnpm tsc --noEmit
 	pnpm test
 
 check-tauri:

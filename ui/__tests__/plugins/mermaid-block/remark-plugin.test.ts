@@ -63,7 +63,7 @@ describe("remarkMermaid", () => {
 
     remarkMermaid()(tree);
 
-    expect(tree.children[0].children[0]).toEqual({
+    expect(tree.children[0].children![0]).toEqual({
       type: "mermaidDiagram",
       value: "graph LR\n  X-->Y",
     });

@@ -2,7 +2,7 @@ import { $remark } from "@milkdown/utils";
 
 export interface RemarkNode {
   type: string;
-  lang?: string;
+  lang?: string | null;
   value?: string;
   children?: RemarkNode[];
 }
