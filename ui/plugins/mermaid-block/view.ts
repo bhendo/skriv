@@ -6,6 +6,7 @@ import { EditorView as CMEditorView, keymap, drawSelection } from "@codemirror/v
 import { EditorState as CMEditorState } from "@codemirror/state";
 import { defaultKeymap, indentWithTab } from "@codemirror/commands";
 import { basicSetup } from "codemirror";
+import createPanZoom, { type PanZoom } from "panzoom";
 import mermaid from "mermaid";
 import { mermaidBlockNode } from "./node";
 import { buildMermaidThemeConfig } from "./theme";
@@ -47,6 +48,7 @@ export const mermaidBlockView = $view(mermaidBlockNode, (): NodeViewConstructor 
     let editing = false;
     let lastSvg = "";
     let cmView: CMEditorView | null = null;
+    let pzInstance: PanZoom | null = null;
 
     // --- DOM structure ---
     const dom = document.createElement("div");
@@ -55,6 +57,11 @@ export const mermaidBlockView = $view(mermaidBlockNode, (): NodeViewConstructor 
     const svgContainer = document.createElement("div");
     svgContainer.className = "mermaid-svg-container";
     dom.appendChild(svgContainer);
+
+    // Inner wrapper for panzoom — panzoom transforms this element
+    const svgWrapper = document.createElement("div");
+    svgWrapper.className = "mermaid-svg-wrapper";
+    svgContainer.appendChild(svgWrapper);
 
     // Editing container with fence markers
     const editContainer = document.createElement("div");
@@ -87,26 +94,52 @@ export const mermaidBlockView = $view(mermaidBlockNode, (): NodeViewConstructor 
     editContainer.appendChild(fenceClose);
     dom.appendChild(editContainer);
 
+    // --- Pan/zoom ---
+    function disposePanZoom(): void {
+      if (pzInstance) {
+        pzInstance.dispose();
+        pzInstance = null;
+      }
+    }
+
+    function attachPanZoom(): void {
+      disposePanZoom();
+      if (!svgWrapper.querySelector("svg")) return;
+      pzInstance = createPanZoom(svgWrapper, {
+        maxZoom: 5,
+        minZoom: 0.5,
+        smoothScroll: false,
+        onClick: () => {
+          if (!view.editable) return;
+          enterEditing();
+        },
+      });
+    }
+
     // --- Rendering ---
     async function renderDiagram(source: string): Promise<void> {
+      disposePanZoom();
+
       if (!source.trim()) {
-        svgContainer.innerHTML = '<div class="mermaid-placeholder">Empty mermaid diagram</div>';
+        svgWrapper.innerHTML = '<div class="mermaid-placeholder">Empty mermaid diagram</div>';
         return;
       }
 
       try {
         const { svg } = await mermaid.render(nextId(), source);
-        svgContainer.innerHTML = svg;
+        svgWrapper.innerHTML = svg;
         lastSvg = svg;
+        attachPanZoom();
       } catch (err: unknown) {
         if (lastSvg) {
-          svgContainer.innerHTML = lastSvg;
+          svgWrapper.innerHTML = lastSvg;
+          attachPanZoom();
         } else {
           const msg = err instanceof Error ? err.message : "Invalid mermaid syntax";
           const errorDiv = document.createElement("div");
           errorDiv.className = "mermaid-error";
           errorDiv.textContent = msg;
-          svgContainer.replaceChildren(errorDiv);
+          svgWrapper.replaceChildren(errorDiv);
         }
       }
     }
@@ -162,6 +195,7 @@ export const mermaidBlockView = $view(mermaidBlockNode, (): NodeViewConstructor 
     function enterEditing(): void {
       if (editing) return;
       editing = true;
+      disposePanZoom();
       svgContainer.style.display = "none";
       editContainer.style.display = "block";
 
@@ -204,11 +238,7 @@ export const mermaidBlockView = $view(mermaidBlockNode, (): NodeViewConstructor 
       renderDiagram(text);
     }
 
-    // --- Event handlers ---
-    svgContainer.addEventListener("click", () => {
-      if (!view.editable) return;
-      enterEditing();
-    });
+    // Click-to-edit is handled by panzoom's onClick callback
 
     // --- Theme change re-render ---
     const rerender = () => {
@@ -247,13 +277,19 @@ export const mermaidBlockView = $view(mermaidBlockNode, (): NodeViewConstructor 
       },
 
       stopEvent(event: Event): boolean {
+        // Let CodeMirror handle its events during editing
         if (editing && dom.contains(event.target as globalThis.Node)) {
+          return true;
+        }
+        // Stop wheel events on the SVG container so panzoom handles zoom
+        if (event.type === "wheel" && svgContainer.contains(event.target as globalThis.Node)) {
           return true;
         }
         return false;
       },
 
       destroy(): void {
+        disposePanZoom();
         if (cmView) cmView.destroy();
         activeViews.delete(rerender);
         dom.remove();
