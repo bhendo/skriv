@@ -8,6 +8,12 @@
 - **URL**: https://github.com/bhendo/skriv/issues/38
 - **Notes**: Fix in commit c23f547 on feature/phase-2-block-syntax-toggling
 
+### 2026-03-22 - #41: Support mermaid diagrams
+- **Status**: Completed
+- **Description**: Render mermaid fenced code blocks as visual SVG diagrams in WYSIWYG mode. Custom `mermaid_block` ProseMirror node with NodeView toggling between rendered SVG and textarea editor. Theme mapped from `--crepe-color-*` CSS vars via mermaid's `themeVariables` API.
+- **URL**: https://github.com/bhendo/skriv/issues/41
+- **Notes**: Implemented on feature/41-mermaid-diagrams branch. Remark plugin intercepts mermaid code fences before Milkdown's code_block handler. New files in `ui/plugins/mermaid-block/`.
+
 ### 2026-03-20 - #39: Cannot exit source mode when inline_source is only content
 - **Status**: Open
 - **Description**: When inline_source fills the entire paragraph, there's no clickable area outside the node to trigger LEAVE. Enter key doesn't exit source mode.
