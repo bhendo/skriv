@@ -12,8 +12,9 @@ dist
 dist-ssr
 *.local
 
-# Claude Code
-.claude
+# Claude Code — ignore all except skills
+.claude/*
+!.claude/skills/
 
 # Editor directories and files
 .vscode/*
