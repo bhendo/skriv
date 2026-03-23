@@ -1,8 +1,9 @@
 import { $prose } from "@milkdown/utils";
 import type { Node } from "@milkdown/kit/prose/model";
-import { type EditorState, Plugin, PluginKey } from "@milkdown/kit/prose/state";
+import type { EditorState } from "@milkdown/kit/prose/state";
 import { Decoration, DecorationSet } from "@milkdown/kit/prose/view";
 import { findAncestorOfType } from "../block-source/cursor";
+import { makeDecorationPlugin } from "../block-source/decoration";
 
 export function getActiveCodeBlock(state: EditorState): { pos: number; node: Node } | null {
   const ancestor = findAncestorOfType(state, "code_block");
@@ -57,44 +58,10 @@ export function buildFenceDecorations(state: EditorState): DecorationSet {
   return DecorationSet.create(state.doc, decorations);
 }
 
-interface CodeBlockDecoState {
-  decorations: DecorationSet;
-  activePos: number | null;
-}
-
-const codeBlockSourceKey = new PluginKey<CodeBlockDecoState>("code-block-source");
-
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export const codeBlockSourcePlugin = $prose((_ctx) => {
-  function buildState(state: EditorState): CodeBlockDecoState {
-    const active = getActiveCodeBlock(state);
-    return {
-      decorations: active ? buildFenceDecorations(state) : DecorationSet.empty,
-      activePos: active?.pos ?? null,
-    };
-  }
-
-  return new Plugin<CodeBlockDecoState>({
-    key: codeBlockSourceKey,
-    state: {
-      init(_, state) {
-        return buildState(state);
-      },
-      apply(tr, old, _oldState, newState) {
-        if (!tr.docChanged && !tr.selectionSet) return old;
-        const active = getActiveCodeBlock(newState);
-        const newPos = active?.pos ?? null;
-        if (newPos === old.activePos && !tr.docChanged) return old;
-        return {
-          decorations: active ? buildFenceDecorations(newState) : DecorationSet.empty,
-          activePos: newPos,
-        };
-      },
-    },
-    props: {
-      decorations(state) {
-        return codeBlockSourceKey.getState(state)?.decorations ?? DecorationSet.empty;
-      },
-    },
-  });
-});
+export const codeBlockSourcePlugin = $prose((_ctx) =>
+  makeDecorationPlugin("code-block-source", buildFenceDecorations, {
+    rebuildOnSelection: true,
+    cacheKey: (state) => getActiveCodeBlock(state)?.pos ?? null,
+  })
+);

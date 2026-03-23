@@ -1,5 +1,5 @@
 import type { Node } from "@milkdown/kit/prose/model";
-import { type EditorState, Plugin, PluginKey, TextSelection } from "@milkdown/kit/prose/state";
+import { TextSelection } from "@milkdown/kit/prose/state";
 import { Decoration, DecorationSet } from "@milkdown/kit/prose/view";
 import type { NodeViewConstructor } from "@milkdown/kit/prose/view";
 import { listItemSchema } from "@milkdown/kit/preset/commonmark";
@@ -9,6 +9,7 @@ import {
 } from "@milkdown/kit/component/list-item-block";
 import { $prose, $view } from "@milkdown/utils";
 import { findAncestorOfType } from "../block-source/cursor";
+import { makeDecorationPlugin } from "../block-source/decoration";
 import { markerForListItem, parseMarker } from "./marker";
 import { convertListType, unwrapListItem } from "./convert";
 import { sinkListItem, liftListItem } from "@milkdown/kit/prose/schema-list";
@@ -348,47 +349,22 @@ export const listSourceView = $view(listItemSchema.node, (ctx): NodeViewConstruc
  * on the affected NodeViews when the cursor moves between list items,
  * even if the node content hasn't changed.
  */
-interface ListCursorState {
-  decorations: DecorationSet;
-  activePos: number | null;
-}
-
-const listCursorKey = new PluginKey<ListCursorState>("list-cursor");
-
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export const listCursorPlugin = $prose((_ctx) => {
-  function buildState(state: EditorState): ListCursorState {
-    const ancestor = findAncestorOfType(state, "list_item");
-    if (!ancestor) return { decorations: DecorationSet.empty, activePos: null };
-
-    return {
-      decorations: DecorationSet.create(state.doc, [
+export const listCursorPlugin = $prose((_ctx) =>
+  makeDecorationPlugin(
+    "list-cursor",
+    (state) => {
+      const ancestor = findAncestorOfType(state, "list_item");
+      if (!ancestor) return DecorationSet.empty;
+      return DecorationSet.create(state.doc, [
         Decoration.node(ancestor.pos, ancestor.pos + ancestor.node.nodeSize, {
           class: "list-item-active",
         }),
-      ]),
-      activePos: ancestor.pos,
-    };
-  }
-
-  return new Plugin<ListCursorState>({
-    key: listCursorKey,
-    state: {
-      init(_, state) {
-        return buildState(state);
-      },
-      apply(tr, old, _oldState, newState) {
-        if (!tr.docChanged && !tr.selectionSet) return old;
-        const ancestor = findAncestorOfType(newState, "list_item");
-        const newPos = ancestor?.pos ?? null;
-        if (newPos === old.activePos && !tr.docChanged) return old;
-        return buildState(newState);
-      },
+      ]);
     },
-    props: {
-      decorations(state) {
-        return listCursorKey.getState(state)?.decorations ?? DecorationSet.empty;
-      },
-    },
-  });
-});
+    {
+      rebuildOnSelection: true,
+      cacheKey: (state) => findAncestorOfType(state, "list_item")?.pos ?? null,
+    }
+  )
+);

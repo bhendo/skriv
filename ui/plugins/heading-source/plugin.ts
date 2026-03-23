@@ -11,6 +11,7 @@ import {
 import { Decoration, DecorationSet } from "@milkdown/kit/prose/view";
 import { buildHeadingPrefix, parseHeadingPrefix, stripPrefix } from "./syntax";
 import { findAncestorOfType, findFirstNodeOfType } from "../block-source/cursor";
+import { makeDecorationPlugin } from "../block-source/decoration";
 
 export function handleHeadingSourceTransition(
   _transactions: readonly Transaction[],
@@ -189,35 +190,25 @@ export function buildHeadingPrefixDecorations(state: EditorState): DecorationSet
   return DecorationSet.create(state.doc, decorations);
 }
 
-const headingSourcePluginKey = new PluginKey("heading-source");
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const headingSourceDecoPlugin = $prose((_ctx) =>
+  makeDecorationPlugin("heading-source-deco", buildHeadingPrefixDecorations)
+);
+
+const headingSourceBehaviorKey = new PluginKey("heading-source-behavior");
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export const headingSourcePlugin = $prose((_ctx) => {
+const headingSourceBehaviorPlugin = $prose((_ctx) => {
   let composing = false;
 
   return new Plugin({
-    key: headingSourcePluginKey,
-    state: {
-      init(_, state) {
-        return buildHeadingPrefixDecorations(state);
-      },
-      apply(tr, oldDecorations, _oldState, newState) {
-        if (tr.docChanged) {
-          return buildHeadingPrefixDecorations(newState);
-        }
-        return oldDecorations;
-      },
-    },
+    key: headingSourceBehaviorKey,
     appendTransaction(transactions, oldState, newState) {
       if (composing) return null;
       return handleHeadingSourceTransition(transactions, oldState, newState);
     },
     props: {
-      decorations(state) {
-        return this.getState(state);
-      },
       handleKeyDown(view, event) {
-        // Intercept Enter key inside heading_source to prevent splitting
         if (event.key !== "Enter") return false;
 
         const headingSourceType = view.state.schema.nodes.heading_source;
@@ -227,18 +218,15 @@ export const headingSourcePlugin = $prose((_ctx) => {
         const $cursor = sel.$cursor;
         if (!$cursor) return false;
 
-        // Check if cursor is inside a heading_source
         const ancestor = findAncestorOfType(view.state, "heading_source");
         if (!ancestor) return false;
 
         const hsPos = ancestor.pos;
         const hsNode = ancestor.node;
 
-        // Leave transition: convert heading_source back to heading
         const leaveTr = leaveHeadingSource(hsNode, hsPos, view.state);
         view.dispatch(leaveTr);
 
-        // Insert a new empty paragraph after the restored heading
         const afterLeaveState = view.state;
         const restoredNode = afterLeaveState.doc.nodeAt(hsPos);
         if (!restoredNode) return true;
@@ -264,3 +252,5 @@ export const headingSourcePlugin = $prose((_ctx) => {
     },
   });
 });
+
+export const headingSourcePlugin = [headingSourceDecoPlugin, headingSourceBehaviorPlugin].flat();
