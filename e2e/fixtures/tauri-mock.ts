@@ -13,16 +13,13 @@ export interface TauriMockConfig {
   fileInfo?: { size: number; modified: number };
   /** Whether write_file should succeed — default: true */
   writeShouldSucceed?: boolean;
-  /** Captured write_file calls for assertion */
-  writes?: Array<{ path: string; content: string }>;
 }
 
 const DEFAULT_CONFIG: Required<TauriMockConfig> = {
   openedFile: null,
   fileContent: "",
-  fileInfo: { size: 100, modified: Date.now() },
+  fileInfo: { size: 100, modified: 0 },
   writeShouldSucceed: true,
-  writes: [],
 };
 
 /**
