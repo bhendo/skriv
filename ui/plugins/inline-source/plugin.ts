@@ -9,6 +9,7 @@ import {
 } from "@milkdown/kit/prose/state";
 import { Decoration, DecorationSet } from "@milkdown/kit/prose/view";
 import type { EditorView } from "@milkdown/kit/prose/view";
+import { findFirstNodeOfType } from "../block-source/cursor";
 import {
   buildRawText,
   computePrefixLength,
@@ -161,20 +162,11 @@ export function handleInlineSourceTransition(
 
   // LEAVE runs for any selection type (cursor, range, node, all) so that
   // non-cursor selections outside the node trigger leave (#34).
-  let inlineSourcePos: number | null = null;
-  let inlineSourceNode: Node | null = null;
-  newState.doc.descendants((node, pos) => {
-    if (node.type === inlineSourceType) {
-      inlineSourcePos = pos;
-      inlineSourceNode = node;
-      return false;
-    }
-    return true;
-  });
+  const found = findFirstNodeOfType(newState.doc, "inline_source");
 
-  if (inlineSourcePos !== null && inlineSourceNode !== null) {
-    const nodeFrom = inlineSourcePos;
-    const nodeTo = inlineSourcePos + (inlineSourceNode as Node).nodeSize;
+  if (found) {
+    const nodeFrom = found.pos;
+    const nodeTo = found.pos + found.node.nodeSize;
 
     // If selection is still inside the inline_source node, skip leave.
     // Strict inequality: nodeFrom/nodeTo are positions before the opening
@@ -182,7 +174,7 @@ export function handleInlineSourceTransition(
     if (sel.from > nodeFrom && sel.to < nodeTo) return null;
 
     const tr = newState.tr;
-    leaveInlineSource(tr, schema, nodeFrom, nodeTo, (inlineSourceNode as Node).textContent);
+    leaveInlineSource(tr, schema, nodeFrom, nodeTo, found.node.textContent);
     tr.setMeta("addToHistory", false);
     return tr;
   }
@@ -406,15 +398,7 @@ export const inlineSourcePlugin = $prose((_ctx) => {
       // Skip the call entirely when there is no inline_source to
       // clean up and ENTER would be the only possible outcome.
       if (suppressEnter && !docChanged) {
-        let hasInlineSource = false;
-        newState.doc.descendants((node) => {
-          if (node.type === newState.schema.nodes.inline_source) {
-            hasInlineSource = true;
-            return false;
-          }
-          return !hasInlineSource;
-        });
-        if (!hasInlineSource) return null;
+        if (!findFirstNodeOfType(newState.doc, "inline_source")) return null;
       }
       return handleInlineSourceTransition(transactions, oldState, newState);
     },

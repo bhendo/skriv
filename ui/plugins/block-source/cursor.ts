@@ -31,11 +31,22 @@ export function findAncestorOfType(
   return null;
 }
 
-/** Check if the selection (TextSelection or NodeSelection) is inside a node of the given type. */
-export function isInsideBlockType(state: EditorState, typeName: string): boolean {
-  const sel = state.selection;
-  if (sel instanceof NodeSelection && sel.node.type.name === typeName) {
+/** Walk the document and return the first node matching the given type name. */
+export function findFirstNodeOfType(
+  doc: Node,
+  typeName: string
+): { node: Node; pos: number } | null {
+  const nodeType = doc.type.schema.nodes[typeName];
+  if (!nodeType) return null;
+
+  let result: { node: Node; pos: number } | null = null;
+  doc.descendants((node, pos) => {
+    if (result) return false;
+    if (node.type === nodeType) {
+      result = { node, pos };
+      return false;
+    }
     return true;
-  }
-  return findAncestorOfType(state, typeName) !== null;
+  });
+  return result;
 }

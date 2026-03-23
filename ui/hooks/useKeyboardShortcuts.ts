@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 interface ShortcutHandlers {
   onSave: () => void;
@@ -8,36 +8,35 @@ interface ShortcutHandlers {
   onToggleSourceMode?: () => void;
 }
 
-export function useKeyboardShortcuts({
-  onSave,
-  onSaveAs,
-  onOpen,
-  onToggleSyntax,
-  onToggleSourceMode,
-}: ShortcutHandlers) {
+export function useKeyboardShortcuts(handlers: ShortcutHandlers) {
+  const ref = useRef(handlers);
+  useEffect(() => {
+    ref.current = handlers;
+  });
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!(e.metaKey || e.ctrlKey)) return;
 
       if (e.shiftKey && e.key === "s") {
         e.preventDefault();
-        onSaveAs();
+        ref.current.onSaveAs();
       } else if (e.key === "s") {
         e.preventDefault();
-        onSave();
+        ref.current.onSave();
       } else if (e.key === "o") {
         e.preventDefault();
-        onOpen();
+        ref.current.onOpen();
       } else if (e.shiftKey && e.key === "e") {
         e.preventDefault();
-        onToggleSyntax?.();
+        ref.current.onToggleSyntax?.();
       } else if (e.key === "/") {
         e.preventDefault();
-        onToggleSourceMode?.();
+        ref.current.onToggleSourceMode?.();
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onSave, onSaveAs, onOpen, onToggleSyntax, onToggleSourceMode]);
+  }, []);
 }

@@ -37,21 +37,35 @@ export interface ParsedSyntax {
   marks: string[];
 }
 
-const PARSE_PATTERNS: { regex: RegExp; marks: string[] }[] = [
-  { regex: /^\*\*\*(.+)\*\*\*$/, marks: ["strong", "emphasis"] },
-  { regex: /^___(.+)___$/, marks: ["strong", "emphasis"] },
-  { regex: /^\*\*(.+)\*\*$/, marks: ["strong"] },
-  { regex: /^__(.+)__$/, marks: ["strong"] },
-  { regex: /^~~(.+)~~$/, marks: ["strike_through"] },
-  { regex: /^\*(.+)\*$/, marks: ["emphasis"] },
-  { regex: /^_(.+)_$/, marks: ["emphasis"] },
-  { regex: /^`(.+)`$/, marks: ["inlineCode"] },
-];
+/**
+ * All recognized marker patterns, ordered longest-first so that `***`
+ * is matched before `**` or `*`.  Each entry carries literal prefix/suffix
+ * strings, the mark names it represents, and a lazily-built regex for
+ * full-string parsing.  Both `parseInlineSyntax` and `findTrailingSplit`
+ * are driven from this single list.
+ */
+const MARKER_PATTERNS: { prefix: string; suffix: string; marks: string[]; regex: RegExp }[] = [
+  { prefix: "***", suffix: "***", marks: ["strong", "emphasis"] },
+  { prefix: "___", suffix: "___", marks: ["strong", "emphasis"] },
+  { prefix: "**", suffix: "**", marks: ["strong"] },
+  { prefix: "__", suffix: "__", marks: ["strong"] },
+  { prefix: "~~", suffix: "~~", marks: ["strike_through"] },
+  { prefix: "*", suffix: "*", marks: ["emphasis"] },
+  { prefix: "_", suffix: "_", marks: ["emphasis"] },
+  { prefix: "`", suffix: "`", marks: ["inlineCode"] },
+].map((p) => ({
+  ...p,
+  regex: new RegExp(`^${escapeRegExp(p.prefix)}(.+)${escapeRegExp(p.suffix)}$`),
+}));
+
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 
 export function parseInlineSyntax(raw: string): ParsedSyntax {
   if (!raw) return { text: "", marks: [] };
 
-  for (const { regex, marks } of PARSE_PATTERNS) {
+  for (const { regex, marks } of MARKER_PATTERNS) {
     const match = raw.match(regex);
     if (match) {
       return { text: match[1]!, marks };
@@ -90,22 +104,6 @@ export interface SyntaxSplit {
 }
 
 /**
- * Candidate patterns for prefix-based splitting, ordered so that longer
- * (more-specific) prefixes are tried first.  Each entry specifies the
- * literal prefix and suffix strings and the mark names they represent.
- */
-const SPLIT_CANDIDATES: { prefix: string; suffix: string; marks: string[] }[] = [
-  { prefix: "***", suffix: "***", marks: ["strong", "emphasis"] },
-  { prefix: "___", suffix: "___", marks: ["strong", "emphasis"] },
-  { prefix: "**", suffix: "**", marks: ["strong"] },
-  { prefix: "__", suffix: "__", marks: ["strong"] },
-  { prefix: "~~", suffix: "~~", marks: ["strike_through"] },
-  { prefix: "*", suffix: "*", marks: ["emphasis"] },
-  { prefix: "_", suffix: "_", marks: ["emphasis"] },
-  { prefix: "`", suffix: "`", marks: ["inlineCode"] },
-];
-
-/**
  * Find text that trails after closed syntax markers within a raw string.
  *
  * For example, given `**test** x`:
@@ -130,7 +128,7 @@ export function findTrailingSplit(raw: string): SyntaxSplit | null {
   const full = parseInlineSyntax(raw);
   if (full.marks.length > 0) return null;
 
-  for (const { prefix, suffix, marks } of SPLIT_CANDIDATES) {
+  for (const { prefix, suffix, marks } of MARKER_PATTERNS) {
     if (!raw.startsWith(prefix)) continue;
 
     // The inner text must start after the prefix and be at least 1 char.

@@ -116,7 +116,6 @@ function App() {
     onToggleSourceMode: handleToggleSourceMode,
   });
 
-  // Check for file passed as argument on launch
   useEffect(() => {
     invoke<string | null>("get_opened_file").then((filePath) => {
       if (filePath) {
@@ -125,7 +124,6 @@ function App() {
     });
   }, [openFile]);
 
-  // Listen for files opened while app is running
   useEffect(() => {
     const unlisten = listen<string>("file-opened", (event) => {
       openFile(event.payload);
@@ -135,13 +133,11 @@ function App() {
     };
   }, [openFile]);
 
-  // Update native window title with filename and modified indicator
   useEffect(() => {
     const title = isModified ? `${fileName} — Edited` : fileName;
     getCurrentWindow().setTitle(title);
   }, [fileName, isModified]);
 
-  // Listen for external file changes on disk
   useEffect(() => {
     const unlisten = listen<string>("file-changed", () => {
       if (isModifiedRef.current) {
@@ -155,7 +151,6 @@ function App() {
     };
   }, [path, openFile]);
 
-  // Clear reload banner and editor snapshot when a new file is opened or reloaded
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- synchronizing banner visibility with file state
     setShowReloadBanner(false);

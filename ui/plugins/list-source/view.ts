@@ -348,35 +348,46 @@ export const listSourceView = $view(listItemSchema.node, (ctx): NodeViewConstruc
  * on the affected NodeViews when the cursor moves between list items,
  * even if the node content hasn't changed.
  */
-const listCursorKey = new PluginKey<DecorationSet>("list-cursor");
+interface ListCursorState {
+  decorations: DecorationSet;
+  activePos: number | null;
+}
+
+const listCursorKey = new PluginKey<ListCursorState>("list-cursor");
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const listCursorPlugin = $prose((_ctx) => {
-  function buildDecorations(state: EditorState) {
+  function buildState(state: EditorState): ListCursorState {
     const ancestor = findAncestorOfType(state, "list_item");
-    if (!ancestor) return DecorationSet.empty;
+    if (!ancestor) return { decorations: DecorationSet.empty, activePos: null };
 
-    return DecorationSet.create(state.doc, [
-      Decoration.node(ancestor.pos, ancestor.pos + ancestor.node.nodeSize, {
-        class: "list-item-active",
-      }),
-    ]);
+    return {
+      decorations: DecorationSet.create(state.doc, [
+        Decoration.node(ancestor.pos, ancestor.pos + ancestor.node.nodeSize, {
+          class: "list-item-active",
+        }),
+      ]),
+      activePos: ancestor.pos,
+    };
   }
 
-  return new Plugin({
+  return new Plugin<ListCursorState>({
     key: listCursorKey,
     state: {
       init(_, state) {
-        return buildDecorations(state);
+        return buildState(state);
       },
-      apply(tr, oldDecorations, _oldState, newState) {
-        if (!tr.docChanged && !tr.selectionSet) return oldDecorations;
-        return buildDecorations(newState);
+      apply(tr, old, _oldState, newState) {
+        if (!tr.docChanged && !tr.selectionSet) return old;
+        const ancestor = findAncestorOfType(newState, "list_item");
+        const newPos = ancestor?.pos ?? null;
+        if (newPos === old.activePos && !tr.docChanged) return old;
+        return buildState(newState);
       },
     },
     props: {
       decorations(state) {
-        return listCursorKey.getState(state) ?? DecorationSet.empty;
+        return listCursorKey.getState(state)?.decorations ?? DecorationSet.empty;
       },
     },
   });

@@ -160,7 +160,7 @@ body,
 }
 
 .milkdown .editor .code-fence {
-  font-family: "SF Mono", "Fira Code", "Fira Mono", Menlo, monospace;
+  font-family: var(--skriv-font-mono);
   font-size: 0.85em;
   line-height: 1.6;
   padding: 2px 16px;

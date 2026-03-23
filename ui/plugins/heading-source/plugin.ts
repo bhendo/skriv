@@ -10,7 +10,7 @@ import {
 } from "@milkdown/kit/prose/state";
 import { Decoration, DecorationSet } from "@milkdown/kit/prose/view";
 import { buildHeadingPrefix, parseHeadingPrefix, stripPrefix } from "./syntax";
-import { findAncestorOfType } from "../block-source/cursor";
+import { findAncestorOfType, findFirstNodeOfType } from "../block-source/cursor";
 
 export function handleHeadingSourceTransition(
   _transactions: readonly Transaction[],
@@ -36,31 +36,21 @@ export function handleHeadingSourceTransition(
   }
 
   // LEAVE runs for any selection type (matching inline_source pattern)
-  let hsPos: number | null = null;
-  let hsNode: Node | null = null;
-  newState.doc.descendants((node, pos) => {
-    if (node.type === headingSourceType) {
-      hsPos = pos;
-      hsNode = node;
-      return false;
-    }
-    return true;
-  });
+  const found = findFirstNodeOfType(newState.doc, "heading_source");
 
-  if (hsPos !== null && hsNode !== null) {
-    const nodeFrom = hsPos;
-    const nodeTo = hsPos + (hsNode as Node).nodeSize;
+  if (found) {
+    const nodeFrom = found.pos;
+    const nodeTo = found.pos + found.node.nodeSize;
 
     // If selection is still inside the heading_source, skip leave
     if (sel.from >= nodeFrom && sel.to <= nodeTo) {
-      // But check for live update if doc changed
       if (docChanged) {
-        return handleLiveUpdate(hsNode as Node, nodeFrom, newState);
+        return handleLiveUpdate(found.node, nodeFrom, newState);
       }
       return null;
     }
 
-    return leaveHeadingSource(hsNode as Node, nodeFrom, newState);
+    return leaveHeadingSource(found.node, nodeFrom, newState);
   }
 
   // ENTER requires a collapsed cursor
