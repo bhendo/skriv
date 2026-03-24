@@ -276,3 +276,103 @@ body,
   white-space: pre-wrap;
   padding: 8px;
 }
+
+/* Mermaid expand overlay */
+.mermaid-overlay-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+
+.mermaid-overlay-backdrop.visible {
+  opacity: 1;
+}
+
+.mermaid-overlay {
+  width: 95vw;
+  height: 95vh;
+  background: var(--crepe-color-background, #ffffff);
+  border: 1px solid var(--crepe-color-outline, #ddd);
+  border-radius: 8px;
+  position: relative;
+  overflow: hidden;
+  outline: none;
+}
+
+.mermaid-overlay-toolbar {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  gap: 4px;
+  z-index: 1;
+}
+
+.mermaid-overlay-toolbar button {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 6px;
+  background: var(--crepe-color-surface, rgba(0, 0, 0, 0.05));
+  color: var(--crepe-color-on-surface, #333);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  transition: background 150ms ease;
+}
+
+.mermaid-overlay-toolbar button:hover {
+  background: var(--crepe-color-surface-variant, rgba(0, 0, 0, 0.1));
+}
+
+.mermaid-overlay-content {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  cursor: grab;
+}
+
+.mermaid-overlay-content:active {
+  cursor: grabbing;
+}
+
+.mermaid-overlay-wrapper {
+  transform-origin: 0 0;
+}
+
+/* Inline expand button */
+.mermaid-expand-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: var(--crepe-color-surface, rgba(0, 0, 0, 0.05));
+  color: var(--crepe-color-on-surface, #333);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  opacity: 0;
+  transition: opacity 150ms ease;
+  z-index: 1;
+}
+
+.milkdown .editor .mermaid-svg-container:hover .mermaid-expand-btn {
+  opacity: 1;
+}
+
+.mermaid-expand-btn:hover {
+  background: var(--crepe-color-surface-variant, rgba(0, 0, 0, 0.1));
+}

@@ -224,3 +224,117 @@ test.describe("Mermaid editor commenting", () => {
     await expect(mermaidCm).toContainText("graph TD");
   });
 });
+
+test.describe("Mermaid expand overlay", () => {
+  test("expand button appears on hover", async ({ page, loadApp }) => {
+    await loadApp({
+      openedFile: "/tmp/test.md",
+      fileContent: MERMAID_CONTENT,
+    });
+
+    const editor = page.locator(".milkdown .editor");
+    const mermaidBlock = editor.locator(".mermaid-block");
+    await expect(mermaidBlock).toBeVisible({ timeout: 10_000 });
+    await expect(mermaidBlock.locator(".mermaid-svg-wrapper svg")).toBeVisible({
+      timeout: 10_000,
+    });
+
+    const expandBtn = mermaidBlock.locator(".mermaid-expand-btn");
+    await expect(expandBtn).toBeAttached();
+    await expect(expandBtn).toHaveCSS("opacity", "0");
+
+    await mermaidBlock.locator(".mermaid-svg-container").hover();
+    await expect(expandBtn).toHaveCSS("opacity", "1");
+  });
+
+  test("clicking expand opens overlay, Esc closes it", async ({
+    page,
+    loadApp,
+  }) => {
+    await loadApp({
+      openedFile: "/tmp/test.md",
+      fileContent: MERMAID_CONTENT,
+    });
+
+    const editor = page.locator(".milkdown .editor");
+    const mermaidBlock = editor.locator(".mermaid-block");
+    await expect(mermaidBlock.locator(".mermaid-svg-wrapper svg")).toBeVisible({
+      timeout: 10_000,
+    });
+
+    await mermaidBlock.locator(".mermaid-svg-container").hover();
+    await mermaidBlock.locator(".mermaid-expand-btn").click();
+
+    const overlay = page.locator(".mermaid-overlay");
+    await expect(overlay).toBeVisible({ timeout: 5_000 });
+    await expect(overlay.locator("svg")).toBeVisible();
+
+    await page.keyboard.press("Escape");
+    await expect(overlay).not.toBeVisible();
+  });
+
+  test("clicking backdrop closes overlay", async ({ page, loadApp }) => {
+    await loadApp({
+      openedFile: "/tmp/test.md",
+      fileContent: MERMAID_CONTENT,
+    });
+
+    const editor = page.locator(".milkdown .editor");
+    const mermaidBlock = editor.locator(".mermaid-block");
+    await expect(mermaidBlock.locator(".mermaid-svg-wrapper svg")).toBeVisible({
+      timeout: 10_000,
+    });
+
+    await mermaidBlock.locator(".mermaid-svg-container").hover();
+    await mermaidBlock.locator(".mermaid-expand-btn").click();
+    await expect(page.locator(".mermaid-overlay")).toBeVisible({
+      timeout: 5_000,
+    });
+
+    await page.locator(".mermaid-overlay-backdrop").click({ position: { x: 5, y: 5 } });
+    await expect(page.locator(".mermaid-overlay")).not.toBeVisible();
+  });
+
+  test("close button in toolbar closes overlay", async ({ page, loadApp }) => {
+    await loadApp({
+      openedFile: "/tmp/test.md",
+      fileContent: MERMAID_CONTENT,
+    });
+
+    const editor = page.locator(".milkdown .editor");
+    const mermaidBlock = editor.locator(".mermaid-block");
+    await expect(mermaidBlock.locator(".mermaid-svg-wrapper svg")).toBeVisible({
+      timeout: 10_000,
+    });
+
+    await mermaidBlock.locator(".mermaid-svg-container").hover();
+    await mermaidBlock.locator(".mermaid-expand-btn").click();
+    await expect(page.locator(".mermaid-overlay")).toBeVisible({
+      timeout: 5_000,
+    });
+
+    await page.locator('.mermaid-overlay-toolbar button[aria-label="Close"]').click();
+    await expect(page.locator(".mermaid-overlay")).not.toBeVisible();
+  });
+
+  test("expand button is hidden in edit mode", async ({ page, loadApp }) => {
+    await loadApp({
+      openedFile: "/tmp/test.md",
+      fileContent: MERMAID_CONTENT,
+    });
+
+    const editor = page.locator(".milkdown .editor");
+    const mermaidBlock = editor.locator(".mermaid-block");
+    await expect(mermaidBlock.locator(".mermaid-svg-wrapper svg")).toBeVisible({
+      timeout: 10_000,
+    });
+
+    await mermaidBlock.locator(".mermaid-svg-container").click();
+    await expect(mermaidBlock.locator(".mermaid-edit-container")).toBeVisible({
+      timeout: 5_000,
+    });
+
+    const expandBtn = mermaidBlock.locator(".mermaid-expand-btn");
+    await expect(expandBtn).toBeHidden();
+  });
+});
