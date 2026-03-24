@@ -1,5 +1,5 @@
 import { $prose } from "@milkdown/utils";
-import type { Node, Mark, MarkType } from "@milkdown/kit/prose/model";
+import type { Node, MarkType } from "@milkdown/kit/prose/model";
 import {
   EditorState,
   Plugin,
@@ -11,6 +11,8 @@ import { Decoration, DecorationSet } from "@milkdown/kit/prose/view";
 import type { EditorView } from "@milkdown/kit/prose/view";
 import { findFirstNodeOfType } from "../block-source/cursor";
 import { makeDecorationPlugin } from "../block-source/decoration";
+import { leaveLinkSource } from "../link-source/plugin";
+import { createMarks, NAV_KEYS } from "../shared/marks";
 import {
   buildRawText,
   computePrefixLength,
@@ -20,11 +22,6 @@ import {
   parseInlineSyntax,
   SUPPORTED_MARKS,
 } from "./syntax";
-
-/** Build Mark[] from mark names, filtering any that don't exist in the schema. */
-function createMarks(schema: { marks: Record<string, MarkType> }, markNames: string[]): Mark[] {
-  return markNames.map((name) => schema.marks[name]?.create()).filter((m): m is Mark => m != null);
-}
 
 /**
  * Replace an inline_source node with its parsed marked text (or plain
@@ -194,6 +191,14 @@ export function handleInlineSourceTransition(
   const marksBefore = nodeBefore?.marks ?? [];
   const marksAfter = nodeAfter?.marks ?? [];
 
+  // Yield to link-source when cursor is on a link mark
+  const linkMarkType = schema.marks.link;
+  if (linkMarkType) {
+    const hasLinkBefore = linkMarkType.isInSet(marksBefore);
+    const hasLinkAfter = linkMarkType.isInSet(marksAfter);
+    if (hasLinkBefore || hasLinkAfter) return null;
+  }
+
   // Find a supported mark at cursor position (left-biased)
   let targetMarkType = null;
   for (const markName of SUPPORTED_MARKS) {
@@ -212,9 +217,6 @@ export function handleInlineSourceTransition(
   if (!span) return null;
 
   // Collect supported mark names from the first text node in the span.
-  // v1 only handles same-boundary marks (all marks share start/end positions),
-  // so inspecting the first child is sufficient. Overlapping marks with different
-  // boundaries are out of scope — see design doc for future phases.
   const $spanStart = newState.doc.resolve(span.from);
   const firstChild = $spanStart.nodeAfter;
   if (!firstChild) return null;
@@ -225,8 +227,29 @@ export function handleInlineSourceTransition(
 
   if (markNames.length === 0) return null;
 
+  // Leave any existing link_source in the same transaction as enter,
+  // then remap positions through the mapping.
+  const tr = newState.tr;
+  let adjustedFrom = span.from;
+  let adjustedTo = span.to;
+
+  const linkSourceFound = findFirstNodeOfType(newState.doc, "link_source");
+  if (linkSourceFound) {
+    leaveLinkSource(
+      tr,
+      schema,
+      linkSourceFound.pos,
+      linkSourceFound.pos + linkSourceFound.node.nodeSize,
+      linkSourceFound.node.textContent,
+      linkSourceFound.node.attrs.href as string,
+      linkSourceFound.node.attrs.title as string
+    );
+    adjustedFrom = tr.mapping.map(span.from);
+    adjustedTo = tr.mapping.map(span.to);
+  }
+
   // Build raw text with syntax markers
-  const textContent = newState.doc.textBetween(span.from, span.to);
+  const textContent = tr.doc.textBetween(adjustedFrom, adjustedTo);
   const rawText = buildRawText(textContent, markNames);
 
   // Create inline_source node
@@ -235,9 +258,7 @@ export function handleInlineSourceTransition(
     schema.text(rawText)
   );
 
-  // Build transaction (non-historical — presentation change only)
-  const tr = newState.tr;
-  tr.replaceWith(span.from, span.to, inlineSource);
+  tr.replaceWith(adjustedFrom, adjustedTo, inlineSource);
   tr.setMeta("addToHistory", false);
 
   // Map cursor position: offset in rendered text -> offset in raw text
@@ -245,8 +266,7 @@ export function handleInlineSourceTransition(
   const offsetInSpan = $cursor.pos - span.from;
   const offsetInRaw = offsetInSpan + prefixLength;
 
-  // inline_source node content starts at span.from + 1 (after node open)
-  const contentStart = span.from + 1;
+  const contentStart = adjustedFrom + 1;
   const newCursorPos = Math.min(contentStart + offsetInRaw, contentStart + rawText.length);
   tr.setSelection(TextSelection.create(tr.doc, newCursorPos));
 
@@ -359,18 +379,6 @@ const inlineSourceDecoPlugin = $prose((_ctx) =>
 );
 
 const inlineSourceBehaviorKey = new PluginKey("inline-source-behavior");
-
-/** Keys that represent intentional cursor navigation. */
-const NAV_KEYS = new Set([
-  "ArrowLeft",
-  "ArrowRight",
-  "ArrowUp",
-  "ArrowDown",
-  "Home",
-  "End",
-  "PageUp",
-  "PageDown",
-]);
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const inlineSourceBehaviorPlugin = $prose((_ctx) => {

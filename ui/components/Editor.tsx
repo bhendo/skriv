@@ -8,6 +8,7 @@ import { inlineSourceNode, inlineSourcePlugin } from "../plugins/inline-source";
 import { headingSourceNode, headingSourcePlugin } from "../plugins/heading-source";
 import { listSourceView, listCursorPlugin } from "../plugins/list-source";
 import { codeBlockSourcePlugin } from "../plugins/code-block-source";
+import { linkSourceNode, linkSourcePlugin } from "../plugins/link-source";
 import { mermaidBlockNode, mermaidBlockView, remarkMermaidPlugin } from "../plugins/mermaid-block";
 import "@milkdown/crepe/theme/common/style.css";
 import "../theme/skriv.css";
@@ -56,7 +57,9 @@ const CrepeEditor = forwardRef<EditorHandle, EditorProps>(
             .use(headingSourcePlugin)
             .use(listSourceView)
             .use(listCursorPlugin)
-            .use(codeBlockSourcePlugin);
+            .use(codeBlockSourcePlugin)
+            .use(linkSourceNode)
+            .use(linkSourcePlugin);
         }
 
         crepe.editor.use(remarkMermaidPlugin).use(mermaidBlockNode).use(mermaidBlockView);
