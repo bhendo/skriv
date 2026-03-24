@@ -56,20 +56,47 @@ export const listSourceView = $view(listItemSchema.node, (ctx): NodeViewConstruc
       const label = node.attrs.label as string;
       const listType = node.attrs.listType as string;
       const checked = node.attrs.checked as boolean | null | undefined;
+      const isReadonly = !view.editable;
+
+      li.classList.remove("editing-marker");
+      labelWrapper.classList.remove("editing-marker");
+      labelWrapper.style.width = "";
 
       const html = config.renderLabel({
         label,
         listType,
         checked: checked ?? undefined,
-        readonly: !view.editable,
+        readonly: isReadonly,
       });
 
-      labelWrapper.setAttribute("aria-hidden", "true");
       labelWrapper.innerHTML = "";
       const span = document.createElement("span");
-      span.className = `milkdown-icon label ${listType === "bullet" ? "bullet" : "ordered"}`;
+      const labelClass =
+        checked == null
+          ? listType === "bullet"
+            ? "bullet"
+            : "ordered"
+          : checked
+            ? "checked"
+            : "unchecked";
+      span.className = `milkdown-icon label ${labelClass}${isReadonly ? " readonly" : ""}`;
       span.innerHTML = html;
       labelWrapper.appendChild(span);
+
+      if (checked == null) {
+        labelWrapper.setAttribute("aria-hidden", "true");
+        labelWrapper.removeAttribute("role");
+        labelWrapper.removeAttribute("aria-checked");
+        labelWrapper.removeAttribute("aria-label");
+      } else {
+        labelWrapper.removeAttribute("aria-hidden");
+        labelWrapper.setAttribute("role", "checkbox");
+        labelWrapper.setAttribute("aria-checked", String(checked));
+        labelWrapper.setAttribute(
+          "aria-label",
+          checked ? "Checked task list item" : "Unchecked task list item"
+        );
+      }
     }
 
     /** Resolve the parent list wrapper type from the document. */
@@ -88,7 +115,12 @@ export const listSourceView = $view(listItemSchema.node, (ctx): NodeViewConstruc
       const marker = markerForListItem(node, parentListType());
       savedMarker = marker;
 
+      li.classList.add("editing-marker");
+      labelWrapper.classList.add("editing-marker");
       labelWrapper.removeAttribute("aria-hidden");
+      labelWrapper.removeAttribute("role");
+      labelWrapper.removeAttribute("aria-checked");
+      labelWrapper.removeAttribute("aria-label");
       labelWrapper.innerHTML = "";
 
       const input = document.createElement("input");
@@ -98,20 +130,34 @@ export const listSourceView = $view(listItemSchema.node, (ctx): NodeViewConstruc
       input.setAttribute("aria-label", "List marker");
       input.setAttribute(
         "aria-description",
-        "Edit to change list type. Dash or asterisk for bullet, number and period for ordered, empty to remove list."
+        "Edit to change list type. Use dash or asterisk for bullets, add [ ] or [x] for task items, use number and period for ordered lists, or clear it to remove the list."
       );
       input.tabIndex = -1;
 
+      input.addEventListener("input", handleInput);
       input.addEventListener("keydown", handleInputKeydown);
       input.addEventListener("blur", handleInputBlur);
       input.addEventListener("compositionstart", handleCompositionStart);
       input.addEventListener("compositionend", handleCompositionEnd);
 
+      syncInputWidth(input, marker);
       labelWrapper.appendChild(input);
     }
 
     function getInput(): HTMLInputElement | null {
       return labelWrapper.querySelector("input.marker-input");
+    }
+
+    function syncInputWidth(input: HTMLInputElement, value: string) {
+      // Size the input to fit the marker text.  We add 1 extra `ch` to
+      // account for the slight difference between the CSS `ch` unit
+      // (the advance width of "0") and actual rendered text, plus the
+      // <input> element's built-in internal decoration.  The CSS right
+      // padding (0.35ch) provides additional breathing room.
+      const chars = (value || "---").length;
+      const width = `${Math.max(chars + 1, 3)}ch`;
+      input.style.width = width;
+      labelWrapper.style.width = width;
     }
 
     // --- Commit / revert ---
@@ -132,6 +178,7 @@ export const listSourceView = $view(listItemSchema.node, (ctx): NodeViewConstruc
           if (currentType !== "bullet") {
             convertListType(view, pos, "bullet_list");
           }
+          syncTaskState(parsed.checked ?? null);
           break;
         }
         case "ordered": {
@@ -139,6 +186,7 @@ export const listSourceView = $view(listItemSchema.node, (ctx): NodeViewConstruc
           if (currentType !== "ordered") {
             convertListType(view, pos, "ordered_list");
           }
+          syncTaskState(parsed.checked ?? null);
           break;
         }
         case "unwrap":
@@ -153,7 +201,10 @@ export const listSourceView = $view(listItemSchema.node, (ctx): NodeViewConstruc
 
     function revertMarkerEdit() {
       const input = getInput();
-      if (input) input.value = savedMarker;
+      if (input) {
+        input.value = savedMarker;
+        syncInputWidth(input, savedMarker);
+      }
     }
 
     function returnFocusToContent() {
@@ -221,12 +272,48 @@ export const listSourceView = $view(listItemSchema.node, (ctx): NodeViewConstruc
       commitMarkerEdit();
     }
 
+    function handleInput(e: Event) {
+      const input = e.target;
+      if (!(input instanceof HTMLInputElement)) return;
+      syncInputWidth(input, input.value);
+    }
+
     function handleCompositionStart() {
       composing = true;
     }
 
     function handleCompositionEnd() {
       composing = false;
+    }
+
+    function syncTaskState(checked: boolean | null) {
+      const currentPos = getPos();
+      if (currentPos == null) return;
+
+      const currentNode = view.state.doc.nodeAt(currentPos);
+      if (!currentNode || currentNode.type.name !== "list_item") return;
+
+      const currentChecked = (currentNode.attrs.checked as boolean | null | undefined) ?? null;
+      if (currentChecked === checked) return;
+
+      view.dispatch(
+        view.state.tr.setNodeMarkup(currentPos, undefined, {
+          ...currentNode.attrs,
+          checked,
+        })
+      );
+    }
+
+    function handleLabelPointerdown(e: PointerEvent) {
+      if (!view.editable) return;
+      if (e.target instanceof HTMLInputElement) return;
+
+      const currentChecked = (node.attrs.checked as boolean | null | undefined) ?? null;
+      if (currentChecked == null) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+      syncTaskState(!currentChecked);
     }
 
     // --- NodeView interface ---
@@ -268,6 +355,7 @@ export const listSourceView = $view(listItemSchema.node, (ctx): NodeViewConstruc
     // check whether the cursor is inside this item so that list items
     // created by input rules (typing "- " or "1. ") show the editable
     // marker right away instead of requiring a click-away-and-back.
+    labelWrapper.addEventListener("pointerdown", handleLabelPointerdown);
     renderStaticLabel();
     checkCursor();
 
@@ -291,6 +379,7 @@ export const listSourceView = $view(listItemSchema.node, (ctx): NodeViewConstruc
             // Skip overwrite if the user is actively editing the input
             if (input && document.activeElement !== input) {
               input.value = newMarker;
+              syncInputWidth(input, newMarker);
               savedMarker = newMarker;
             }
           }
@@ -331,11 +420,13 @@ export const listSourceView = $view(listItemSchema.node, (ctx): NodeViewConstruc
       destroy() {
         const input = getInput();
         if (input) {
+          input.removeEventListener("input", handleInput);
           input.removeEventListener("keydown", handleInputKeydown);
           input.removeEventListener("blur", handleInputBlur);
           input.removeEventListener("compositionstart", handleCompositionStart);
           input.removeEventListener("compositionend", handleCompositionEnd);
         }
+        labelWrapper.removeEventListener("pointerdown", handleLabelPointerdown);
         dom.remove();
         contentDOM.remove();
       },

@@ -176,10 +176,24 @@ body,
   background: transparent;
   color: inherit;
   opacity: 0.4;
-  width: 24px;
-  text-align: right;
-  padding: 0;
+  min-width: 24px;
+  box-sizing: content-box;
+  text-align: left;
+  letter-spacing: 0;
+  font-kerning: none;
+  font-variant-ligatures: none;
+  padding: 0 0.35ch 0 0;
   outline: none;
+}
+
+.milkdown .editor .milkdown-list-item-block > .list-item.editing-marker {
+  gap: 0;
+}
+
+.milkdown .editor .milkdown-list-item-block .label-wrapper.editing-marker {
+  justify-content: flex-start;
+  min-width: 24px;
+  width: auto;
 }
 
 .milkdown .editor .milkdown-list-item-block .marker-input:focus {

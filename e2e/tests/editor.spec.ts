@@ -71,6 +71,98 @@ test.describe("Editor rendering", () => {
     await expect(firstParagraph).toHaveCSS("margin-bottom", "0px");
   });
 
+  test("task list marker editor shows the full markdown prefix", async ({ page, loadApp }) => {
+    await loadApp({
+      openedFile: "/tmp/test.md",
+      fileContent: "- [ ] Todo\n- [x] Done\n",
+    });
+
+    const listItems = page.locator(".milkdown .editor .milkdown-list-item-block");
+
+    await listItems.nth(0).locator(".children").click();
+    await expect(listItems.nth(0).locator(".marker-input")).toHaveValue("- [ ]");
+    const uncheckedWidth = await listItems
+      .nth(0)
+      .locator(".label-wrapper")
+      .evaluate((el) => el.getBoundingClientRect().width);
+    expect(uncheckedWidth).toBeGreaterThan(24);
+    expect(uncheckedWidth).toBeLessThan(72);
+    const uncheckedGap = await listItems.nth(0).evaluate((el) => {
+      const label = el.querySelector(".label-wrapper");
+      const children = el.querySelector(".children");
+      if (!(label instanceof HTMLElement) || !(children instanceof HTMLElement)) {
+        return null;
+      }
+      return children.getBoundingClientRect().left - label.getBoundingClientRect().right;
+    });
+    expect(uncheckedGap).not.toBeNull();
+    expect(uncheckedGap!).toBeLessThanOrEqual(1);
+
+    await listItems.nth(1).locator(".children").click();
+    await expect(listItems.nth(1).locator(".marker-input")).toHaveValue("- [x]");
+    const checkedWidth = await listItems
+      .nth(1)
+      .locator(".label-wrapper")
+      .evaluate((el) => el.getBoundingClientRect().width);
+    expect(checkedWidth).toBeGreaterThan(24);
+    expect(checkedWidth).toBeLessThan(72);
+  });
+
+  test("ordered and numbered-task marker inputs have reasonable width", async ({
+    page,
+    loadApp,
+  }) => {
+    await loadApp({
+      openedFile: "/tmp/test.md",
+      fileContent: "Before\n\n1. Ordered\n",
+    });
+
+    // Click into the ordered item to enter editing mode
+    const listItem = page.locator(".milkdown .editor .milkdown-list-item-block");
+    await listItem.locator(".children").click();
+    await expect(listItem.locator(".marker-input")).toHaveValue("1.");
+
+    // Label wrapper should be wider than the 24px minimum but not excessively wide
+    const wrapperWidth = await listItem
+      .locator(".label-wrapper")
+      .evaluate((el) => el.getBoundingClientRect().width);
+    expect(wrapperWidth).toBeGreaterThan(24);
+    expect(wrapperWidth).toBeLessThan(72);
+
+    // Content should start close to the label (gap: 0 in editing mode)
+    const gap = await listItem.evaluate((el) => {
+      const label = el.querySelector(".label-wrapper");
+      const children = el.querySelector(".children");
+      if (!(label instanceof HTMLElement) || !(children instanceof HTMLElement)) return null;
+      return children.getBoundingClientRect().left - label.getBoundingClientRect().right;
+    });
+    expect(gap).not.toBeNull();
+    expect(gap!).toBeLessThanOrEqual(1);
+  });
+
+  test("clicking a task checkbox toggles the underlying markdown", async ({ page, loadApp }) => {
+    await loadApp({
+      openedFile: "/tmp/test.md",
+      fileContent: "Before\n\n- [ ] Todo\n",
+    });
+
+    await page.locator(".milkdown .editor p").first().click();
+
+    const taskCheckbox = page.locator(
+      '.milkdown .editor .milkdown-list-item-block .label-wrapper[role="checkbox"]'
+    );
+    await expect(taskCheckbox).toHaveAttribute("aria-checked", "false");
+
+    await taskCheckbox.click();
+    await expect(taskCheckbox).toHaveAttribute("aria-checked", "true");
+
+    await page.keyboard.press(`${process.platform === "darwin" ? "Meta" : "Control"}+m`);
+
+    const sourceCm = page.locator(".source-editor .cm-editor");
+    await expect(sourceCm).toBeVisible({ timeout: 5_000 });
+    await expect(sourceCm).toContainText("- [x] Todo");
+  });
+
   test("renders code block (CodeMirror)", async ({ page, loadApp }) => {
     await loadApp({
       openedFile: "/tmp/test.md",
