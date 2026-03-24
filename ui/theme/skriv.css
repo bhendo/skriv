@@ -138,6 +138,21 @@ body,
   opacity: 0.4;
 }
 
+.milkdown .editor .link-source {
+  font-family: inherit;
+  border-radius: 2px;
+  background: var(--crepe-color-inline-area, #f5f5f5);
+  caret-color: var(--crepe-color-on-background, #333);
+}
+
+.milkdown .editor .link-source .syntax-marker {
+  opacity: 0.4;
+}
+
+.milkdown .editor .link-source .link-url {
+  opacity: 0.6;
+}
+
 .milkdown .editor .heading-source .syntax-marker {
   opacity: 0.4;
 }
