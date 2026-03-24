@@ -133,12 +133,12 @@ export function openOverlay(options: OverlayOptions): OverlayHandle {
   // Compute synced transform and initialize panzoom
   const diagramCenter = computeDiagramCenter(
     options.initialTransform,
-    options.inlineContainerDimensions,
+    options.inlineContainerDimensions
   );
   const overlayTransform = computeTransformForContainer(
     diagramCenter,
     { width: content.clientWidth, height: content.clientHeight },
-    options.initialTransform.scale,
+    options.initialTransform.scale
   );
 
   let pzInstance: PanZoom | null = createPanZoomWithTransform(wrapper, overlayTransform);
@@ -148,7 +148,7 @@ export function openOverlay(options: OverlayOptions): OverlayHandle {
     const currentDims = { width: content.clientWidth, height: content.clientHeight };
     const fitTransform = computeFitToView(
       { width: svgNaturalWidth, height: svgNaturalHeight },
-      currentDims,
+      currentDims
     );
     pzInstance.zoomAbs(0, 0, fitTransform.scale);
     pzInstance.moveTo(fitTransform.x, fitTransform.y);

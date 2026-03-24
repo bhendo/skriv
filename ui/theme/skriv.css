@@ -348,11 +348,23 @@ body,
   transform-origin: 0 0;
 }
 
-/* Inline expand button */
-.mermaid-expand-btn {
+/* Inline diagram toolbar (zoom controls + expand) */
+.mermaid-inline-toolbar {
   position: absolute;
   top: 8px;
   right: 8px;
+  display: flex;
+  gap: 4px;
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+
+.milkdown .editor .mermaid-svg-container:hover .mermaid-inline-toolbar {
+  opacity: 1;
+}
+
+.mermaid-inline-toolbar button {
   width: 28px;
   height: 28px;
   border: none;
@@ -364,15 +376,9 @@ body,
   align-items: center;
   justify-content: center;
   font-size: 14px;
-  opacity: 0;
-  transition: opacity 150ms ease;
-  z-index: 1;
+  transition: background 150ms ease;
 }
 
-.milkdown .editor .mermaid-svg-container:hover .mermaid-expand-btn {
-  opacity: 1;
-}
-
-.mermaid-expand-btn:hover {
+.mermaid-inline-toolbar button:hover {
   background: var(--crepe-color-surface-variant, rgba(0, 0, 0, 0.1));
 }

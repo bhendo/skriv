@@ -14,6 +14,7 @@ import {
   openOverlay,
   computeDiagramCenter,
   computeTransformForContainer,
+  computeFitToView,
   createPanZoomWithTransform,
 } from "./overlay";
 import type { OverlayHandle, Transform as OverlayTransform } from "./overlay";
@@ -88,11 +89,26 @@ export const mermaidBlockView = $view(mermaidBlockNode, (): NodeViewConstructor 
     svgWrapper.className = "mermaid-svg-wrapper";
     svgContainer.appendChild(svgWrapper);
 
-    const expandBtn = document.createElement("button");
-    expandBtn.className = "mermaid-expand-btn";
-    expandBtn.setAttribute("aria-label", "Expand diagram");
-    expandBtn.textContent = "⤢";
-    svgContainer.appendChild(expandBtn);
+    const inlineToolbar = document.createElement("div");
+    inlineToolbar.className = "mermaid-inline-toolbar";
+
+    function makeInlineButton(text: string, label: string): HTMLButtonElement {
+      const btn = document.createElement("button");
+      btn.textContent = text;
+      btn.setAttribute("aria-label", label);
+      return btn;
+    }
+
+    const fitBtn = makeInlineButton("⊞", "Fit to view");
+    const zoomInBtn = makeInlineButton("+", "Zoom in");
+    const zoomOutBtn = makeInlineButton("−", "Zoom out");
+    const expandBtn = makeInlineButton("⤢", "Expand diagram");
+
+    inlineToolbar.appendChild(fitBtn);
+    inlineToolbar.appendChild(zoomInBtn);
+    inlineToolbar.appendChild(zoomOutBtn);
+    inlineToolbar.appendChild(expandBtn);
+    svgContainer.appendChild(inlineToolbar);
 
     let overlayHandle: OverlayHandle | null = null;
 
@@ -119,6 +135,9 @@ export const mermaidBlockView = $view(mermaidBlockNode, (): NodeViewConstructor 
 
     function attachPanZoom(overrideTransform?: OverlayTransform): void {
       disposePanZoom();
+      // Clear stale CSS transform left by the previous panzoom instance so
+      // getBoundingClientRect returns the SVG's natural dimensions.
+      svgWrapper.style.transform = "";
       const svgEl = svgWrapper.querySelector("svg");
       if (!svgEl) return;
 
@@ -144,13 +163,43 @@ export const mermaidBlockView = $view(mermaidBlockNode, (): NodeViewConstructor 
         svgWrapper,
         { x: offsetX, y: offsetY, scale },
         {
-          onClick: () => {
+          onClick: (e: Event) => {
             if (!view.editable || overlayHandle) return;
+            if (e.target instanceof globalThis.Node && inlineToolbar.contains(e.target)) return;
             enterEditing();
           },
         }
       );
     }
+
+    fitBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (!pzInstance) return;
+      const svgEl = svgWrapper.querySelector("svg");
+      if (!svgEl) return;
+      const svgRect = svgEl.getBoundingClientRect();
+      const t = pzInstance.getTransform();
+      const naturalW = svgRect.width / t.scale;
+      const naturalH = svgRect.height / t.scale;
+      const fit = computeFitToView(
+        { width: naturalW, height: naturalH },
+        { width: svgContainer.clientWidth, height: svgContainer.clientHeight }
+      );
+      pzInstance.zoomAbs(0, 0, fit.scale);
+      pzInstance.moveTo(fit.x, fit.y);
+    });
+
+    zoomInBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (!pzInstance) return;
+      pzInstance.zoomTo(svgContainer.clientWidth / 2, svgContainer.clientHeight / 2, 1.5);
+    });
+
+    zoomOutBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (!pzInstance) return;
+      pzInstance.zoomTo(svgContainer.clientWidth / 2, svgContainer.clientHeight / 2, 0.67);
+    });
 
     /**
      * Mermaid sometimes calculates a viewBox that doesn't encompass all
@@ -313,15 +362,26 @@ export const mermaidBlockView = $view(mermaidBlockNode, (): NodeViewConstructor 
         initialTransform: transform,
         inlineContainerDimensions: inlineDims,
         onClose: (overlayTransform, overlayDims) => {
+          // Preserve the diagram center point from the overlay, but use the
+          // inline's default scale (fit-to-width). Using the overlay's scale
+          // would produce jarring height/zoom changes since the inline
+          // container is much smaller than the overlay.
+          const svgEl = svgWrapper.querySelector("svg");
+          if (!svgEl) {
+            attachPanZoom();
+            overlayHandle = null;
+            return;
+          }
+          const svgRect = svgEl.getBoundingClientRect();
+          const currentScale = pzInstance?.getTransform().scale ?? 1;
+          const naturalWidth = svgRect.width / currentScale;
+          const inlineScale = Math.min(svgContainer.clientWidth / naturalWidth, 1);
+
           const center = computeDiagramCenter(overlayTransform, overlayDims);
-          const currentInlineDims = {
-            width: svgContainer.clientWidth,
-            height: svgContainer.clientHeight,
-          };
           const inlineTransform = computeTransformForContainer(
             center,
-            currentInlineDims,
-            overlayTransform.scale
+            { width: svgContainer.clientWidth, height: svgContainer.clientHeight },
+            inlineScale
           );
           attachPanZoom(inlineTransform);
           overlayHandle = null;
