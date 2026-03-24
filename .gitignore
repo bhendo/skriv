@@ -18,6 +18,7 @@ dist-ssr
 
 # Superpowers brainstorming artifacts
 .superpowers/
+test-results/
 
 # Editor directories and files
 .vscode/*
