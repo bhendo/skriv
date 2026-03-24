@@ -226,7 +226,7 @@ test.describe("Mermaid editor commenting", () => {
 });
 
 test.describe("Mermaid expand overlay", () => {
-  test("expand button appears on hover", async ({ page, loadApp }) => {
+  test("inline toolbar appears on hover", async ({ page, loadApp }) => {
     await loadApp({
       openedFile: "/tmp/test.md",
       fileContent: MERMAID_CONTENT,
@@ -239,12 +239,12 @@ test.describe("Mermaid expand overlay", () => {
       timeout: 10_000,
     });
 
-    const expandBtn = mermaidBlock.locator(".mermaid-expand-btn");
-    await expect(expandBtn).toBeAttached();
-    await expect(expandBtn).toHaveCSS("opacity", "0");
+    const toolbar = mermaidBlock.locator(".mermaid-inline-toolbar");
+    await expect(toolbar).toBeAttached();
+    await expect(toolbar).toHaveCSS("opacity", "0");
 
     await mermaidBlock.locator(".mermaid-svg-container").hover();
-    await expect(expandBtn).toHaveCSS("opacity", "1");
+    await expect(toolbar).toHaveCSS("opacity", "1");
   });
 
   test("clicking expand opens overlay, Esc closes it", async ({
@@ -263,7 +263,7 @@ test.describe("Mermaid expand overlay", () => {
     });
 
     await mermaidBlock.locator(".mermaid-svg-container").hover();
-    await mermaidBlock.locator(".mermaid-expand-btn").click();
+    await mermaidBlock.locator(".mermaid-inline-toolbar button[aria-label='Expand diagram']").click();
 
     const overlay = page.locator(".mermaid-overlay");
     await expect(overlay).toBeVisible({ timeout: 5_000 });
@@ -286,7 +286,7 @@ test.describe("Mermaid expand overlay", () => {
     });
 
     await mermaidBlock.locator(".mermaid-svg-container").hover();
-    await mermaidBlock.locator(".mermaid-expand-btn").click();
+    await mermaidBlock.locator(".mermaid-inline-toolbar button[aria-label='Expand diagram']").click();
     await expect(page.locator(".mermaid-overlay")).toBeVisible({
       timeout: 5_000,
     });
@@ -308,7 +308,7 @@ test.describe("Mermaid expand overlay", () => {
     });
 
     await mermaidBlock.locator(".mermaid-svg-container").hover();
-    await mermaidBlock.locator(".mermaid-expand-btn").click();
+    await mermaidBlock.locator(".mermaid-inline-toolbar button[aria-label='Expand diagram']").click();
     await expect(page.locator(".mermaid-overlay")).toBeVisible({
       timeout: 5_000,
     });
@@ -317,7 +317,7 @@ test.describe("Mermaid expand overlay", () => {
     await expect(page.locator(".mermaid-overlay")).not.toBeVisible();
   });
 
-  test("expand button is hidden in edit mode", async ({ page, loadApp }) => {
+  test("inline toolbar is hidden in edit mode", async ({ page, loadApp }) => {
     await loadApp({
       openedFile: "/tmp/test.md",
       fileContent: MERMAID_CONTENT,
@@ -334,7 +334,7 @@ test.describe("Mermaid expand overlay", () => {
       timeout: 5_000,
     });
 
-    const expandBtn = mermaidBlock.locator(".mermaid-expand-btn");
-    await expect(expandBtn).toBeHidden();
+    const toolbar = mermaidBlock.locator(".mermaid-inline-toolbar");
+    await expect(toolbar).toBeHidden();
   });
 });
