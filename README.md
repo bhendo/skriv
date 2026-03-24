@@ -21,7 +21,7 @@ A Typora-style WYSIWYG markdown editor for macOS, built with Tauri, React, and M
 ## Quick Start
 
 ```bash
-git clone https://github.com/bhendo/markdown.git
+git clone https://github.com/bhendo/skriv.git
 cd markdown
 make setup
 make dev

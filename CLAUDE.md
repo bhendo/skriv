@@ -46,7 +46,7 @@ make lint           # run all linters
 make format         # auto-format all code
 
 # Granular targets (also used by CI)
-make test-ui  # npm test (Vitest)
+make test-ui  # pnpm test (Vitest)
 make test-tauri        # cargo test
 make lint-ui  # ESLint
 make lint-tauri        # cargo clippy
@@ -84,20 +84,24 @@ This project maintains institutional knowledge in `docs/project_notes/` for cons
 ### Memory-Aware Protocols
 
 **Before proposing architectural changes:**
+
 - Check `docs/project_notes/decisions.md` for existing decisions
 - Verify the proposed approach doesn't conflict with past choices
 
 **When encountering errors or bugs:**
+
 - Search `docs/project_notes/bugs.md` for similar issues
 - Apply known solutions if found
 - Document new bugs and solutions when resolved
 
-**When debugging ProseMirror plugins:**
+**When debugging:**
+
 - Check `docs/project_notes/key_facts.md` for internals gotchas
 - Always instrument with logging before attempting fixes
 - Verify fixes are running (check webview DevTools, not terminal)
 
 **When completing work on tickets:**
+
 - Log completed work in `docs/project_notes/issues.md`
 
 ## License

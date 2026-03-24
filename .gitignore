@@ -12,9 +12,10 @@ dist
 dist-ssr
 *.local
 
-# Claude Code — ignore all except skills
-.claude/*
-!.claude/skills/
+# Claude Code
+.claude/worktrees
+.claude/settings.local.json
+CLAUDE.local.md
 
 # Superpowers brainstorming artifacts
 .superpowers/
@@ -22,6 +23,7 @@ dist-ssr
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
+.kiro
 .idea
 .DS_Store
 *.suo
