@@ -15,8 +15,26 @@ describe("parseMarker", () => {
     expect(parseMarker("+")).toEqual({ type: "bullet" });
   });
 
+  it("parses task bullets", () => {
+    expect(parseMarker("- [ ]")).toEqual({ type: "bullet", checked: false });
+    expect(parseMarker("- [x]")).toEqual({ type: "bullet", checked: true });
+  });
+
   it("parses '1.' as ordered with startNumber 1", () => {
     expect(parseMarker("1.")).toEqual({ type: "ordered", startNumber: 1 });
+  });
+
+  it("parses ordered task items", () => {
+    expect(parseMarker("1. [ ]")).toEqual({
+      type: "ordered",
+      startNumber: 1,
+      checked: false,
+    });
+    expect(parseMarker("2. [x]")).toEqual({
+      type: "ordered",
+      startNumber: 2,
+      checked: true,
+    });
   });
 
   it("parses '2.' as ordered with startNumber 2", () => {
@@ -63,6 +81,7 @@ const schema = new Schema({
         label: { default: "\u2022" },
         listType: { default: "bullet" },
         spread: { default: true },
+        checked: { default: null },
       },
       toDOM: () => ["li", 0] as const,
     },
@@ -89,6 +108,20 @@ describe("markerForListItem", () => {
     expect(markerForListItem(item)).toBe("-");
   });
 
+  it("returns task markers for checked and unchecked task list items", () => {
+    const unchecked = schema.nodes.list_item.create(
+      { listType: "bullet", label: "\u2022", checked: false },
+      schema.nodes.paragraph.create()
+    );
+    const checked = schema.nodes.list_item.create(
+      { listType: "bullet", label: "\u2022", checked: true },
+      schema.nodes.paragraph.create()
+    );
+
+    expect(markerForListItem(unchecked)).toBe("- [ ]");
+    expect(markerForListItem(checked)).toBe("- [x]");
+  });
+
   it("returns the label for ordered list items", () => {
     const item = schema.nodes.list_item.create(
       { listType: "ordered", label: "3." },
@@ -103,5 +136,29 @@ describe("markerForListItem", () => {
       schema.nodes.paragraph.create()
     );
     expect(markerForListItem(item)).toBe("1.");
+  });
+
+  it("returns ordered task markers when the item is checked", () => {
+    const item = schema.nodes.list_item.create(
+      { listType: "ordered", label: "3.", checked: true },
+      schema.nodes.paragraph.create()
+    );
+    expect(markerForListItem(item)).toBe("3. [x]");
+  });
+
+  it("returns ordered task markers when the item is unchecked", () => {
+    const item = schema.nodes.list_item.create(
+      { listType: "ordered", label: "3.", checked: false },
+      schema.nodes.paragraph.create()
+    );
+    expect(markerForListItem(item)).toBe("3. [ ]");
+  });
+
+  it("uses parentListType when provided, overriding node attrs", () => {
+    const item = schema.nodes.list_item.create(
+      { listType: "bullet", label: "\u2022", checked: false },
+      schema.nodes.paragraph.create()
+    );
+    expect(markerForListItem(item, "ordered")).toBe("1. [ ]");
   });
 });
