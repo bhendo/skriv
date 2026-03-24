@@ -6,11 +6,17 @@ import { EditorView as CMEditorView, type ViewUpdate, keymap } from "@codemirror
 import { EditorState as CMEditorState } from "@codemirror/state";
 import { basicSetup } from "codemirror";
 import { oneDark } from "@codemirror/theme-one-dark";
-import createPanZoom, { type PanZoom } from "panzoom";
 import mermaid from "mermaid";
 import { mermaidBlockNode } from "./node";
 import { buildMermaidThemeConfig } from "./theme";
 import { createFenceOpen, createFenceClose } from "../code-block-source/plugin";
+import {
+  openOverlay,
+  computeDiagramCenter,
+  computeTransformForContainer,
+  createPanZoomWithTransform,
+} from "./overlay";
+import type { OverlayHandle, Transform as OverlayTransform } from "./overlay";
 
 let mermaidIdCounter = 0;
 function nextId(): string {
@@ -66,7 +72,7 @@ export const mermaidBlockView = $view(mermaidBlockNode, (): NodeViewConstructor 
     let lastSvg = "";
     let lastRenderedContent = "";
     let cmView: CMEditorView | null = null;
-    let pzInstance: PanZoom | null = null;
+    let pzInstance: ReturnType<typeof createPanZoomWithTransform> | null = null;
     let updating = false; // Guard against CM↔PM sync loops
 
     // --- DOM structure ---
@@ -81,6 +87,14 @@ export const mermaidBlockView = $view(mermaidBlockNode, (): NodeViewConstructor 
     const svgWrapper = document.createElement("div");
     svgWrapper.className = "mermaid-svg-wrapper";
     svgContainer.appendChild(svgWrapper);
+
+    const expandBtn = document.createElement("button");
+    expandBtn.className = "mermaid-expand-btn";
+    expandBtn.setAttribute("aria-label", "Expand diagram");
+    expandBtn.textContent = "⤢";
+    svgContainer.appendChild(expandBtn);
+
+    let overlayHandle: OverlayHandle | null = null;
 
     // Editing container with fence markers
     const editContainer = document.createElement("div");
@@ -103,19 +117,18 @@ export const mermaidBlockView = $view(mermaidBlockNode, (): NodeViewConstructor 
       }
     }
 
-    function attachPanZoom(): void {
+    function attachPanZoom(overrideTransform?: OverlayTransform): void {
       disposePanZoom();
       const svgEl = svgWrapper.querySelector("svg");
       if (!svgEl) return;
 
-      // With useMaxWidth:false, the SVG renders at natural size.
-      // Calculate scale to fit within container width.
       const containerWidth = svgContainer.clientWidth;
-      const svgWidth = svgEl.getBoundingClientRect().width;
-      const svgHeight = svgEl.getBoundingClientRect().height;
+      const svgRect = svgEl.getBoundingClientRect();
+      const svgWidth = svgRect.width;
+      const svgHeight = svgRect.height;
       if (svgWidth === 0 || svgHeight === 0) return;
 
-      const scale = Math.min(containerWidth / svgWidth, 1);
+      const scale = overrideTransform?.scale ?? Math.min(containerWidth / svgWidth, 1);
 
       // Size container height to fit the scaled diagram (capped at 80vh)
       const fittedHeight = svgHeight * scale + 32;
@@ -123,22 +136,20 @@ export const mermaidBlockView = $view(mermaidBlockNode, (): NodeViewConstructor 
       const containerH = Math.min(fittedHeight, maxHeight);
       svgContainer.style.height = `${containerH}px`;
 
-      // Center the scaled content
-      const offsetX = (containerWidth - svgWidth * scale) / 2;
-      const offsetY = (containerH - svgHeight * scale) / 2;
+      // Use override offsets if provided, otherwise center
+      const offsetX = overrideTransform?.x ?? (containerWidth - svgWidth * scale) / 2;
+      const offsetY = overrideTransform?.y ?? (containerH - svgHeight * scale) / 2;
 
-      pzInstance = createPanZoom(svgWrapper, {
-        maxZoom: 5,
-        minZoom: 0.2,
-        smoothScroll: false,
-        initialZoom: scale,
-        initialX: offsetX,
-        initialY: offsetY,
-        onClick: () => {
-          if (!view.editable) return;
-          enterEditing();
-        },
-      });
+      pzInstance = createPanZoomWithTransform(
+        svgWrapper,
+        { x: offsetX, y: offsetY, scale },
+        {
+          onClick: () => {
+            if (!view.editable || overlayHandle) return;
+            enterEditing();
+          },
+        }
+      );
     }
 
     /**
@@ -285,6 +296,39 @@ export const mermaidBlockView = $view(mermaidBlockNode, (): NodeViewConstructor 
       renderDiagram(text);
     }
 
+    expandBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+
+      if (!pzInstance || !lastSvg) return;
+
+      const transform = pzInstance.getTransform();
+      const inlineDims = {
+        width: svgContainer.clientWidth,
+        height: svgContainer.clientHeight,
+      };
+
+      overlayHandle = openOverlay({
+        svgHtml: lastSvg,
+        initialTransform: transform,
+        inlineContainerDimensions: inlineDims,
+        onClose: (overlayTransform, overlayDims) => {
+          const center = computeDiagramCenter(overlayTransform, overlayDims);
+          const currentInlineDims = {
+            width: svgContainer.clientWidth,
+            height: svgContainer.clientHeight,
+          };
+          const inlineTransform = computeTransformForContainer(
+            center,
+            currentInlineDims,
+            overlayTransform.scale
+          );
+          attachPanZoom(inlineTransform);
+          overlayHandle = null;
+        },
+      });
+    });
+
     // Click-to-edit for rendered diagrams is handled by panzoom's onClick.
     // For empty/error states (no panzoom), handle click directly.
     svgContainer.addEventListener("click", () => {
@@ -314,6 +358,11 @@ export const mermaidBlockView = $view(mermaidBlockNode, (): NodeViewConstructor 
 
         const contentChanged = updatedNode.textContent !== node.textContent;
         node = updatedNode;
+
+        if (overlayHandle && contentChanged) {
+          overlayHandle.closeWithoutCallback();
+          overlayHandle = null;
+        }
 
         if (cmView && contentChanged) {
           // External change while editing — update CodeMirror
@@ -357,6 +406,10 @@ export const mermaidBlockView = $view(mermaidBlockNode, (): NodeViewConstructor 
       },
 
       destroy(): void {
+        if (overlayHandle) {
+          overlayHandle.closeWithoutCallback();
+          overlayHandle = null;
+        }
         disposePanZoom();
         if (cmView) cmView.destroy();
         activeViews.delete(rerender);
