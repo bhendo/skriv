@@ -4,6 +4,13 @@ Recurring bugs, root causes, and solutions. Focus on what was learned.
 
 ## Entries
 
+### 2026-03-24 - Custom list items showed duplicate bullets and loose block spacing
+
+- **Issue**: Bulleted lists rendered with a stray native marker at the far left and the text sat lower than the custom marker, making lists look misaligned.
+- **Root Cause**: The custom list item NodeView renders its own marker UI, but the browser was still allowed to apply native `li` marker styling and default first/last block margins inside the list item content.
+- **Solution**: Explicitly reset the custom list item's native list styling (`list-style: none`, zeroed margin/padding), keep the flex layout local to the themed editor, and trim the first/last child block margins inside `.children`.
+- **Prevention**: Any custom ProseMirror/Milkdown list item UI should explicitly neutralize native `li` marker behavior and add an e2e style assertion for the relevant computed list styles.
+
 ### 2026-03-20 - Inline formatting lost during structural edits (#38)
 
 - **Issue**: Bold/italic/code text lost formatting when: (a) typing `**text**` triggered input rules that flashed source mode, (b) backspace joining paragraphs destroyed the inline_source node, (c) editing markers inside inline_source had asterisks stripped by Milkdown input rules

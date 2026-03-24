@@ -58,6 +58,33 @@ body,
   line-height: var(--skriv-line-height);
 }
 
+.milkdown .editor ul,
+.milkdown .editor ol {
+  margin: 0.5em 0;
+}
+
+.milkdown .editor .milkdown-list-item-block > .list-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.milkdown .editor .milkdown-list-item-block > .list-item > .children {
+  flex: 1;
+  min-width: 0;
+}
+
+.milkdown .editor .milkdown-list-item-block > .list-item > .children > :first-child {
+  margin-top: 0;
+}
+
+.milkdown .editor .milkdown-list-item-block > .list-item > .children > :last-child {
+  margin-bottom: 0;
+}
+
 .milkdown .editor blockquote {
   border-left: 4px solid var(--crepe-color-outline, #ddd);
   margin: 0.8em 0;

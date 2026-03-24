@@ -12,14 +12,10 @@ test.describe("Editor rendering", () => {
     await expect(editor.locator("h3")).toContainText("Heading Three");
   });
 
-  test("renders inline formatting (bold, italic, code)", async ({
-    page,
-    loadApp,
-  }) => {
+  test("renders inline formatting (bold, italic, code)", async ({ page, loadApp }) => {
     await loadApp({
       openedFile: "/tmp/test.md",
-      fileContent:
-        "This is **bold** and *italic* and `inline code` text.\n",
+      fileContent: "This is **bold** and *italic* and `inline code` text.\n",
     });
     const editor = page.locator(".milkdown .editor");
     await expect(editor.locator("strong")).toContainText("bold");
@@ -53,6 +49,28 @@ test.describe("Editor rendering", () => {
     await expect(listItems.nth(2)).toContainText("Third");
   });
 
+  test("custom list items suppress native markers and keep tight block spacing", async ({
+    page,
+    loadApp,
+  }) => {
+    await loadApp({
+      openedFile: "/tmp/test.md",
+      fileContent: "- First item\n- Second item\n",
+    });
+
+    const firstListItem = page
+      .locator(".milkdown .editor .milkdown-list-item-block > .list-item")
+      .first();
+    await expect(firstListItem).toBeVisible();
+
+    await expect(firstListItem).toHaveCSS("list-style-type", "none");
+    await expect(firstListItem).toHaveCSS("display", "flex");
+
+    const firstParagraph = firstListItem.locator(".children > p").first();
+    await expect(firstParagraph).toHaveCSS("margin-top", "0px");
+    await expect(firstParagraph).toHaveCSS("margin-bottom", "0px");
+  });
+
   test("renders code block (CodeMirror)", async ({ page, loadApp }) => {
     await loadApp({
       openedFile: "/tmp/test.md",
@@ -70,9 +88,7 @@ test.describe("Editor rendering", () => {
       fileContent: "> This is a blockquote.\n",
     });
     const editor = page.locator(".milkdown .editor");
-    await expect(editor.locator("blockquote")).toContainText(
-      "This is a blockquote.",
-    );
+    await expect(editor.locator("blockquote")).toContainText("This is a blockquote.");
   });
 
   test("renders horizontal rule", async ({ page, loadApp }) => {
@@ -84,10 +100,7 @@ test.describe("Editor rendering", () => {
     await expect(editor.locator("hr")).toBeVisible();
   });
 
-  test("loads file content when openedFile is set", async ({
-    page,
-    loadApp,
-  }) => {
+  test("loads file content when openedFile is set", async ({ page, loadApp }) => {
     await loadApp({
       openedFile: "/tmp/my-doc.md",
       fileContent: "# My Document\n\nSome paragraph text here.\n",
@@ -97,10 +110,7 @@ test.describe("Editor rendering", () => {
     await expect(editor).toContainText("Some paragraph text here.");
   });
 
-  test("shows placeholder when no file is opened", async ({
-    page,
-    loadApp,
-  }) => {
+  test("shows placeholder when no file is opened", async ({ page, loadApp }) => {
     await loadApp();
     const editor = page.locator(".milkdown .editor");
     await expect(editor.locator(".crepe-placeholder")).toBeVisible();
