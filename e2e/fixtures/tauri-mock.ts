@@ -13,6 +13,8 @@ export interface TauriMockConfig {
   fileInfo?: { size: number; modified: number };
   /** Whether write_file should succeed — default: true */
   writeShouldSucceed?: boolean;
+  /** Response for clipboard readText — default: "" (empty clipboard) */
+  clipboardText?: string;
 }
 
 const DEFAULT_CONFIG: Required<TauriMockConfig> = {
@@ -20,6 +22,7 @@ const DEFAULT_CONFIG: Required<TauriMockConfig> = {
   fileContent: "",
   fileInfo: { size: 100, modified: 0 },
   writeShouldSucceed: true,
+  clipboardText: "",
 };
 
 /**
@@ -104,6 +107,10 @@ export async function injectTauriMock(
 
         case "unwatch_file":
           return undefined;
+
+        // Clipboard plugin
+        case "plugin:clipboard-manager|read_text":
+          return cfg.clipboardText;
 
         // Dialog plugin
         case "plugin:dialog|open":

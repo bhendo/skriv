@@ -27,6 +27,7 @@ import {
   normalizeHref,
   parseLinkSyntax,
 } from "./syntax";
+import { readClipboardUrl } from "./clipboard";
 
 /** Create a text node with a link mark and optional inner marks from raw link text. */
 function createLinkTextNode(
@@ -458,6 +459,48 @@ const linkSourceDecoPlugin = $prose((_ctx) =>
   makeDecorationPlugin("link-source-deco", buildLinkDecorations)
 );
 
+/**
+ * Phase 2 of Cmd+K clipboard auto-fill. After Phase 1 creates the link_source
+ * node with empty parens, this reads the clipboard and fills the URL if valid.
+ */
+async function fillUrlFromClipboard(view: EditorView, selectedTextLen: number): Promise<void> {
+  const url = await readClipboardUrl();
+  if (!url) return;
+
+  // Re-derive state — it may have changed since Phase 1.
+  // Find the link_source node by type rather than saved position,
+  // because AllSelection (Cmd+A) can cause replaceWith to auto-wrap
+  // the node in a paragraph, shifting its position.
+  const state = view.state;
+  const found = findFirstNodeOfType(state.doc, "link_source");
+  if (!found) return;
+
+  const { node, pos: nodePos } = found;
+  const rawText = node.textContent;
+
+  // Bail if user has started typing in the URL field
+  if (!rawText.endsWith("]()")) return;
+  if (rawText.length - "[]()".length !== selectedTextLen) return;
+
+  const linkText = selectedTextLen > 0 ? rawText.slice(1, 1 + selectedTextLen) : "";
+  const newRawText = buildLinkRawText(linkText, url);
+
+  const linkSourceType = state.schema.nodes.link_source;
+  const newNode = linkSourceType.create({ href: "", title: "" }, state.schema.text(newRawText));
+  const tr = state.tr.replaceWith(nodePos, nodePos + node.nodeSize, newNode);
+
+  const contentStart = nodePos + 1;
+  if (selectedTextLen > 0) {
+    // Keep link_source open so user can review the auto-filled URL
+    const endOfUrl = contentStart + newRawText.length - 1;
+    tr.setSelection(TextSelection.create(tr.doc, endOfUrl));
+  } else {
+    tr.setSelection(TextSelection.create(tr.doc, contentStart + 1));
+  }
+
+  view.dispatch(tr);
+}
+
 const linkSourceBehaviorKey = new PluginKey("link-source-behavior");
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -601,12 +644,13 @@ const linkSourceBehaviorPlugin = $prose((_ctx) => {
             const linkSource = linkSourceType.create({ href: "", title: "" }, schema.text(rawText));
             const tr = view.state.tr.replaceWith(sel.from, sel.to, linkSource);
             // Place cursor inside parens: after "]("
-            // Content starts at sel.from + 1 (node open token)
-            // Position after "](" = contentStart + "[".length + selectedText.length + "](".length
             const contentStart = sel.from + 1;
             const cursorPos = contentStart + 1 + selectedText.length + 2;
             tr.setSelection(TextSelection.create(tr.doc, cursorPos));
             view.dispatch(tr);
+
+            // Phase 2: async clipboard auto-fill
+            void fillUrlFromClipboard(view, selectedText.length);
             return true;
           }
 
@@ -616,10 +660,12 @@ const linkSourceBehaviorPlugin = $prose((_ctx) => {
           const pos = sel.from;
           const tr = view.state.tr.replaceWith(pos, pos, linkSource);
           // Place cursor inside brackets: after "["
-          // Content starts at pos + 1 (node open token), cursor after "[" = contentStart + 1
           const contentStart = pos + 1;
           tr.setSelection(TextSelection.create(tr.doc, contentStart + 1));
           view.dispatch(tr);
+
+          // Phase 2: async clipboard auto-fill
+          void fillUrlFromClipboard(view, 0);
           return true;
         }
 

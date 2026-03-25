@@ -69,7 +69,7 @@ Any failure — clipboard empty, not a URL, plugin error, exception — silently
 ### Cursor Positioning
 
 **Case 2 (text selected):**
-- **With clipboard URL:** `[text](https://example.com)|` — cursor after closing paren (link is complete, user continues typing prose). Matches Typora behavior.
+- **With clipboard URL:** `[text](https://example.com|)` — cursor at end of URL inside parens, keeping `link_source` node open so the user can review/edit the URL before navigating away.
 - **Without clipboard URL:** `[text](|)` — cursor inside empty parens, same as current behavior.
 
 **Case 3 (no selection):**
@@ -80,7 +80,7 @@ Any failure — clipboard empty, not a URL, plugin error, exception — silently
 
 | Scenario | Expected result |
 |----------|-----------------|
-| Clipboard has valid `https://` URL, text selected | `[text](clipboard-url)`, cursor after `)` |
+| Clipboard has valid `https://` URL, text selected | `[text](clipboard-url)`, cursor at end of URL inside parens |
 | Clipboard has valid `http://` URL, no selection | `[](clipboard-url)`, cursor inside `[]` |
 | Clipboard has plain text (not a URL) | Falls back to empty parens |
 | Clipboard is empty | Falls back to empty parens |
