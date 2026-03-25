@@ -10,25 +10,15 @@ Project configuration and important reference information.
 - **Node positions**: For inline node at pos P with nodeSize N: P is BEFORE the opening token (outside), P+1 to P+N-1 is inside, P+N is AFTER the closing token (outside). Use strict inequality (`>` / `<`) for "inside" checks.
 - **Milkdown custom input rules**: Tagged with `MILKDOWN_CUSTOM_INPUTRULES$` meta on their transactions.
 
-## Milkdown Plugin Registration
+## Milkdown / CodeMirror Editor Reference
 
-- **Remark plugins:** Use `$remark()` from `@milkdown/utils` and register with `.use()`. Do NOT manually update `remarkPluginsCtx` via `config()` — Crepe's initialization overwrites it.
-- **`$node()` return type:** Returns `$Node` directly (has `.type(ctx)` method and `.id`). Pass directly to `$view()`, not `.node` — the `.node` pattern is from Milkdown preset schemas, not `$node()`.
+See `milkdown-editor-reference` skill for plugin registration patterns, context access, basicSetup contents, CodeMirror search API, theming, and transaction gotchas.
+
+Additional notes not in the skill:
+- **Crepe's CodeMirrorBlock:** Uses `basicSetup` + `drawSelection()` + `keymap.of(defaultKeymap.concat(indentWithTab))` + config extensions. Source at `@milkdown/components/src/code-block/view/node-view.ts`.
+- **`$node()` return type:** Returns `$Node` directly (has `.type(ctx)` method and `.id`). Pass directly to `$view()`, not `.node`.
 - **`$view()` first argument:** Expects `$Node | $Mark`, not a slice or node type.
-- **Crepe's CodeMirrorBlock:** Uses `basicSetup` from `codemirror` package + `drawSelection()` + `keymap.of(defaultKeymap.concat(indentWithTab))` + config extensions. Source at `@milkdown/components/src/code-block/view/node-view.ts`.
-
-## CodeMirror Theming — Two Layers
-
-Crepe's code block styling uses two layers that must both be present for custom CM instances to match:
-
-1. **`oneDark` extension** (`@codemirror/theme-one-dark`) — provides syntax highlighting colors. Crepe passes this via `defaultConfig[CodeMirror].theme`. Used in both light and dark mode.
-2. **CSS on `.milkdown-code-block`** — overrides oneDark's dark background with `--crepe-color-surface` (warm cream in light, dark in dark). Defined in Crepe's `code-mirror.css`.
-
-**For inline editors** (mermaid, etc.): add `oneDark` as a CM extension + add `milkdown-code-block` class to the container div.
-
-**For full-page editors** (source mode): add `oneDark` as a CM extension + use CSS on the wrapper (e.g., `.source-editor .cm-editor { background: var(--crepe-color-surface) }`) to override backgrounds.
-
-**Keyboard shortcuts:** Source mode toggle is `Cmd+M`. `Cmd+/` is free for CodeMirror's `toggleComment`.
+- **Keyboard shortcuts:** Source mode toggle is `Cmd+M`. `Cmd+/` is free for CodeMirror's `toggleComment`.
 
 ## E2E Style Testing
 
