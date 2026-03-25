@@ -18,12 +18,21 @@ vi.mock("@codemirror/view", () => {
     EditorView: MockEditorView,
     keymap: { of: vi.fn(() => ({})) },
     placeholder: vi.fn(() => ({})),
+    lineNumbers: vi.fn(() => ({})),
+    highlightActiveLineGutter: vi.fn(() => ({})),
+    highlightSpecialChars: vi.fn(() => ({})),
+    drawSelection: vi.fn(() => ({})),
+    dropCursor: vi.fn(() => ({})),
+    rectangularSelection: vi.fn(() => ({})),
+    crosshairCursor: vi.fn(() => ({})),
+    highlightActiveLine: vi.fn(() => ({})),
   };
 });
 
 vi.mock("@codemirror/state", () => ({
   EditorState: {
     create: vi.fn(() => ({ doc: { toString: () => "mock markdown" } })),
+    allowMultipleSelections: { of: vi.fn(() => ({})) },
   },
 }));
 
@@ -38,6 +47,10 @@ vi.mock("@codemirror/language-data", () => ({
 vi.mock("@codemirror/language", () => ({
   syntaxHighlighting: vi.fn(() => ({})),
   defaultHighlightStyle: {},
+  foldGutter: vi.fn(() => ({})),
+  indentOnInput: vi.fn(() => ({})),
+  bracketMatching: vi.fn(() => ({})),
+  foldKeymap: [],
 }));
 
 vi.mock("@codemirror/commands", () => ({
@@ -48,11 +61,15 @@ vi.mock("@codemirror/commands", () => ({
 
 vi.mock("@codemirror/search", () => ({
   searchKeymap: [],
+  highlightSelectionMatches: vi.fn(() => ({})),
+  search: vi.fn(() => ({})),
 }));
 
 vi.mock("@codemirror/autocomplete", () => ({
   closeBracketsKeymap: [],
   closeBrackets: vi.fn(() => ({})),
+  autocompletion: vi.fn(() => ({})),
+  completionKeymap: [],
 }));
 
 afterEach(cleanup);

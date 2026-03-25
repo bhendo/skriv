@@ -1,9 +1,35 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
-import { EditorView } from "@codemirror/view";
+import {
+  EditorView,
+  lineNumbers,
+  highlightActiveLineGutter,
+  highlightSpecialChars,
+  drawSelection,
+  dropCursor,
+  rectangularSelection,
+  crosshairCursor,
+  highlightActiveLine,
+  keymap,
+} from "@codemirror/view";
 import { EditorState } from "@codemirror/state";
+import {
+  foldGutter,
+  indentOnInput,
+  syntaxHighlighting,
+  defaultHighlightStyle,
+  bracketMatching,
+  foldKeymap,
+} from "@codemirror/language";
+import { history, historyKeymap, defaultKeymap } from "@codemirror/commands";
+import {
+  closeBrackets,
+  closeBracketsKeymap,
+  autocompletion,
+  completionKeymap,
+} from "@codemirror/autocomplete";
+import { highlightSelectionMatches, search } from "@codemirror/search";
 import { markdown } from "@codemirror/lang-markdown";
 import { languages } from "@codemirror/language-data";
-import { basicSetup } from "codemirror";
 import { oneDark } from "@codemirror/theme-one-dark";
 import type { EditorHandle } from "../types/editor";
 
@@ -23,6 +49,7 @@ export const SourceEditor = forwardRef<EditorHandle, SourceEditorProps>(
       ref,
       () => ({
         getMarkdown: () => viewRef.current?.state.doc.toString(),
+        getCodeMirrorView: () => viewRef.current,
       }),
       []
     );
@@ -34,7 +61,32 @@ export const SourceEditor = forwardRef<EditorHandle, SourceEditorProps>(
         state: EditorState.create({
           doc: defaultValue,
           extensions: [
-            basicSetup,
+            lineNumbers(),
+            highlightActiveLineGutter(),
+            highlightSpecialChars(),
+            history(),
+            foldGutter(),
+            drawSelection(),
+            dropCursor(),
+            EditorState.allowMultipleSelections.of(true),
+            indentOnInput(),
+            syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
+            bracketMatching(),
+            closeBrackets(),
+            autocompletion(),
+            rectangularSelection(),
+            crosshairCursor(),
+            highlightActiveLine(),
+            highlightSelectionMatches(),
+            search(),
+            keymap.of([
+              ...closeBracketsKeymap,
+              ...defaultKeymap,
+              // searchKeymap intentionally excluded — search is handled by SearchBar
+              ...historyKeymap,
+              ...foldKeymap,
+              ...completionKeymap,
+            ]),
             EditorView.lineWrapping,
             markdown({ codeLanguages: languages }),
             oneDark,

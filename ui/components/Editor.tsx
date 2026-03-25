@@ -2,7 +2,7 @@ import { forwardRef, useImperativeHandle } from "react";
 import { Crepe, CrepeFeature } from "@milkdown/crepe";
 import { remarkStringifyOptionsCtx } from "@milkdown/core";
 import { Milkdown, MilkdownProvider, useEditor, useInstance } from "@milkdown/react";
-import { getMarkdown } from "@milkdown/utils";
+import { getMarkdown, $prose } from "@milkdown/utils";
 import type { EditorHandle } from "../types/editor";
 import { inlineSourceNode, inlineSourcePlugin } from "../plugins/inline-source";
 import { headingSourceNode, headingSourcePlugin } from "../plugins/heading-source";
@@ -10,10 +10,13 @@ import { listSourceView, listCursorPlugin } from "../plugins/list-source";
 import { codeBlockSourcePlugin } from "../plugins/code-block-source";
 import { linkSourceNode, linkSourcePlugin } from "../plugins/link-source";
 import { mermaidBlockNode, mermaidBlockView, remarkMermaidPlugin } from "../plugins/mermaid-block";
+import { createSearchPlugin } from "../plugins/search";
 import "@milkdown/crepe/theme/common/style.css";
 import "../theme/skriv.css";
 
 export type { EditorHandle } from "../types/editor";
+
+const searchPlugin = $prose(() => createSearchPlugin());
 
 interface EditorProps {
   defaultValue: string;
@@ -62,7 +65,11 @@ const CrepeEditor = forwardRef<EditorHandle, EditorProps>(
             .use(linkSourcePlugin);
         }
 
-        crepe.editor.use(remarkMermaidPlugin).use(mermaidBlockNode).use(mermaidBlockView);
+        crepe.editor
+          .use(remarkMermaidPlugin)
+          .use(mermaidBlockNode)
+          .use(mermaidBlockView)
+          .use(searchPlugin);
 
         if (onChange) {
           crepe.on((listener) => {
@@ -87,6 +94,15 @@ const CrepeEditor = forwardRef<EditorHandle, EditorProps>(
         getMarkdown: () => {
           const editor = getInstance();
           return editor?.action(getMarkdown());
+        },
+        getMilkdownCtx: () => {
+          const editor = getInstance();
+          if (!editor) return null;
+          try {
+            return editor.ctx;
+          } catch {
+            return null;
+          }
         },
       }),
       [getInstance]
