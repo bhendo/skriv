@@ -6,6 +6,7 @@ interface ShortcutHandlers {
   onOpen: () => void;
   onToggleSyntax?: () => void;
   onToggleSourceMode?: () => void;
+  onSearch?: () => void;
 }
 
 export function useKeyboardShortcuts(handlers: ShortcutHandlers) {
@@ -17,6 +18,12 @@ export function useKeyboardShortcuts(handlers: ShortcutHandlers) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!(e.metaKey || e.ctrlKey)) return;
+
+      if (e.key === "f" && !e.shiftKey) {
+        e.preventDefault();
+        ref.current.onSearch?.();
+        return;
+      }
 
       if (e.shiftKey && e.key === "s") {
         e.preventDefault();

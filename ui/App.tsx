@@ -5,10 +5,12 @@ import { open, save } from "@tauri-apps/plugin-dialog";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { MarkdownEditor, type EditorHandle } from "./components/Editor";
 import { SourceEditor } from "./components/SourceEditor";
+import { SearchBar } from "./components/SearchBar";
 import { ErrorBanner } from "./components/ErrorBanner";
 import { ReloadBanner } from "./components/ReloadBanner";
 import { useFile } from "./hooks/useFile";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
+import { useSearch } from "./hooks/useSearch";
 import { useTheme } from "./hooks/useTheme";
 import { reinitMermaid } from "./plugins/mermaid-block";
 
@@ -108,12 +110,30 @@ function App() {
     [snapshotAndToggle]
   );
 
+  const getMilkdownCtx = useCallback(() => {
+    return editorRef.current?.getMilkdownCtx?.() ?? null;
+  }, []);
+
+  const {
+    isSearchOpen,
+    searchInfo,
+    initialQuery,
+    focusKey,
+    openSearch,
+    closeSearch,
+    handleQueryChange,
+    handleNext,
+    handlePrev,
+    handleToggleCaseSensitive,
+  } = useSearch({ editorRef, sourceMode, getMilkdownCtx });
+
   useKeyboardShortcuts({
     onSave: handleSave,
     onSaveAs: handleSaveAs,
     onOpen: handleOpen,
     onToggleSyntax: handleToggleSyntax,
     onToggleSourceMode: handleToggleSourceMode,
+    onSearch: openSearch,
   });
 
   useEffect(() => {
@@ -169,21 +189,37 @@ function App() {
         }}
         onDismiss={() => setShowReloadBanner(false)}
       />
-      <div style={{ flex: 1, overflow: "auto" }}>
-        {sourceMode ? (
-          <SourceEditor
-            ref={editorRef}
-            defaultValue={editorSnapshot ?? content ?? PLACEHOLDER}
-            onChange={handleChange}
-          />
-        ) : (
-          <MarkdownEditor
-            ref={editorRef}
-            defaultValue={editorSnapshot ?? content ?? PLACEHOLDER}
-            onChange={handleChange}
-            syntaxToggling={syntaxToggling}
+      <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
+        {isSearchOpen && (
+          <SearchBar
+            matchCount={searchInfo.matchCount}
+            activeIndex={searchInfo.activeIndex}
+            caseSensitive={searchInfo.caseSensitive}
+            initialQuery={initialQuery}
+            focusKey={focusKey}
+            onQueryChange={handleQueryChange}
+            onNext={handleNext}
+            onPrev={handlePrev}
+            onToggleCaseSensitive={handleToggleCaseSensitive}
+            onClose={closeSearch}
           />
         )}
+        <div style={{ height: "100%", overflow: "auto" }}>
+          {sourceMode ? (
+            <SourceEditor
+              ref={editorRef}
+              defaultValue={editorSnapshot ?? content ?? PLACEHOLDER}
+              onChange={handleChange}
+            />
+          ) : (
+            <MarkdownEditor
+              ref={editorRef}
+              defaultValue={editorSnapshot ?? content ?? PLACEHOLDER}
+              onChange={handleChange}
+              syntaxToggling={syntaxToggling}
+            />
+          )}
+        </div>
       </div>
     </div>
   );
