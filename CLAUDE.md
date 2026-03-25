@@ -48,6 +48,7 @@ make format         # auto-format all code
 # Granular targets (also used by CI)
 make test-ui  # pnpm test (Vitest)
 make test-tauri        # cargo test
+make test-e2e          # pnpm test:e2e (Playwright, requires dev server)
 make lint-ui  # ESLint
 make lint-tauri        # cargo clippy
 make format-ui # Prettier
