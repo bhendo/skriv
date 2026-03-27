@@ -120,6 +120,13 @@ body,
   border: 1px solid var(--crepe-color-outline, #ddd);
   padding: 8px 12px;
   text-align: left;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.milkdown .editor th code,
+.milkdown .editor td code {
+  word-break: break-all;
 }
 
 .milkdown .editor th {
