@@ -1,2 +1,5 @@
 [build]
-rustc-wrapper = "sccache"
+build-dir = "{cargo-cache-home}/build/skriv"
+
+[unstable]
+build-dir-new-layout = true
