@@ -7,6 +7,7 @@ interface ShortcutHandlers {
   onToggleSyntax?: () => void;
   onToggleSourceMode?: () => void;
   onSearch?: () => void;
+  onToggleToc?: () => void;
 }
 
 export function useKeyboardShortcuts(handlers: ShortcutHandlers) {
@@ -40,6 +41,9 @@ export function useKeyboardShortcuts(handlers: ShortcutHandlers) {
       } else if (e.key === "m") {
         e.preventDefault();
         ref.current.onToggleSourceMode?.();
+      } else if (e.shiftKey && e.key === "l") {
+        e.preventDefault();
+        ref.current.onToggleToc?.();
       }
     };
 
