@@ -8,10 +8,12 @@ import { SourceEditor } from "./components/SourceEditor";
 import { SearchBar } from "./components/SearchBar";
 import { ErrorBanner } from "./components/ErrorBanner";
 import { ReloadBanner } from "./components/ReloadBanner";
+import { TocSidebar } from "./components/TocSidebar";
 import { useFile } from "./hooks/useFile";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { useSearch } from "./hooks/useSearch";
 import { useTheme } from "./hooks/useTheme";
+import { useToc } from "./hooks/useToc";
 import { reinitMermaid } from "./plugins/mermaid-block";
 
 const PLACEHOLDER = `# Welcome to Skriv
@@ -44,10 +46,22 @@ function App() {
   const [syntaxToggling, setSyntaxToggling] = useState(true);
   const [sourceMode, setSourceMode] = useState(false);
   const [editorSnapshot, setEditorSnapshot] = useState<string | null>(null);
+  const [tocOpen, setTocOpen] = useState(() => {
+    return localStorage.getItem("skriv-toc-open") === "true";
+  });
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const isModifiedRef = useRef(isModified);
   useEffect(() => {
     isModifiedRef.current = isModified;
   }, [isModified]);
+
+  useEffect(() => {
+    localStorage.setItem("skriv-toc-open", String(tocOpen));
+  }, [tocOpen]);
+
+  const handleToggleToc = useCallback(() => {
+    setTocOpen((prev) => !prev);
+  }, []);
 
   const handleChange = useCallback(() => {
     markModified();
@@ -127,6 +141,12 @@ function App() {
     handleToggleCaseSensitive,
   } = useSearch({ editorRef, sourceMode, getMilkdownCtx });
 
+  const { headings, activeIndex, scrollToHeading } = useToc({
+    editorRef,
+    sourceMode,
+    scrollContainerRef,
+  });
+
   useKeyboardShortcuts({
     onSave: handleSave,
     onSaveAs: handleSaveAs,
@@ -134,6 +154,7 @@ function App() {
     onToggleSyntax: handleToggleSyntax,
     onToggleSourceMode: handleToggleSourceMode,
     onSearch: openSearch,
+    onToggleToc: handleToggleToc,
   });
 
   useEffect(() => {
@@ -189,36 +210,57 @@ function App() {
         }}
         onDismiss={() => setShowReloadBanner(false)}
       />
-      <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
-        {isSearchOpen && (
-          <SearchBar
-            matchCount={searchInfo.matchCount}
-            activeIndex={searchInfo.activeIndex}
-            caseSensitive={searchInfo.caseSensitive}
-            initialQuery={initialQuery}
-            focusKey={focusKey}
-            onQueryChange={handleQueryChange}
-            onNext={handleNext}
-            onPrev={handlePrev}
-            onToggleCaseSensitive={handleToggleCaseSensitive}
-            onClose={closeSearch}
-          />
-        )}
-        <div style={{ height: "100%", overflow: "auto" }}>
-          {sourceMode ? (
-            <SourceEditor
-              ref={editorRef}
-              defaultValue={editorSnapshot ?? content ?? PLACEHOLDER}
-              onChange={handleChange}
-            />
-          ) : (
-            <MarkdownEditor
-              ref={editorRef}
-              defaultValue={editorSnapshot ?? content ?? PLACEHOLDER}
-              onChange={handleChange}
-              syntaxToggling={syntaxToggling}
+      <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+        <TocSidebar
+          headings={headings}
+          activeIndex={activeIndex}
+          isOpen={tocOpen}
+          onToggle={handleToggleToc}
+          onHeadingClick={scrollToHeading}
+        />
+        <div
+          className="editor-column"
+          style={{ flex: 1, position: "relative", overflow: "hidden" }}
+        >
+          {!tocOpen && (
+            <button
+              className="toc-expand-button"
+              onClick={handleToggleToc}
+              aria-label="Open table of contents"
+            >
+              ☰
+            </button>
+          )}
+          {isSearchOpen && (
+            <SearchBar
+              matchCount={searchInfo.matchCount}
+              activeIndex={searchInfo.activeIndex}
+              caseSensitive={searchInfo.caseSensitive}
+              initialQuery={initialQuery}
+              focusKey={focusKey}
+              onQueryChange={handleQueryChange}
+              onNext={handleNext}
+              onPrev={handlePrev}
+              onToggleCaseSensitive={handleToggleCaseSensitive}
+              onClose={closeSearch}
             />
           )}
+          <div ref={scrollContainerRef} style={{ height: "100%", overflow: "auto" }}>
+            {sourceMode ? (
+              <SourceEditor
+                ref={editorRef}
+                defaultValue={editorSnapshot ?? content ?? PLACEHOLDER}
+                onChange={handleChange}
+              />
+            ) : (
+              <MarkdownEditor
+                ref={editorRef}
+                defaultValue={editorSnapshot ?? content ?? PLACEHOLDER}
+                onChange={handleChange}
+                syntaxToggling={syntaxToggling}
+              />
+            )}
+          </div>
         </div>
       </div>
     </div>

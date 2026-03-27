@@ -20,11 +20,7 @@ interface UseTocResult {
   scrollToHeading: (pos: number) => void;
 }
 
-export function useToc({
-  editorRef,
-  sourceMode,
-  scrollContainerRef,
-}: UseTocOptions): UseTocResult {
+export function useToc({ editorRef, sourceMode, scrollContainerRef }: UseTocOptions): UseTocResult {
   const [headings, setHeadings] = useState<TocHeading[]>([]);
   const [activeIndex, setActiveIndex] = useState(-1);
   const headingsRef = useRef<TocHeading[]>([]);
@@ -77,8 +73,7 @@ export function useToc({
     if (!container) return;
 
     const onScroll = () => {
-      const threshold =
-        container.getBoundingClientRect().top + container.clientHeight * 0.2;
+      const threshold = container.getBoundingClientRect().top + container.clientHeight * 0.2;
       const current = headingsRef.current;
       let active = -1;
 
@@ -139,7 +134,7 @@ export function useToc({
           view.dispatch(
             view.state.tr
               .setSelection(TextSelection.create(view.state.doc, pos + 1))
-              .scrollIntoView(),
+              .scrollIntoView()
           );
           view.focus();
         } catch {
@@ -147,7 +142,7 @@ export function useToc({
         }
       }
     },
-    [sourceMode, editorRef],
+    [sourceMode, editorRef]
   );
 
   return { headings, activeIndex, scrollToHeading };
