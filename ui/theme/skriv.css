@@ -480,3 +480,127 @@ body,
   background: var(--crepe-color-primary, #4183c4);
   color: #fff;
 }
+
+/* ── TOC Sidebar ─────────────────────────────── */
+
+.toc-sidebar {
+  width: 220px;
+  min-width: 220px;
+  overflow: hidden;
+  transition:
+    width 0.2s ease,
+    min-width 0.2s ease;
+  border-right: 1px solid var(--crepe-color-outline, #eee);
+  background: var(--crepe-color-background, #ffffff);
+}
+
+.toc-sidebar--collapsed {
+  width: 0;
+  min-width: 0;
+  border-right: none;
+}
+
+.toc-sidebar__inner {
+  width: 220px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.toc-sidebar__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 12px 8px;
+  flex-shrink: 0;
+}
+
+.toc-sidebar__title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--crepe-color-on-surface-variant, #666);
+}
+
+.toc-sidebar__toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  color: var(--crepe-color-on-surface-variant, #666);
+  padding: 2px 6px;
+  border-radius: 4px;
+  line-height: 1;
+}
+
+.toc-sidebar__toggle:hover {
+  background: var(--crepe-color-surface-variant, #f0f0f0);
+}
+
+.toc-sidebar__nav {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 4px 12px;
+}
+
+.toc-sidebar__item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--crepe-color-on-surface-variant, #555);
+  border-radius: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.toc-sidebar__item:hover {
+  background: var(--crepe-color-surface-variant, #f0f0f0);
+  color: var(--crepe-color-on-surface, #333);
+}
+
+.toc-sidebar__item[aria-current="true"] {
+  background: var(--crepe-color-primary, #1976d2);
+  color: var(--crepe-color-on-primary, #fff);
+}
+
+.toc-sidebar__empty {
+  padding: 12px;
+  font-size: 12px;
+  color: var(--crepe-color-on-surface-variant, #999);
+  font-style: italic;
+}
+
+/* Expand button (visible when sidebar is collapsed) */
+.toc-expand-button {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 50;
+  background: var(--crepe-color-surface, #ffffff);
+  border: 1px solid var(--crepe-color-outline, #ddd);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--crepe-color-on-surface-variant, #666);
+  padding: 4px 8px;
+  line-height: 1;
+}
+
+.toc-expand-button:hover {
+  background: var(--crepe-color-surface-variant, #f0f0f0);
+}
+
+/* Editor column container for future container queries (#11) */
+.editor-column {
+  container-name: editor;
+  container-type: inline-size;
+}
