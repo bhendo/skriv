@@ -116,6 +116,10 @@ export function useToc({ editorRef, sourceMode, scrollContainerRef }: UseTocOpti
   }, [sourceMode, scrollContainerRef, editorRef]);
 
   // ── Click-to-navigate ───────────────────────────
+  // ProseMirror's tr.scrollIntoView() only scrolls its own DOM container,
+  // not the outer App scroll div. Use DOM scrollIntoView (rAF-deferred so
+  // decorations and position updates render first) instead — same pattern
+  // as useSearch.ts scrollActiveMatchIntoView.
   const scrollToHeading = useCallback(
     (pos: number) => {
       if (sourceMode) {
@@ -131,12 +135,40 @@ export function useToc({ editorRef, sourceMode, scrollContainerRef }: UseTocOpti
         if (!ctx) return;
         try {
           const view = ctx.get(editorViewCtx);
-          view.dispatch(
-            view.state.tr
-              .setSelection(TextSelection.create(view.state.doc, pos + 1))
-              .scrollIntoView()
-          );
+          // Move the cursor to the heading position
+          view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, pos + 1)));
           view.focus();
+          // Scroll the heading DOM node into view via the outer scroll container.
+          // ProseMirror's tr.scrollIntoView() only scrolls its own DOM container,
+          // not the outer App scroll div — use DOM scrollIntoView instead (same
+          // pattern as useSearch.ts scrollActiveMatchIntoView).
+          // rAF ensures the layout is stable before reading nodeDOM.
+          requestAnimationFrame(() => {
+            try {
+              const dom = view.nodeDOM(pos);
+              if (dom instanceof HTMLElement) {
+                dom.scrollIntoView({ block: "start", behavior: "instant" });
+              } else {
+                // nodeDOM can return null for nodes not in the rendered DOM.
+                // Fall back: resolve the heading text from the doc, derive its
+                // id attribute, and query the element directly.
+                const $pos = view.state.doc.resolve(pos + 1);
+                const node = $pos.parent;
+                const id = node.textContent
+                  .toLowerCase()
+                  .replace(/\s+/g, "-")
+                  .replace(/[^\w-]/g, "");
+                const el = view.dom.querySelector(
+                  `h1#${id}, h2#${id}, h3#${id}, h4#${id}, h5#${id}, h6#${id}`
+                ) as HTMLElement | null;
+                if (el) {
+                  el.scrollIntoView({ block: "start", behavior: "instant" });
+                }
+              }
+            } catch {
+              // Editor unmounted or pos invalid
+            }
+          });
         } catch {
           // Editor not ready
         }
