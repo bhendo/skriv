@@ -37,11 +37,7 @@ function paragraph(text: string) {
 
 describe("extractHeadingsFromPM", () => {
   it("extracts headings with correct levels and positions", () => {
-    const pmDoc = doc(
-      heading(1, "Introduction"),
-      paragraph("Some text"),
-      heading(2, "Background"),
-    );
+    const pmDoc = doc(heading(1, "Introduction"), paragraph("Some text"), heading(2, "Background"));
     const result = extractHeadingsFromPM(pmDoc);
     expect(result).toHaveLength(2);
     expect(result[0]).toEqual({ level: 1, text: "Introduction", pos: 0 });
@@ -49,10 +45,7 @@ describe("extractHeadingsFromPM", () => {
   });
 
   it("extracts heading_source nodes and strips ATX prefix", () => {
-    const pmDoc = doc(
-      headingSource(2, "## Editing"),
-      paragraph("body"),
-    );
+    const pmDoc = doc(headingSource(2, "## Editing"), paragraph("body"));
     const result = extractHeadingsFromPM(pmDoc);
     expect(result).toHaveLength(1);
     expect(result[0]).toEqual(expect.objectContaining({ level: 2, text: "Editing" }));
@@ -64,11 +57,7 @@ describe("extractHeadingsFromPM", () => {
   });
 
   it("handles mixed heading and heading_source nodes, stripping prefix from source", () => {
-    const pmDoc = doc(
-      heading(1, "Title"),
-      headingSource(2, "## Subtitle"),
-      heading(3, "Section"),
-    );
+    const pmDoc = doc(heading(1, "Title"), headingSource(2, "## Subtitle"), heading(3, "Section"));
     const result = extractHeadingsFromPM(pmDoc);
     expect(result).toHaveLength(3);
     expect(result.map((h) => h.level)).toEqual([1, 2, 3]);
