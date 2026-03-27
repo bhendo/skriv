@@ -107,6 +107,22 @@ Listens to the scroll event on the editor's scroll container (the `overflow: aut
 
 CSS transition on sidebar width (`220px` → `0`) with `overflow: hidden`. Editor column resizes smoothly via flexbox.
 
+## Testing
+
+### Unit Tests (Vitest)
+
+- **ProseMirror heading extraction:** Given a PM doc with various heading levels, verify correct `TocHeading[]` output. Test `heading` and `heading_source` nodes, nested content, and empty documents.
+- **CodeMirror heading extraction:** Given raw markdown text, verify correct `TocHeading[]` output. Test all heading levels, headings with inline formatting, lines that look like headings but aren't (e.g., inside code blocks).
+- **TocSidebar component:** Renders heading list with correct indentation per level. Highlights active index. Shows empty state when no headings. Calls `scrollToHeading` on click.
+
+### E2E Tests (Playwright)
+
+- **Toggle sidebar:** Open sidebar via keyboard shortcut and toggle button, verify it appears/disappears.
+- **Heading list populates:** Open a markdown file with headings, open sidebar, verify headings appear with correct hierarchy.
+- **Click-to-navigate:** Click a TOC entry, verify the editor scrolls to that heading.
+- **Real-time update:** Add a new heading in the editor, verify it appears in the TOC without manual refresh.
+- **Source mode:** Switch to source mode, verify TOC still shows headings and click-to-navigate works.
+
 ## Edge Cases
 
 - **No headings:** Sidebar shows subtle "No headings" empty state.
