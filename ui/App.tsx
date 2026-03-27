@@ -12,6 +12,7 @@ import { useFile } from "./hooks/useFile";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { useSearch } from "./hooks/useSearch";
 import { useTheme } from "./hooks/useTheme";
+import { useWindowClose } from "./hooks/useWindowClose";
 import { reinitMermaid } from "./plugins/mermaid-block";
 
 const PLACEHOLDER = `# Welcome to Skriv
@@ -48,6 +49,10 @@ function App() {
   useEffect(() => {
     isModifiedRef.current = isModified;
   }, [isModified]);
+  const pathRef = useRef(path);
+  useEffect(() => {
+    pathRef.current = path;
+  }, [path]);
 
   const handleChange = useCallback(() => {
     markModified();
@@ -83,12 +88,22 @@ function App() {
     await saveFile(markdown);
   }, [path, saveFile, handleSaveAs]);
 
+  const handleNewWindow = useCallback(async () => {
+    await invoke("create_window");
+  }, []);
+
   const handleOpen = useCallback(async () => {
     const selected = await open({
       filters: [{ name: "Markdown", extensions: ["md", "markdown"] }],
     });
-    if (selected) {
+    if (!selected) return;
+
+    if (!pathRef.current) {
+      // Current window has no file — open in place
       openFile(selected as string);
+    } else {
+      // Current window has a file — open in a new window
+      await invoke("create_window", { path: selected });
     }
   }, [openFile]);
 
@@ -131,9 +146,15 @@ function App() {
     onSave: handleSave,
     onSaveAs: handleSaveAs,
     onOpen: handleOpen,
+    onNewWindow: handleNewWindow,
     onToggleSyntax: handleToggleSyntax,
     onToggleSourceMode: handleToggleSourceMode,
     onSearch: openSearch,
+  });
+
+  useWindowClose({
+    isModified,
+    onSave: handleSave,
   });
 
   useEffect(() => {

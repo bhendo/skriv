@@ -10,13 +10,7 @@
     "frontendDist": "../ui/dist"
   },
   "app": {
-    "windows": [
-      {
-        "title": "Skriv",
-        "width": 900,
-        "height": 700
-      }
-    ],
+    "windows": [],
     "security": {
       "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: https:; connect-src 'self'",
       "assetProtocol": {

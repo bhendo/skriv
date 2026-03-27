@@ -20,6 +20,7 @@ serde_json = "1"
 tauri-plugin-dialog = "2.6.0"
 tauri-plugin-clipboard-manager = "2.3.2"
 notify = "8"
+tauri-plugin-single-instance = "2"
 
 [dev-dependencies]
 tempfile = "3"
