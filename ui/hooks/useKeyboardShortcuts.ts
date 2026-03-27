@@ -4,6 +4,7 @@ interface ShortcutHandlers {
   onSave: () => void;
   onSaveAs: () => void;
   onOpen: () => void;
+  onNewWindow?: () => void;
   onToggleSyntax?: () => void;
   onToggleSourceMode?: () => void;
   onSearch?: () => void;
@@ -22,6 +23,12 @@ export function useKeyboardShortcuts(handlers: ShortcutHandlers) {
       if (e.key === "f" && !e.shiftKey) {
         e.preventDefault();
         ref.current.onSearch?.();
+        return;
+      }
+
+      if (e.key === "n" && !e.shiftKey) {
+        e.preventDefault();
+        ref.current.onNewWindow?.();
         return;
       }
 

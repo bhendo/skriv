@@ -1,4 +1,5 @@
 use crate::validated_path::ValidatedPath;
+use tauri::Manager;
 
 /// Format a file operation error with the validated path context.
 fn file_error(op: &str, path: &ValidatedPath, err: impl std::fmt::Display) -> String {
@@ -24,17 +25,39 @@ fn write_validated(validated: &ValidatedPath, content: &str) -> Result<(), Strin
 pub fn write_file(
     path: String,
     content: String,
-    watcher: tauri::State<'_, crate::watcher::FileWatcher>,
+    window: tauri::Window,
+    manager: tauri::State<'_, crate::window_manager::WindowManager>,
 ) -> Result<(), String> {
     let validated = ValidatedPath::new(&path)?;
-    watcher.record_self_write();
+    manager.get_state(window.label(), |state| {
+        state.record_self_write();
+    });
     write_validated(&validated, &content)
 }
 
 #[tauri::command]
-pub fn write_new_file(path: String, content: String) -> Result<(), String> {
+pub fn write_new_file(
+    path: String,
+    content: String,
+    window: tauri::Window,
+    app_handle: tauri::AppHandle,
+    manager: tauri::State<'_, crate::window_manager::WindowManager>,
+) -> Result<(), String> {
     let validated = ValidatedPath::new_for_write(&path)?;
-    write_validated(&validated, &content)
+    write_validated(&validated, &content)?;
+
+    // After successful write, update backend state
+    let canonical = validated.as_path().to_path_buf();
+    let label = window.label().to_string();
+    manager.set_file_path(&label, Some(canonical));
+    crate::scope::expand_scope_for_file(&app_handle, validated.as_path())?;
+    manager
+        .with_state_mut(&label, |state| {
+            state.watch(&path, label.clone(), app_handle.clone())
+        })
+        .unwrap_or(Ok(()))?;
+
+    Ok(())
 }
 
 #[tauri::command]
@@ -73,24 +96,99 @@ pub struct FileInfo {
 }
 
 #[tauri::command]
-pub fn get_opened_file(state: tauri::State<'_, crate::OpenedFile>) -> Option<String> {
-    state.0.lock().unwrap().clone()
+pub fn get_opened_file(
+    window: tauri::Window,
+    manager: tauri::State<'_, crate::window_manager::WindowManager>,
+) -> Option<String> {
+    manager
+        .get_state(window.label(), |state| {
+            state
+                .file_path
+                .as_ref()
+                .map(|p| p.to_string_lossy().into_owned())
+        })
+        .flatten()
 }
 
 #[tauri::command]
 pub fn watch_file(
     path: String,
+    window: tauri::Window,
     app_handle: tauri::AppHandle,
-    watcher: tauri::State<'_, crate::watcher::FileWatcher>,
+    manager: tauri::State<'_, crate::window_manager::WindowManager>,
 ) -> Result<(), String> {
-    // Validate path before watching (prevent using watcher as filesystem probe)
     crate::validated_path::ValidatedPath::new(&path)?;
-    watcher.watch(&path, app_handle)
+    let label = window.label().to_string();
+    manager
+        .with_state_mut(&label, |state| {
+            state.watch(&path, label.clone(), app_handle.clone())
+        })
+        .unwrap_or(Err("Window not found".to_string()))
 }
 
 #[tauri::command]
-pub fn unwatch_file(watcher: tauri::State<'_, crate::watcher::FileWatcher>) -> Result<(), String> {
-    watcher.unwatch()
+pub fn unwatch_file(
+    window: tauri::Window,
+    manager: tauri::State<'_, crate::window_manager::WindowManager>,
+) -> Result<(), String> {
+    manager
+        .with_state_mut(window.label(), |state| state.unwatch())
+        .unwrap_or(Ok(()))
+}
+
+#[tauri::command]
+pub async fn create_window(
+    path: Option<String>,
+    app_handle: tauri::AppHandle,
+    manager: tauri::State<'_, crate::window_manager::WindowManager>,
+) -> Result<String, String> {
+    // Check if the file is already open in another window
+    let canonical = if let Some(ref p) = path {
+        let validated = ValidatedPath::new(p)?;
+        let c = validated.as_path().to_path_buf();
+        if let Some(existing_label) = manager.find_by_path(&c) {
+            if let Some(win) = app_handle.get_webview_window(&existing_label) {
+                let _ = win.set_focus();
+            }
+            return Ok(existing_label);
+        }
+        Some(c)
+    } else {
+        None
+    };
+
+    let label = manager.next_label();
+    crate::window_manager::WindowManager::build_window(&app_handle, &label)?;
+    manager.register(&label);
+
+    if let Some(c) = canonical {
+        manager.set_file_path(&label, Some(c));
+    }
+
+    Ok(label)
+}
+
+#[tauri::command]
+pub async fn close_window(
+    window: tauri::Window,
+    manager: tauri::State<'_, crate::window_manager::WindowManager>,
+) -> Result<(), String> {
+    let label = window.label().to_string();
+
+    manager.with_state_mut(&label, |state| {
+        let _ = state.unwatch();
+    });
+    manager.remove(&label);
+
+    window
+        .destroy()
+        .map_err(|e| format!("Failed to close window: {}", e))?;
+
+    if manager.window_count() == 0 {
+        window.app_handle().exit(0);
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -147,10 +245,8 @@ mod tests {
     fn test_write_new_file() {
         let dir = tempfile::tempdir().unwrap();
         let file_path = dir.path().join("new.md");
-        let result = write_new_file(
-            file_path.to_string_lossy().to_string(),
-            "# New file".to_string(),
-        );
+        let validated = ValidatedPath::new_for_write(&file_path.to_string_lossy()).unwrap();
+        let result = write_validated(&validated, "# New file");
         assert!(result.is_ok());
         assert_eq!(fs::read_to_string(&file_path).unwrap(), "# New file");
     }
