@@ -85,7 +85,7 @@ body,
   color: var(--crepe-color-on-surface-variant, #666);
 }
 
-.milkdown .editor code {
+:is(.milkdown .editor, .live-preview-editor .cm-table-preview) code {
   background: var(--crepe-color-inline-area, #f5f5f5);
   border-radius: 3px;
   padding: 0.15em 0.4em;
@@ -129,14 +129,14 @@ body,
   margin: 1.5em 0;
 }
 
-.milkdown .editor table {
+:is(.milkdown .editor, .live-preview-editor .cm-table-preview) table {
   border-collapse: collapse;
   width: 100%;
   margin: 0.8em 0;
 }
 
-.milkdown .editor th,
-.milkdown .editor td {
+:is(.milkdown .editor, .live-preview-editor .cm-table-preview) th,
+:is(.milkdown .editor, .live-preview-editor .cm-table-preview) td {
   border: 1px solid var(--crepe-color-outline, #ddd);
   padding: 8px 12px;
   text-align: left;
@@ -144,12 +144,12 @@ body,
   word-break: break-word;
 }
 
-.milkdown .editor th code,
-.milkdown .editor td code {
+:is(.milkdown .editor, .live-preview-editor .cm-table-preview) th code,
+:is(.milkdown .editor, .live-preview-editor .cm-table-preview) td code {
   word-break: break-all;
 }
 
-.milkdown .editor th {
+:is(.milkdown .editor, .live-preview-editor .cm-table-preview) th {
   background: var(--crepe-color-surface-low, #f5f5f5);
   font-weight: 600;
 }
@@ -300,8 +300,19 @@ body,
   --pm-syntax-invalid: #e06c75;
 }
 
-/* Mermaid diagram blocks */
-.milkdown .editor .mermaid-block {
+/* Table preview widgets (live preview) — table/cell/code rules are shared
+   with the Milkdown editor via the :is() selectors above. */
+.live-preview-editor .cm-table-preview {
+  cursor: text;
+}
+
+.live-preview-editor .cm-table-link {
+  color: var(--pm-link-color);
+  text-decoration: underline;
+}
+
+/* Mermaid diagram blocks (both editors) */
+:is(.milkdown .editor, .live-preview-editor) .mermaid-block {
   margin: 0.8em 0;
 }
 
@@ -310,7 +321,7 @@ body,
   outline-offset: 2px;
 }
 
-.milkdown .editor .mermaid-svg-container {
+:is(.milkdown .editor, .live-preview-editor) .mermaid-svg-container {
   overflow: hidden;
   cursor: grab;
   min-height: 60px;
@@ -320,25 +331,25 @@ body,
   position: relative;
 }
 
-.milkdown .editor .mermaid-svg-container:active {
+:is(.milkdown .editor, .live-preview-editor) .mermaid-svg-container:active {
   cursor: grabbing;
 }
 
-.milkdown .editor .mermaid-svg-wrapper {
+:is(.milkdown .editor, .live-preview-editor) .mermaid-svg-wrapper {
   transform-origin: 0 0;
 }
 
 /* Prevent mermaid foreignObject (htmlLabels:true) from clipping node content */
-.milkdown .editor .mermaid-svg-wrapper foreignObject {
+:is(.milkdown .editor, .live-preview-editor) .mermaid-svg-wrapper foreignObject {
   overflow: visible;
 }
 
 /* Shrink edge labels to reduce overlap on dense diagrams */
-.milkdown .editor .mermaid-svg-wrapper .edgeLabel {
+:is(.milkdown .editor, .live-preview-editor) .mermaid-svg-wrapper .edgeLabel {
   font-size: 0.85em;
 }
 
-.milkdown .editor .mermaid-svg-wrapper svg {
+:is(.milkdown .editor, .live-preview-editor) .mermaid-svg-wrapper svg {
   height: auto;
 }
 
@@ -349,12 +360,12 @@ body,
   overflow-x: auto;
 }
 
-.milkdown .editor .mermaid-placeholder {
+:is(.milkdown .editor, .live-preview-editor) .mermaid-placeholder {
   color: var(--crepe-color-on-surface-variant, #999);
   font-style: italic;
 }
 
-.milkdown .editor .mermaid-error {
+:is(.milkdown .editor, .live-preview-editor) .mermaid-error {
   color: #c0392b;
   font-family: var(--skriv-font-mono);
   font-size: 0.85em;
@@ -445,7 +456,7 @@ body,
   transition: opacity 150ms ease;
 }
 
-.milkdown .editor .mermaid-svg-container:hover .mermaid-inline-toolbar {
+:is(.milkdown .editor, .live-preview-editor) .mermaid-svg-container:hover .mermaid-inline-toolbar {
   opacity: 1;
 }
 

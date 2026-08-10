@@ -64,6 +64,12 @@ vi.mock("@lezer/markdown", () => ({
   GFM: {},
 }));
 
+vi.mock("../../live-preview", () => ({
+  mermaidPreviewExtension: {},
+  tablePreviewExtension: {},
+  livePreviewFormattingKeymap: [],
+}));
+
 vi.mock("@prosemark/core", () => ({
   defaultHideExtensions: [],
   defaultFoldableSyntaxExtensions: [],

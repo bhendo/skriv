@@ -22,10 +22,14 @@ import {
   fixedTabWidthExtension,
   softIndentExtension,
   codeBlockDecorationsExtension,
-  prosemarkMarkdownFormattingKeymap,
   prosemarkBaseThemeSetup,
   prosemarkMarkdownSyntaxExtensions,
 } from "@prosemark/core";
+import {
+  mermaidPreviewExtension,
+  tablePreviewExtension,
+  livePreviewFormattingKeymap,
+} from "../live-preview";
 import type { EditorHandle } from "../types/editor";
 
 interface LivePreviewEditorProps {
@@ -78,6 +82,8 @@ export const LivePreviewEditor = forwardRef<EditorHandle, LivePreviewEditorProps
             fixedTabWidthExtension,
             softIndentExtension,
             codeBlockDecorationsExtension,
+            mermaidPreviewExtension,
+            tablePreviewExtension,
             prosemarkBaseThemeSetup(),
             highlightSpecialChars(),
             history(),
@@ -88,7 +94,7 @@ export const LivePreviewEditor = forwardRef<EditorHandle, LivePreviewEditorProps
             autocompletion(),
             search(),
             keymap.of([
-              ...prosemarkMarkdownFormattingKeymap,
+              ...livePreviewFormattingKeymap,
               ...closeBracketsKeymap,
               ...defaultKeymap,
               // searchKeymap intentionally excluded — search is handled by SearchBar

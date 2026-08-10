@@ -87,13 +87,28 @@ export async function dumpStyleDiagnostics(
 }
 
 export const test = base.extend<{
+  /**
+   * Option fixture: run specs against the live-preview editor instead of
+   * Milkdown. Set per file/describe with `test.use({ livePreview: true })`,
+   * or for a whole Playwright project via its `use` block.
+   */
+  livePreview: boolean;
   loadApp: (config?: TauriMockConfig) => Promise<void>;
 }>({
-  loadApp: async ({ page }, use) => {
+  livePreview: [false, { option: true }],
+  loadApp: async ({ page, livePreview }, use) => {
     const loadApp = async (config: TauriMockConfig = {}) => {
       await injectTauriMock(page, config);
+      if (livePreview) {
+        await page.addInitScript(() => {
+          window.localStorage.setItem("skriv:live-preview", "1");
+        });
+      }
       await page.goto("/");
-      await page.waitForSelector(".milkdown .editor", { timeout: 10_000 });
+      await page.waitForSelector(
+        livePreview ? ".live-preview-editor .cm-content" : ".milkdown .editor",
+        { timeout: 10_000 }
+      );
     };
     await use(loadApp);
   },
