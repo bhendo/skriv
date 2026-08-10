@@ -23,7 +23,7 @@ import type { EditorView as CMEditorView } from "@codemirror/view";
 
 interface UseSearchOptions {
   editorRef: React.RefObject<EditorHandle | null>;
-  sourceMode: boolean;
+  codeMirrorMode: boolean;
   getMilkdownCtx: () => Editor["ctx"] | null;
 }
 
@@ -81,7 +81,7 @@ function scrollActiveMatchIntoView(view: PMEditorView) {
   });
 }
 
-export function useSearch({ editorRef, sourceMode, getMilkdownCtx }: UseSearchOptions) {
+export function useSearch({ editorRef, codeMirrorMode, getMilkdownCtx }: UseSearchOptions) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchInfo, setSearchInfo] = useState<SearchInfo>({
     matchCount: 0,
@@ -108,7 +108,7 @@ export function useSearch({ editorRef, sourceMode, getMilkdownCtx }: UseSearchOp
   }, [editorRef]);
 
   const getSelectedText = useCallback((): string => {
-    if (sourceMode) {
+    if (codeMirrorMode) {
       const cmView = getCmView();
       if (!cmView) return "";
       const { from, to } = cmView.state.selection.main;
@@ -119,12 +119,12 @@ export function useSearch({ editorRef, sourceMode, getMilkdownCtx }: UseSearchOp
     const { from, to } = view.state.selection;
     if (from === to) return "";
     return view.state.doc.textBetween(from, to);
-  }, [sourceMode, getCmView, getPmView]);
+  }, [codeMirrorMode, getCmView, getPmView]);
 
   const handleQueryChange = useCallback(
     (query: string) => {
       queryRef.current = query;
-      if (sourceMode) {
+      if (codeMirrorMode) {
         const cmView = getCmView();
         if (!cmView) return;
         const sq = new SearchQuery({
@@ -142,7 +142,7 @@ export function useSearch({ editorRef, sourceMode, getMilkdownCtx }: UseSearchOp
         syncPmSearchInfo(ctx, setSearchInfo);
       }
     },
-    [sourceMode, getCmView, getMilkdownCtx]
+    [codeMirrorMode, getCmView, getMilkdownCtx]
   );
 
   const navigateMatch = useCallback(
@@ -152,7 +152,7 @@ export function useSearch({ editorRef, sourceMode, getMilkdownCtx }: UseSearchOp
       ) => import("@milkdown/kit/prose/state").Transaction,
       cmCommand: (view: CMEditorView) => boolean
     ) => {
-      if (sourceMode) {
+      if (codeMirrorMode) {
         const cmView = getCmView();
         if (!cmView) return;
         cmCommand(cmView);
@@ -166,7 +166,7 @@ export function useSearch({ editorRef, sourceMode, getMilkdownCtx }: UseSearchOp
         syncPmSearchInfo(ctx, setSearchInfo);
       }
     },
-    [sourceMode, getCmView, getMilkdownCtx]
+    [codeMirrorMode, getCmView, getMilkdownCtx]
   );
 
   const handleNext = useCallback(() => navigateMatch(pmNextMatch, cmFindNext), [navigateMatch]);
@@ -175,7 +175,7 @@ export function useSearch({ editorRef, sourceMode, getMilkdownCtx }: UseSearchOp
   const handleToggleCaseSensitive = useCallback(() => {
     const newValue = !caseSensitiveRef.current;
     caseSensitiveRef.current = newValue;
-    if (sourceMode) {
+    if (codeMirrorMode) {
       const cmView = getCmView();
       if (!cmView) return;
       const sq = new SearchQuery({
@@ -192,7 +192,7 @@ export function useSearch({ editorRef, sourceMode, getMilkdownCtx }: UseSearchOp
       view.dispatch(pmSetCaseSensitive(view.state, newValue));
       syncPmSearchInfo(ctx, setSearchInfo);
     }
-  }, [sourceMode, getCmView, getMilkdownCtx]);
+  }, [codeMirrorMode, getCmView, getMilkdownCtx]);
 
   const openSearch = useCallback(() => {
     const selected = getSelectedText();
@@ -209,7 +209,7 @@ export function useSearch({ editorRef, sourceMode, getMilkdownCtx }: UseSearchOp
 
   const closeSearch = useCallback(() => {
     setIsSearchOpen(false);
-    if (sourceMode) {
+    if (codeMirrorMode) {
       const cmView = getCmView();
       if (cmView) {
         const sq = new SearchQuery({ search: "" });
@@ -229,7 +229,7 @@ export function useSearch({ editorRef, sourceMode, getMilkdownCtx }: UseSearchOp
       caseSensitive: caseSensitiveRef.current,
     });
     queryRef.current = "";
-  }, [sourceMode, getCmView, getMilkdownCtx]);
+  }, [codeMirrorMode, getCmView, getMilkdownCtx]);
 
   return {
     isSearchOpen,
