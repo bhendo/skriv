@@ -2,6 +2,13 @@
 
 ## Entries
 
+### 2026-08-10 - #68: Live-preview feature migration
+
+- **Status**: In progress (migration PR)
+- **Description**: Feature parity for the live-preview editor after the spike merged: mermaid diagrams (fold widget reusing the shared renderer/overlay), GFM table previews (pure source → DOM renderer via @lezer/markdown), Cmd+K clipboard link auto-fill (#56 parity), Cmd+E / Cmd+Alt+X shortcut aliases (#25 parity). Task lists and image folding come free from ProseMark defaults (relates #60). E2E suite for live-preview mode added.
+- **URL**: https://github.com/bhendo/skriv/issues/68
+- **Notes**: Not migrated (intentional, pending verdict): Crepe floating toolbar, slash commands, structured table editing. Local-file image resolution is not present in either editor; belongs with #3.
+
 ### 2026-08-10 - #68: Spike: CodeMirror 6 live-preview editor core (ProseMark)
 
 - **Status**: Spike implemented, PR open, awaiting evaluation
