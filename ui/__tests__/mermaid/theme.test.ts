@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { buildMermaidThemeConfig } from "../../../plugins/mermaid-block/theme";
+import { buildMermaidThemeConfig } from "../../mermaid/theme";
 
 describe("buildMermaidThemeConfig", () => {
   it("always uses base theme", () => {
