@@ -2,6 +2,13 @@
 
 ## Entries
 
+### 2026-08-10 - #68: Spike: CodeMirror 6 live-preview editor core (ProseMark)
+
+- **Status**: Spike implemented, PR open, awaiting evaluation
+- **Description**: Flag-gated CodeMirror 6 + @prosemark/core live-preview editor mounted in the WYSIWYG slot (`VITE_LIVE_PREVIEW=1` or localStorage `skriv:live-preview=1`). Motivation: the ProseMirror `*-source` plugins fight the architecture (~half the frontend, most open bugs); CM6 live preview makes syntax reveal the default behavior. Evaluation criteria in `docs/plans/2026-08-10-live-preview-editor-spike-design.md`.
+- **URL**: https://github.com/bhendo/skriv/issues/68
+- **Notes**: `useSearch`'s `sourceMode` option renamed to `codeMirrorMode` (it selects the CodeMirror search path, now used by both source mode and live preview). ProseMark themes via `--pm-*` CSS variables, mapped to crepe variables in `skriv.css`.
+
 ### 2026-03-20 - #38: Bold text lost when unwrapping list item via marker deletion
 - **Status**: Completed
 - **Description**: Inline formatting lost during structural edits. Root cause was three interacting issues in the inline-source plugin (ENTER timing, input rule interference, backspace boundary handling).
