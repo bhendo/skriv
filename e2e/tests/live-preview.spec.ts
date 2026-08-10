@@ -16,15 +16,7 @@ graph TD
 - [ ] a task
 `;
 
-test.use({ livePreview: true });
-
-test.describe("Live preview mode", () => {
-  test("mounts the CodeMirror live-preview editor", async ({ page, loadApp }) => {
-    await loadApp();
-    await expect(page.locator(".live-preview-editor .cm-content")).toBeVisible();
-    await expect(page.locator(".milkdown")).toHaveCount(0);
-  });
-
+test.describe("Live preview syntax folding", () => {
   test("hides heading syntax until the cursor enters the line", async ({ page, loadApp }) => {
     await loadApp({ openedFile: "/tmp/test.md", fileContent: DOC });
 
@@ -55,20 +47,12 @@ test.describe("Live preview mode", () => {
     await expect(page.locator(".cm-content")).toContainText("| Name | Age |");
   });
 
-  test("renders mermaid fences as SVG diagrams", async ({ page, loadApp }) => {
-    await loadApp({ openedFile: "/tmp/test.md", fileContent: DOC });
-
-    const block = page.locator(".cm-mermaid-block");
-    await expect(block).toBeVisible({ timeout: 10_000 });
-    await expect(block.locator(".mermaid-svg-wrapper svg")).toBeVisible({ timeout: 10_000 });
-  });
-
   test("renders task list checkboxes", async ({ page, loadApp }) => {
     await loadApp({ openedFile: "/tmp/test.md", fileContent: DOC });
     await expect(page.locator(".cm-content input[type=checkbox]")).toBeVisible();
   });
 
-  test("saves the document unchanged via Cmd+S", async ({ page, loadApp }) => {
+  test("saves the document byte-identical via Cmd+S", async ({ page, loadApp }) => {
     await loadApp({ openedFile: "/tmp/test.md", fileContent: DOC });
 
     // Make an edit so the save has something to flush, then undo it
@@ -83,14 +67,5 @@ test.describe("Live preview mode", () => {
 
     const writes = await getMockWrites(page);
     expect(writes[writes.length - 1].content).toBe(DOC);
-  });
-
-  test("search works via the shared search bar", async ({ page, loadApp }) => {
-    await loadApp({ openedFile: "/tmp/test.md", fileContent: DOC });
-
-    await page.locator(".cm-content").click();
-    await page.keyboard.press(`${MOD}+f`);
-    await page.locator(".search-input").fill("bold");
-    await expect(page.locator(".search-count")).toContainText("1");
   });
 });

@@ -2,9 +2,8 @@ import mermaid from "mermaid";
 import { buildMermaidThemeConfig } from "./theme";
 
 /**
- * Editor-agnostic mermaid rendering core shared by the Milkdown NodeView
- * and the live-preview CodeMirror widget: initialization, theme re-render
- * registry, diagram ids, and SVG viewBox correction.
+ * Editor-agnostic mermaid rendering core: initialization, theme re-render
+ * registry, diagram ids, SVG cache, and viewBox correction.
  */
 
 let mermaidIdCounter = 0;
@@ -80,6 +79,18 @@ export function reinitMermaid(): void {
   for (const rerender of activeViews) {
     rerender();
   }
+}
+
+/**
+ * Re-render diagrams when the system light/dark preference flips — mermaid
+ * bakes colors into its SVGs, so CSS variables alone can't retheme them.
+ * Called once at app startup.
+ */
+export function watchSystemThemeForMermaid(): () => void {
+  const mq = window.matchMedia("(prefers-color-scheme: dark)");
+  const handler = () => reinitMermaid();
+  mq.addEventListener("change", handler);
+  return () => mq.removeEventListener("change", handler);
 }
 
 /**

@@ -3,11 +3,11 @@ import { EditorState, EditorSelection } from "@codemirror/state";
 import type { TransactionSpec } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
 
-vi.mock("../../plugins/link-source/clipboard", () => ({
+vi.mock("../../live-preview/clipboard", () => ({
   readClipboardUrl: vi.fn(),
 }));
 
-import { readClipboardUrl } from "../../plugins/link-source/clipboard";
+import { readClipboardUrl } from "../../live-preview/clipboard";
 import { insertLinkWithClipboard } from "../../live-preview/links";
 
 const mockedClipboard = vi.mocked(readClipboardUrl);

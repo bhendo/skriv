@@ -10,6 +10,7 @@ import {
   crosshairCursor,
   highlightActiveLine,
   keymap,
+  placeholder,
 } from "@codemirror/view";
 import { EditorState } from "@codemirror/state";
 import {
@@ -79,6 +80,7 @@ export const SourceEditor = forwardRef<EditorHandle, SourceEditorProps>(
             highlightActiveLine(),
             highlightSelectionMatches(),
             search(),
+            placeholder("Start writing markdown here…"),
             keymap.of([
               ...closeBracketsKeymap,
               ...defaultKeymap,

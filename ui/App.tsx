@@ -1,33 +1,18 @@
-import { useEffect, useCallback, useRef, useState, lazy, Suspense } from "react";
+import { useEffect, useCallback, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { MarkdownEditor, type EditorHandle } from "./components/Editor";
+import { LivePreviewEditor } from "./components/LivePreviewEditor";
 import { SourceEditor } from "./components/SourceEditor";
-import { isLivePreviewEnabled } from "./flags";
 import { SearchBar } from "./components/SearchBar";
 import { ErrorBanner } from "./components/ErrorBanner";
 import { ReloadBanner } from "./components/ReloadBanner";
 import { useFile } from "./hooks/useFile";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { useSearch } from "./hooks/useSearch";
-import { useTheme } from "./hooks/useTheme";
 import { useWindowClose } from "./hooks/useWindowClose";
-import { reinitMermaid } from "./mermaid/renderer";
-
-const PLACEHOLDER = `# Welcome to Skriv
-
-Start writing markdown here.
-`;
-
-const livePreview = isLivePreviewEnabled();
-
-// Lazy so the default-off spike (and @prosemark/core's emoji data) stays out
-// of the startup chunk.
-const LivePreviewEditor = lazy(() =>
-  import("./components/LivePreviewEditor").then((m) => ({ default: m.LivePreviewEditor }))
-);
+import type { EditorHandle } from "./types/editor";
 
 function App() {
   const editorRef = useRef<EditorHandle>(null);
@@ -44,14 +29,7 @@ function App() {
     saveNewFile,
   } = useFile();
 
-  const { theme } = useTheme();
-
-  useEffect(() => {
-    reinitMermaid();
-  }, [theme]);
-
   const [showReloadBanner, setShowReloadBanner] = useState(false);
-  const [syntaxToggling, setSyntaxToggling] = useState(true);
   const [sourceMode, setSourceMode] = useState(false);
   const [editorSnapshot, setEditorSnapshot] = useState<string | null>(null);
   const isModifiedRef = useRef(isModified);
@@ -116,26 +94,12 @@ function App() {
     }
   }, [openFile]);
 
-  const snapshotAndToggle = useCallback((toggle: React.Dispatch<React.SetStateAction<boolean>>) => {
+  const handleToggleSourceMode = useCallback(() => {
     const markdown = editorRef.current?.getMarkdown();
     if (markdown !== undefined) {
       setEditorSnapshot(markdown);
     }
-    toggle((prev) => !prev);
-  }, []);
-
-  const handleToggleSyntax = useCallback(
-    () => snapshotAndToggle(setSyntaxToggling),
-    [snapshotAndToggle]
-  );
-
-  const handleToggleSourceMode = useCallback(
-    () => snapshotAndToggle(setSourceMode),
-    [snapshotAndToggle]
-  );
-
-  const getMilkdownCtx = useCallback(() => {
-    return editorRef.current?.getMilkdownCtx?.() ?? null;
+    setSourceMode((prev) => !prev);
   }, []);
 
   const {
@@ -149,19 +113,13 @@ function App() {
     handleNext,
     handlePrev,
     handleToggleCaseSensitive,
-  } = useSearch({
-    editorRef,
-    codeMirrorMode: sourceMode || livePreview,
-    getMilkdownCtx,
-  });
+  } = useSearch({ editorRef });
 
   useKeyboardShortcuts({
     onSave: handleSave,
     onSaveAs: handleSaveAs,
     onOpen: handleOpen,
     onNewWindow: handleNewWindow,
-    // Syntax toggling is a Milkdown-editor concept; meaningless in live preview
-    onToggleSyntax: livePreview ? undefined : handleToggleSyntax,
     onToggleSourceMode: handleToggleSourceMode,
     onSearch: openSearch,
   });
@@ -243,23 +201,14 @@ function App() {
           {sourceMode ? (
             <SourceEditor
               ref={editorRef}
-              defaultValue={editorSnapshot ?? content ?? PLACEHOLDER}
+              defaultValue={editorSnapshot ?? content}
               onChange={handleChange}
             />
-          ) : livePreview ? (
-            <Suspense fallback={null}>
-              <LivePreviewEditor
-                ref={editorRef}
-                defaultValue={editorSnapshot ?? content ?? PLACEHOLDER}
-                onChange={handleChange}
-              />
-            </Suspense>
           ) : (
-            <MarkdownEditor
+            <LivePreviewEditor
               ref={editorRef}
-              defaultValue={editorSnapshot ?? content ?? PLACEHOLDER}
+              defaultValue={editorSnapshot ?? content}
               onChange={handleChange}
-              syntaxToggling={syntaxToggling}
             />
           )}
         </div>

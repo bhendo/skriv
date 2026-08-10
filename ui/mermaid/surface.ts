@@ -35,9 +35,8 @@ export interface MermaidSurface {
 export interface MermaidSurfaceOptions {
   /**
    * Called when the user clicks the diagram (outside the toolbar) to start
-   * editing. Hosts decide what "editing" means: the Milkdown NodeView swaps
-   * in an embedded editor; the live-preview widget moves the cursor into
-   * the fence so the fold extension reveals the source.
+   * editing. The live-preview widget moves the cursor into the fence so
+   * the fold extension reveals the source.
    */
   onActivate: () => void;
 }

@@ -1,9 +1,4 @@
-import {
-  test as base,
-  expect,
-  type Page,
-  type Locator,
-} from "@playwright/test";
+import { test as base, expect, type Page } from "@playwright/test";
 import { injectTauriMock, type TauriMockConfig } from "./tauri-mock";
 
 export { expect };
@@ -23,92 +18,14 @@ export async function getMockWrites(
   );
 }
 
-/**
- * Extract computed CSS property values from an element.
- * Returns a record of property names to their computed values.
- *
- * Usage:
- *   const styles = await getComputedStyles(locator, ['background-color', 'padding', 'font-size']);
- */
-export async function getComputedStyles(
-  locator: Locator,
-  properties: string[],
-): Promise<Record<string, string>> {
-  return locator.evaluate((el, props) => {
-    const computed = window.getComputedStyle(el);
-    const result: Record<string, string> = {};
-    for (const prop of props) {
-      result[prop] = computed.getPropertyValue(prop);
-    }
-    return result;
-  }, properties);
-}
-
-/**
- * Dump all style-related details about an element for debugging.
- * Returns computed styles, applied classes, and ancestor chain.
- */
-export async function dumpStyleDiagnostics(
-  locator: Locator,
-  properties: string[],
-): Promise<{
-  tag: string;
-  classes: string[];
-  styles: Record<string, string>;
-  ancestors: Array<{ tag: string; classes: string[] }>;
-}> {
-  return locator.evaluate(
-    (el, props) => {
-      const computed = window.getComputedStyle(el);
-      const styles: Record<string, string> = {};
-      for (const prop of props) {
-        styles[prop] = computed.getPropertyValue(prop);
-      }
-
-      const ancestors: Array<{ tag: string; classes: string[] }> = [];
-      let parent = el.parentElement;
-      while (parent && ancestors.length < 10) {
-        ancestors.push({
-          tag: parent.tagName.toLowerCase(),
-          classes: Array.from(parent.classList),
-        });
-        parent = parent.parentElement;
-      }
-
-      return {
-        tag: el.tagName.toLowerCase(),
-        classes: Array.from(el.classList),
-        styles,
-        ancestors,
-      };
-    },
-    properties,
-  );
-}
-
 export const test = base.extend<{
-  /**
-   * Option fixture: run specs against the live-preview editor instead of
-   * Milkdown. Set per file/describe with `test.use({ livePreview: true })`,
-   * or for a whole Playwright project via its `use` block.
-   */
-  livePreview: boolean;
   loadApp: (config?: TauriMockConfig) => Promise<void>;
 }>({
-  livePreview: [false, { option: true }],
-  loadApp: async ({ page, livePreview }, use) => {
+  loadApp: async ({ page }, use) => {
     const loadApp = async (config: TauriMockConfig = {}) => {
       await injectTauriMock(page, config);
-      if (livePreview) {
-        await page.addInitScript(() => {
-          window.localStorage.setItem("skriv:live-preview", "1");
-        });
-      }
       await page.goto("/");
-      await page.waitForSelector(
-        livePreview ? ".live-preview-editor .cm-content" : ".milkdown .editor",
-        { timeout: 10_000 }
-      );
+      await page.waitForSelector(".live-preview-editor .cm-content", { timeout: 10_000 });
     };
     await use(loadApp);
   },

@@ -1,0 +1,34 @@
+/* Skriv color palette.
+   Values originate from Milkdown Crepe's "crepe" / "crepe-dark" themes
+   (MIT licensed), vendored when the Milkdown editor was removed so the
+   warm light/dark look survives the editor-core pivot (#68). */
+
+:root {
+  --skriv-color-background: #fffdfb;
+  --skriv-color-on-background: #1f1b16;
+  --skriv-color-surface: #fff8f4;
+  --skriv-color-surface-low: #fff1e5;
+  --skriv-color-surface-variant: #ede0d4;
+  --skriv-color-on-surface: #201b13;
+  --skriv-color-on-surface-variant: #4f4539;
+  --skriv-color-outline: #817567;
+  --skriv-color-primary: #805610;
+  --skriv-color-error: #ba1a1a;
+  --skriv-color-inline-area: #e4d8cc;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --skriv-color-background: #1f1b16;
+    --skriv-color-on-background: #eae1d9;
+    --skriv-color-surface: #18120b;
+    --skriv-color-surface-low: #201b13;
+    --skriv-color-surface-variant: #3b342b;
+    --skriv-color-on-surface: #ede0d4;
+    --skriv-color-on-surface-variant: #d3c4b4;
+    --skriv-color-outline: #9c8f80;
+    --skriv-color-primary: #f4bd6f;
+    --skriv-color-error: #ffb4ab;
+    --skriv-color-inline-area: #3f3830;
+  }
+}

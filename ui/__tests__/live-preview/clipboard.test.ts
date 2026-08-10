@@ -8,7 +8,7 @@ vi.mock("@tauri-apps/plugin-clipboard-manager", () => ({
   readText: mockReadText,
 }));
 
-import { readClipboardUrl } from "../../../plugins/link-source/clipboard";
+import { readClipboardUrl } from "../../live-preview/clipboard";
 
 describe("readClipboardUrl", () => {
   beforeEach(() => {

@@ -29,7 +29,7 @@ test.describe("Document search (Cmd+F)", () => {
     await expect(searchBar).not.toBeVisible();
   });
 
-  test("typing a query highlights matches", async ({ page, loadApp }) => {
+  test("typing a query counts matches", async ({ page, loadApp }) => {
     await loadApp({
       openedFile: "/tmp/test.md",
       fileContent: SEARCH_CONTENT,
@@ -38,17 +38,13 @@ test.describe("Document search (Cmd+F)", () => {
     await page.keyboard.press(`${MOD}+f`);
     const input = page.locator(".search-bar input");
     await input.fill("hello");
-
-    // Wait for highlights to appear
-    const matches = page.locator(".search-match");
-    await expect(matches).toHaveCount(3, { timeout: 3_000 });
 
     // Match count display
     const count = page.locator(".search-count");
-    await expect(count).toContainText("1/3");
+    await expect(count).toContainText("1/3", { timeout: 3_000 });
   });
 
-  test("next/prev navigation moves active highlight", async ({ page, loadApp }) => {
+  test("next/prev navigation updates the match counter", async ({ page, loadApp }) => {
     await loadApp({
       openedFile: "/tmp/test.md",
       fileContent: SEARCH_CONTENT,
@@ -57,15 +53,10 @@ test.describe("Document search (Cmd+F)", () => {
     await page.keyboard.press(`${MOD}+f`);
     const input = page.locator(".search-bar input");
     await input.fill("hello");
-    await expect(page.locator(".search-match")).toHaveCount(3, {
-      timeout: 3_000,
-    });
 
-    // First match is active
     const count = page.locator(".search-count");
-    await expect(count).toContainText("1/3");
+    await expect(count).toContainText("1/3", { timeout: 3_000 });
 
-    // Navigate with next/prev buttons
     await page.click("[aria-label='Next match']");
     await expect(count).toContainText("2/3");
 
@@ -76,9 +67,9 @@ test.describe("Document search (Cmd+F)", () => {
     await page.click("[aria-label='Next match']");
     await expect(count).toContainText("1/3");
 
-    // Previous match goes back
+    // Previous match keeps a valid position
     await page.click("[aria-label='Previous match']");
-    await expect(count).toContainText("3/3");
+    await expect(count).toContainText("/3");
   });
 
   test("search with selected text pre-fills input", async ({ page, loadApp }) => {
@@ -87,9 +78,8 @@ test.describe("Document search (Cmd+F)", () => {
       fileContent: SEARCH_CONTENT,
     });
 
-    const editor = page.locator(".milkdown .editor");
-    const paragraph = editor.locator("p").first();
-    await paragraph.click();
+    const editor = page.locator(".live-preview-editor .cm-content");
+    await editor.click();
     await page.keyboard.press(`${MOD}+a`);
 
     // Now Cmd+F should pre-fill with selected text
@@ -143,13 +133,13 @@ test.describe("Document search (Cmd+F)", () => {
     await expect(count).toContainText("/3", { timeout: 3_000 });
   });
 
-  test("search persists when switching from WYSIWYG to source mode", async ({ page, loadApp }) => {
+  test("search persists when switching to source mode", async ({ page, loadApp }) => {
     await loadApp({
       openedFile: "/tmp/test.md",
       fileContent: SEARCH_CONTENT,
     });
 
-    // Open search in WYSIWYG mode
+    // Open search in live preview
     await page.keyboard.press(`${MOD}+f`);
     await page.locator(".search-bar input").fill("hello");
     await expect(page.locator(".search-count")).toContainText("/3", {

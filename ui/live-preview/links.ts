@@ -1,15 +1,15 @@
 import type { KeyBinding } from "@codemirror/view";
 import type { Command } from "@codemirror/view";
-import { readClipboardUrl } from "../plugins/link-source/clipboard";
+import { readClipboardUrl } from "./clipboard";
 
 /**
  * Cmd+K link insertion with clipboard auto-fill (#56): wraps the selection
  * as a markdown link, filling the URL from the clipboard when it holds a
  * valid http(s) URL.
  *
- * Cursor placement mirrors the Milkdown implementation: with a selection,
- * the cursor lands at the end of the URL so the auto-filled value can be
- * reviewed; without one, it lands inside the brackets to type the link text.
+ * Cursor placement: with a selection, the cursor lands at the end of the
+ * URL so the auto-filled value can be reviewed; without one, it lands
+ * inside the brackets to type the link text.
  */
 export const insertLinkWithClipboard: Command = (view) => {
   const { from, to } = view.state.selection.main;
