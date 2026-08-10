@@ -6,7 +6,7 @@ import {
   openOverlay,
   type Transform,
   type Dimensions,
-} from "../../../plugins/mermaid-block/overlay";
+} from "../../mermaid/overlay";
 
 describe("computeDiagramCenter", () => {
   it("computes center point of visible area in diagram coordinates", () => {

@@ -14,7 +14,7 @@ import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { useSearch } from "./hooks/useSearch";
 import { useTheme } from "./hooks/useTheme";
 import { useWindowClose } from "./hooks/useWindowClose";
-import { reinitMermaid } from "./plugins/mermaid-block";
+import { reinitMermaid } from "./mermaid/renderer";
 
 const PLACEHOLDER = `# Welcome to Skriv
 

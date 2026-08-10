@@ -6,111 +6,22 @@ import { EditorView as CMEditorView, type ViewUpdate, keymap } from "@codemirror
 import { EditorState as CMEditorState } from "@codemirror/state";
 import { basicSetup } from "codemirror";
 import { oneDark } from "@codemirror/theme-one-dark";
-import mermaid from "mermaid";
 import { mermaidBlockNode } from "./node";
-import { buildMermaidThemeConfig } from "./theme";
+import { createMermaidSurface } from "../../mermaid/surface";
 import { createFenceOpen, createFenceClose } from "../code-block-source/plugin";
-import {
-  openOverlay,
-  computeDiagramCenter,
-  computeTransformForContainer,
-  computeFitToView,
-  createPanZoomWithTransform,
-} from "./overlay";
-import type { OverlayHandle, Transform as OverlayTransform } from "./overlay";
-
-let mermaidIdCounter = 0;
-function nextId(): string {
-  return `mermaid-diagram-${++mermaidIdCounter}`;
-}
-
-let mermaidInitialized = false;
-
-/** Registry of active NodeView re-render callbacks for theme changes. */
-const activeViews = new Set<() => void>();
-
-function ensureMermaidInit(): void {
-  const config = buildMermaidThemeConfig();
-  mermaid.initialize({
-    startOnLoad: false,
-    securityLevel: "strict",
-    htmlLabels: true,
-    theme: config.theme,
-    themeVariables: config.themeVariables,
-    // Render at natural size so panzoom handles scaling (not mermaid).
-    flowchart: {
-      useMaxWidth: false,
-      padding: 20,
-      nodeSpacing: 120,
-      rankSpacing: 160,
-      wrappingWidth: 180,
-    },
-    sequence: { useMaxWidth: false },
-    class: { useMaxWidth: false },
-    state: { useMaxWidth: false, padding: 15 },
-    er: { useMaxWidth: false },
-    journey: { useMaxWidth: false },
-    gantt: { useMaxWidth: false },
-    pie: { useMaxWidth: false },
-  });
-  mermaidInitialized = true;
-}
-
-/** Re-initialize mermaid with fresh theme variables and re-render all diagrams. */
-export function reinitMermaid(): void {
-  mermaidInitialized = false;
-  ensureMermaidInit();
-  for (const rerender of activeViews) {
-    rerender();
-  }
-}
 
 export const mermaidBlockView = $view(mermaidBlockNode, (): NodeViewConstructor => {
   return (initialNode: Node, view: PMEditorView, getPos: () => number | undefined) => {
-    if (!mermaidInitialized) ensureMermaidInit();
-
     let node = initialNode;
-    let lastSvg = "";
-    let lastRenderedContent = "";
     let cmView: CMEditorView | null = null;
-    let pzInstance: ReturnType<typeof createPanZoomWithTransform> | null = null;
     let updating = false; // Guard against CM↔PM sync loops
 
-    // --- DOM structure ---
-    const dom = document.createElement("div");
-    dom.className = "mermaid-block";
-
-    const svgContainer = document.createElement("div");
-    svgContainer.className = "mermaid-svg-container";
-    dom.appendChild(svgContainer);
-
-    // Inner wrapper for panzoom — panzoom transforms this element
-    const svgWrapper = document.createElement("div");
-    svgWrapper.className = "mermaid-svg-wrapper";
-    svgContainer.appendChild(svgWrapper);
-
-    const inlineToolbar = document.createElement("div");
-    inlineToolbar.className = "mermaid-inline-toolbar";
-
-    function makeInlineButton(text: string, label: string): HTMLButtonElement {
-      const btn = document.createElement("button");
-      btn.textContent = text;
-      btn.setAttribute("aria-label", label);
-      return btn;
-    }
-
-    const fitBtn = makeInlineButton("⊞", "Fit to view");
-    const zoomInBtn = makeInlineButton("+", "Zoom in");
-    const zoomOutBtn = makeInlineButton("−", "Zoom out");
-    const expandBtn = makeInlineButton("⤢", "Expand diagram");
-
-    inlineToolbar.appendChild(fitBtn);
-    inlineToolbar.appendChild(zoomInBtn);
-    inlineToolbar.appendChild(zoomOutBtn);
-    inlineToolbar.appendChild(expandBtn);
-    svgContainer.appendChild(inlineToolbar);
-
-    let overlayHandle: OverlayHandle | null = null;
+    const surface = createMermaidSurface({
+      onActivate: () => {
+        if (view.editable) enterEditing();
+      },
+    });
+    const dom = surface.dom;
 
     // Editing container with fence markers
     const editContainer = document.createElement("div");
@@ -124,129 +35,6 @@ export const mermaidBlockView = $view(mermaidBlockNode, (): NodeViewConstructor 
     editContainer.appendChild(cmContainer);
     editContainer.appendChild(createFenceClose());
     dom.appendChild(editContainer);
-
-    // --- Pan/zoom ---
-    function disposePanZoom(): void {
-      if (pzInstance) {
-        pzInstance.dispose();
-        pzInstance = null;
-      }
-    }
-
-    function attachPanZoom(overrideTransform?: OverlayTransform): void {
-      disposePanZoom();
-      // Clear stale CSS transform left by the previous panzoom instance so
-      // getBoundingClientRect returns the SVG's natural dimensions.
-      svgWrapper.style.transform = "";
-      const svgEl = svgWrapper.querySelector("svg");
-      if (!svgEl) return;
-
-      const containerWidth = svgContainer.clientWidth;
-      const svgRect = svgEl.getBoundingClientRect();
-      const svgWidth = svgRect.width;
-      const svgHeight = svgRect.height;
-      if (svgWidth === 0 || svgHeight === 0) return;
-
-      const scale = overrideTransform?.scale ?? Math.min(containerWidth / svgWidth, 1);
-
-      // Size container height to fit the scaled diagram (capped at 80vh)
-      const fittedHeight = svgHeight * scale + 32;
-      const maxHeight = window.innerHeight * 0.8;
-      const containerH = Math.min(fittedHeight, maxHeight);
-      svgContainer.style.height = `${containerH}px`;
-
-      // Use override offsets if provided, otherwise center
-      const offsetX = overrideTransform?.x ?? (containerWidth - svgWidth * scale) / 2;
-      const offsetY = overrideTransform?.y ?? (containerH - svgHeight * scale) / 2;
-
-      pzInstance = createPanZoomWithTransform(
-        svgWrapper,
-        { x: offsetX, y: offsetY, scale },
-        {
-          onClick: (e: Event) => {
-            if (!view.editable || overlayHandle) return;
-            if (e.target instanceof globalThis.Node && inlineToolbar.contains(e.target)) return;
-            enterEditing();
-          },
-        }
-      );
-    }
-
-    fitBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      if (!pzInstance) return;
-      const svgEl = svgWrapper.querySelector("svg");
-      if (!svgEl) return;
-      const svgRect = svgEl.getBoundingClientRect();
-      const t = pzInstance.getTransform();
-      const naturalW = svgRect.width / t.scale;
-      const naturalH = svgRect.height / t.scale;
-      const fit = computeFitToView(
-        { width: naturalW, height: naturalH },
-        { width: svgContainer.clientWidth, height: svgContainer.clientHeight }
-      );
-      pzInstance.zoomAbs(0, 0, fit.scale);
-      pzInstance.moveTo(fit.x, fit.y);
-    });
-
-    zoomInBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      if (!pzInstance) return;
-      pzInstance.zoomTo(svgContainer.clientWidth / 2, svgContainer.clientHeight / 2, 1.5);
-    });
-
-    zoomOutBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      if (!pzInstance) return;
-      pzInstance.zoomTo(svgContainer.clientWidth / 2, svgContainer.clientHeight / 2, 0.67);
-    });
-
-    /**
-     * Mermaid sometimes calculates a viewBox that doesn't encompass all
-     * rendered content (especially with subgraphs). Measure the actual
-     * bounding box of all SVG content and expand the viewBox if needed.
-     */
-    function fixViewBox(svgEl: SVGSVGElement): void {
-      const bbox = svgEl.getBBox();
-      const padding = 20;
-      const x = bbox.x - padding;
-      const y = bbox.y - padding;
-      const w = bbox.width + padding * 2;
-      const h = bbox.height + padding * 2;
-      svgEl.setAttribute("viewBox", `${x} ${y} ${w} ${h}`);
-    }
-
-    // --- Rendering ---
-    async function renderDiagram(source: string): Promise<void> {
-      if (source === lastRenderedContent) return;
-      disposePanZoom();
-      lastRenderedContent = source;
-
-      if (!source.trim()) {
-        svgWrapper.innerHTML = '<div class="mermaid-placeholder">Empty mermaid diagram</div>';
-        return;
-      }
-
-      try {
-        const { svg } = await mermaid.render(nextId(), source);
-        svgWrapper.innerHTML = svg;
-        const svgEl = svgWrapper.querySelector("svg");
-        if (svgEl) fixViewBox(svgEl);
-        lastSvg = svgWrapper.innerHTML;
-        attachPanZoom();
-      } catch (err: unknown) {
-        if (lastSvg) {
-          svgWrapper.innerHTML = lastSvg;
-          attachPanZoom();
-        } else {
-          const msg = err instanceof Error ? err.message : "Invalid mermaid syntax";
-          const errorDiv = document.createElement("div");
-          errorDiv.className = "mermaid-error";
-          errorDiv.textContent = msg;
-          svgWrapper.replaceChildren(errorDiv);
-        }
-      }
-    }
 
     // --- CodeMirror ↔ ProseMirror sync ---
     // Sync CM changes to PM in real-time (like Crepe's CodeMirrorBlock)
@@ -323,8 +111,7 @@ export const mermaidBlockView = $view(mermaidBlockNode, (): NodeViewConstructor 
     // --- State transitions ---
     function enterEditing(): void {
       if (cmView) return;
-      disposePanZoom();
-      svgContainer.style.display = "none";
+      surface.hide();
       editContainer.style.display = "block";
 
       cmView = createCMEditor(node.textContent);
@@ -340,73 +127,12 @@ export const mermaidBlockView = $view(mermaidBlockNode, (): NodeViewConstructor 
       cmView = null;
 
       editContainer.style.display = "none";
-      svgContainer.style.display = "block";
-      lastRenderedContent = ""; // Content may have changed during editing
-      renderDiagram(text);
+      surface.show();
+      void surface.render(text);
     }
 
-    expandBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      e.preventDefault();
-
-      if (!pzInstance || !lastSvg) return;
-
-      const transform = pzInstance.getTransform();
-      const inlineDims = {
-        width: svgContainer.clientWidth,
-        height: svgContainer.clientHeight,
-      };
-
-      overlayHandle = openOverlay({
-        svgHtml: lastSvg,
-        initialTransform: transform,
-        inlineContainerDimensions: inlineDims,
-        onClose: (overlayTransform, overlayDims) => {
-          // Preserve the diagram center point from the overlay, but use the
-          // inline's default scale (fit-to-width). Using the overlay's scale
-          // would produce jarring height/zoom changes since the inline
-          // container is much smaller than the overlay.
-          const svgEl = svgWrapper.querySelector("svg");
-          if (!svgEl) {
-            attachPanZoom();
-            overlayHandle = null;
-            return;
-          }
-          const svgRect = svgEl.getBoundingClientRect();
-          const currentScale = pzInstance?.getTransform().scale ?? 1;
-          const naturalWidth = svgRect.width / currentScale;
-          const inlineScale = Math.min(svgContainer.clientWidth / naturalWidth, 1);
-
-          const center = computeDiagramCenter(overlayTransform, overlayDims);
-          const inlineTransform = computeTransformForContainer(
-            center,
-            { width: svgContainer.clientWidth, height: svgContainer.clientHeight },
-            inlineScale
-          );
-          attachPanZoom(inlineTransform);
-          overlayHandle = null;
-        },
-      });
-    });
-
-    // Click-to-edit for rendered diagrams is handled by panzoom's onClick.
-    // For empty/error states (no panzoom), handle click directly.
-    svgContainer.addEventListener("click", () => {
-      if (pzInstance || !view.editable) return;
-      enterEditing();
-    });
-
-    // --- Theme change re-render ---
-    const rerender = () => {
-      if (!cmView) {
-        lastRenderedContent = ""; // Force re-render on theme change
-        renderDiagram(node.textContent);
-      }
-    };
-    activeViews.add(rerender);
-
     // --- Initial render ---
-    renderDiagram(node.textContent);
+    void surface.render(node.textContent);
 
     // --- NodeView interface ---
     return {
@@ -419,10 +145,7 @@ export const mermaidBlockView = $view(mermaidBlockNode, (): NodeViewConstructor 
         const contentChanged = updatedNode.textContent !== node.textContent;
         node = updatedNode;
 
-        if (overlayHandle && contentChanged) {
-          overlayHandle.closeWithoutCallback();
-          overlayHandle = null;
-        }
+        if (contentChanged) surface.closeOverlay();
 
         if (cmView && contentChanged) {
           // External change while editing — update CodeMirror
@@ -435,7 +158,7 @@ export const mermaidBlockView = $view(mermaidBlockNode, (): NodeViewConstructor 
           }
           updating = false;
         } else if (!cmView && contentChanged) {
-          renderDiagram(node.textContent);
+          void surface.render(node.textContent);
         }
 
         return true;
@@ -459,20 +182,18 @@ export const mermaidBlockView = $view(mermaidBlockNode, (): NodeViewConstructor 
           return true;
         }
         // Stop wheel events on the SVG container so panzoom handles zoom
-        if (event.type === "wheel" && svgContainer.contains(event.target as globalThis.Node)) {
+        if (
+          event.type === "wheel" &&
+          surface.svgContainer.contains(event.target as globalThis.Node)
+        ) {
           return true;
         }
         return false;
       },
 
       destroy(): void {
-        if (overlayHandle) {
-          overlayHandle.closeWithoutCallback();
-          overlayHandle = null;
-        }
-        disposePanZoom();
+        surface.dispose();
         if (cmView) cmView.destroy();
-        activeViews.delete(rerender);
         dom.remove();
       },
     };
