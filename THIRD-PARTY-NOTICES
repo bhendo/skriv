@@ -6,14 +6,26 @@ This file lists the third-party dependencies used by Skriv and their licenses.
 JavaScript / npm Dependencies
 ------------------------------
 
-@milkdown/crepe — MIT
-  https://github.com/Milkdown/milkdown
+@codemirror/* — MIT
+  https://github.com/codemirror
 
-@milkdown/react — MIT
-  https://github.com/Milkdown/milkdown
+@lezer/common, @lezer/markdown — MIT
+  https://github.com/lezer-parser
+
+@prosemark/core — MIT
+  https://github.com/jsimonrichard/ProseMark
+
+mermaid — MIT
+  https://github.com/mermaid-js/mermaid
+
+panzoom — MIT
+  https://github.com/anvaka/panzoom
 
 @tauri-apps/api — MIT OR Apache-2.0
   https://github.com/tauri-apps/tauri
+
+@tauri-apps/plugin-clipboard-manager — MIT OR Apache-2.0
+  https://github.com/tauri-apps/plugins-workspace
 
 @tauri-apps/plugin-dialog — MIT OR Apache-2.0
   https://github.com/tauri-apps/plugins-workspace
@@ -27,17 +39,16 @@ react — MIT
 react-dom — MIT
   https://github.com/facebook/react
 
-@codemirror/* — MIT
-  https://github.com/codemirror
-  (Transitive dependency via @milkdown/crepe)
-
-prosemirror-* — MIT
-  https://github.com/ProseMirror
-  (Transitive dependency via @milkdown/crepe)
-
 DOMPurify — MPL-2.0 OR Apache-2.0
   https://github.com/cure53/DOMPurify
-  (Transitive dependency)
+  (Transitive dependency via mermaid)
+
+Vendored Code
+-------------
+
+ui/theme/colors.css — color palette values originate from Milkdown Crepe's
+"crepe" / "crepe-dark" themes — MIT
+  https://github.com/Milkdown/milkdown
 
 Rust / Cargo Dependencies
 --------------------------

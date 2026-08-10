@@ -1,12 +1,12 @@
 # Skriv
 
-Typora-style WYSIWYG markdown editor built with Tauri, React, and Milkdown Crepe.
+Typora-style live-preview markdown editor built with Tauri, React, and CodeMirror 6.
 
 ## Tech Stack
 
 - **Tauri v2** — desktop shell (Rust backend)
 - **React 18+** with TypeScript — frontend
-- **Milkdown Crepe v7** (`@milkdown/crepe`, `@milkdown/react`) — WYSIWYG editor with CodeMirror, toolbar, tables, image blocks, DOMPurify
+- **CodeMirror 6 + ProseMark** (`@prosemark/core`) — live-preview editor: the document is the markdown source; syntax marks hide/fold via decorations when the cursor is outside (Obsidian Live Preview model)
 - **Vite** — frontend build tool
 - **Rust stable** — backend (notify v8, tauri-plugin-dialog)
 - **sccache** — Rust compilation cache (configured in `src-tauri/.cargo/config.toml`)
@@ -27,11 +27,10 @@ docs/plans/       # Design doc and implementation plan
 
 ## Key Architecture Decisions
 
-- **Milkdown Crepe** (not raw Milkdown Kit) — provides CodeMirror code blocks, floating toolbar, slash commands, tables, image blocks, and DOMPurify sanitization out of the box
+- **CodeMirror 6 live preview, not a rich-text tree** (ADR-003 in `docs/project_notes/decisions.md`) — the buffer IS the markdown source, so Typora-style syntax reveal is decoration removal, saves are lossless, and there is no WYSIWYG↔source serialization. The previous Milkdown/ProseMirror editor was removed in #68; custom fold widgets (mermaid, tables) live in `ui/live-preview/`, the editor-agnostic mermaid core in `ui/mermaid/`
 - **ValidatedPath** (`src-tauri/src/validated_path.rs`) — all file I/O commands validate and canonicalize paths, restricting to `.md`/`.markdown` files only
 - **Dynamic asset scoping** (`src-tauri/src/scope.rs`) — asset protocol scope starts empty; directories are added when files are opened, with sensitive dirs (`.ssh`, `.gnupg`, etc.) explicitly forbidden
 - **Self-write suppression** in file watcher — prevents save from triggering spurious "reload?" prompts
-- **Cursor-aware Typora-style syntax toggling is post-MVP** — ProseMirror is not well-suited for this pattern
 
 ## Commands
 
@@ -79,7 +78,7 @@ This project maintains institutional knowledge in `docs/project_notes/` for cons
 
 - **bugs.md** - Bug log with dates, solutions, and prevention notes
 - **decisions.md** - Architectural Decision Records (ADRs) with context and trade-offs
-- **key_facts.md** - Project configuration, ProseMirror internals, debugging tips
+- **key_facts.md** - Project configuration, CodeMirror/ProseMark internals, debugging tips
 - **issues.md** - Work log with ticket IDs, descriptions, and URLs
 
 ### Memory-Aware Protocols

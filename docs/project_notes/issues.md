@@ -2,16 +2,23 @@
 
 ## Entries
 
+### 2026-08-10 - #68: Milkdown removal — live preview becomes the editor
+
+- **Status**: Completed
+- **Description**: Deleted the Milkdown/Crepe editor, all five `*-source` plugins, the PM search plugin, and the `@milkdown/*` + `codemirror` dependencies (~4,700 lines). Live preview is now the only WYSIWYG editor; Cmd+M raw source mode remains. Crepe's palette vendored to `ui/theme/colors.css` as `--skriv-color-*`; `useSearch` is CodeMirror-only; e2e suite rewritten against the live-preview editor. Added CM `placeholder()` ghost text (the old `?? PLACEHOLDER` fallback was dead code — `content` initializes to `""`).
+- **URL**: https://github.com/bhendo/skriv/issues/68
+- **Notes**: Behavior differences vs Crepe are recorded in ADR-003. Closed as resolved/obsolete: #8, #24, #31, #32, #37, #39, #50, #53, #59, #60.
+
 ### 2026-08-10 - #68: Live-preview feature migration
 
-- **Status**: In progress (migration PR)
+- **Status**: Completed (merged in PR #71)
 - **Description**: Feature parity for the live-preview editor after the spike merged: mermaid diagrams (fold widget reusing the shared renderer/overlay), GFM table previews (pure source → DOM renderer via @lezer/markdown), Cmd+K clipboard link auto-fill (#56 parity), Cmd+E / Cmd+Alt+X shortcut aliases (#25 parity). Task lists and image folding come free from ProseMark defaults (relates #60). E2E suite for live-preview mode added.
 - **URL**: https://github.com/bhendo/skriv/issues/68
 - **Notes**: Not migrated (intentional, pending verdict): Crepe floating toolbar, slash commands, structured table editing. Local-file image resolution is not present in either editor; belongs with #3.
 
 ### 2026-08-10 - #68: Spike: CodeMirror 6 live-preview editor core (ProseMark)
 
-- **Status**: Spike implemented, PR open, awaiting evaluation
+- **Status**: Superseded — the spike passed evaluation; see the Milkdown-removal entry above
 - **Description**: Flag-gated CodeMirror 6 + @prosemark/core live-preview editor mounted in the WYSIWYG slot (`VITE_LIVE_PREVIEW=1` or localStorage `skriv:live-preview=1`). Motivation: the ProseMirror `*-source` plugins fight the architecture (~half the frontend, most open bugs); CM6 live preview makes syntax reveal the default behavior. Evaluation criteria in `docs/plans/2026-08-10-live-preview-editor-spike-design.md`.
 - **URL**: https://github.com/bhendo/skriv/issues/68
 - **Notes**: `useSearch`'s `sourceMode` option renamed to `codeMirrorMode` (it selects the CodeMirror search path, now used by both source mode and live preview). ProseMark themes via `--pm-*` CSS variables, mapped to crepe variables in `skriv.css`.
