@@ -9,6 +9,21 @@
   --skriv-code-font-size: 0.9em;
 }
 
+/* Responsive content width (#11) — matches Typora's breakpoints so the
+   writing area expands on larger screens while keeping readable line
+   lengths on smaller ones. */
+@media (min-width: 1400px) {
+  :root {
+    --skriv-editor-max-width: 1024px;
+  }
+}
+
+@media (min-width: 1800px) {
+  :root {
+    --skriv-editor-max-width: 1200px;
+  }
+}
+
 html,
 body,
 #root {
