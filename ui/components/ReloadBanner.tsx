@@ -13,9 +13,9 @@ export const ReloadBanner: FC<ReloadBannerProps> = ({ visible, onReload, onDismi
     <div
       style={{
         padding: "8px 16px",
-        backgroundColor: "var(--crepe-color-surface-low, #fffbeb)",
-        borderBottom: "1px solid var(--crepe-color-outline, #fde68a)",
-        color: "var(--crepe-color-on-surface, #92400e)",
+        backgroundColor: "var(--skriv-color-surface-low, #fffbeb)",
+        borderBottom: "1px solid var(--skriv-color-outline, #fde68a)",
+        color: "var(--skriv-color-on-surface, #92400e)",
         fontSize: 13,
         display: "flex",
         justifyContent: "space-between",

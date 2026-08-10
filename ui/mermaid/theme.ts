@@ -13,13 +13,13 @@ function isDarkMode(): boolean {
  * Build mermaid theme config using the 'base' theme with curated palettes.
  *
  * Uses theme: "base" because mermaid ignores themeVariables with "default"
- * or "dark" themes. The palettes are inspired by Crepe's warm brown/cream
- * tones but tuned for diagram readability and contrast.
+ * or "dark" themes. The palettes echo skriv's warm brown/cream palette
+ * (ui/theme/colors.css) but are tuned for diagram readability and contrast.
  */
 export function buildMermaidThemeConfig(): MermaidThemeConfig {
   const vars = isDarkMode()
     ? {
-        // Dark palette — warm dark tones matching Crepe classic-dark
+        // Dark palette — warm dark tones matching skriv's dark palette
         background: "#1f1b16",
         primaryColor: "#3b342b",
         primaryTextColor: "#eae1d9",
@@ -35,7 +35,7 @@ export function buildMermaidThemeConfig(): MermaidThemeConfig {
         fontFamily: FONT_FAMILY,
       }
     : {
-        // Light palette — warm cream tones matching Crepe classic
+        // Light palette — warm cream tones matching skriv's light palette
         background: "#fffdfb",
         primaryColor: "#fff1e5",
         primaryTextColor: "#1f1b16",

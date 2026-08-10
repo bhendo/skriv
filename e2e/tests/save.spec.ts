@@ -1,16 +1,13 @@
 import { test, expect, MOD, getMockWrites } from "../fixtures";
 
 test.describe("Save keyboard shortcuts", () => {
-  test("Cmd+S triggers write_file with editor content", async ({
-    page,
-    loadApp,
-  }) => {
+  test("Cmd+S triggers write_file with editor content", async ({ page, loadApp }) => {
     await loadApp({
       openedFile: "/tmp/test.md",
       fileContent: "Hello world\n",
     });
 
-    const editor = page.locator(".milkdown .editor");
+    const editor = page.locator(".live-preview-editor .cm-content");
     await editor.click();
 
     await page.keyboard.press("End");
@@ -32,13 +29,10 @@ test.describe("Save keyboard shortcuts", () => {
     expect(lastWrite.content).toContain("extra text");
   });
 
-  test("Cmd+S with no file open does not crash", async ({
-    page,
-    loadApp,
-  }) => {
+  test("Cmd+S with no file open does not crash", async ({ page, loadApp }) => {
     await loadApp();
 
-    const editor = page.locator(".milkdown .editor");
+    const editor = page.locator(".live-preview-editor .cm-content");
     await editor.click();
 
     await page.keyboard.type("some text");

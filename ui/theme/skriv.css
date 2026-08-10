@@ -1,4 +1,5 @@
-/* Skriv theme — clean, Typora-inspired overrides on Crepe */
+/* Skriv theme — clean, Typora-inspired styling over CodeMirror + ProseMark.
+   Colors come from ui/theme/colors.css (--skriv-color-*). */
 
 :root {
   --skriv-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
@@ -31,221 +32,41 @@ body,
   padding: 0;
   height: 100%;
   font-family: var(--skriv-font-sans);
-  background: var(--crepe-color-background, #ffffff);
-  color: var(--crepe-color-on-background, #333);
+  background: var(--skriv-color-background, #ffffff);
+  color: var(--skriv-color-on-background, #333);
 }
 
-.milkdown,
 .source-editor,
 .live-preview-editor {
   max-width: var(--skriv-editor-max-width);
   margin: 0 auto;
   padding: var(--skriv-editor-padding);
-}
-
-.milkdown {
-  outline: none;
-}
-
-.milkdown .editor {
-  outline: none;
-}
-
-.milkdown .editor h1 {
-  font-size: 2em;
-  font-weight: 600;
-  margin: 1.2em 0 0.6em;
-  padding-bottom: 0.3em;
-  border-bottom: 1px solid var(--crepe-color-outline, #eee);
-}
-
-.milkdown .editor h2 {
-  font-size: 1.5em;
-  font-weight: 600;
-  margin: 1em 0 0.5em;
-  padding-bottom: 0.25em;
-  border-bottom: 1px solid var(--crepe-color-outline, #eee);
-}
-
-.milkdown .editor h3 {
-  font-size: 1.25em;
-  font-weight: 600;
-  margin: 0.8em 0 0.4em;
-}
-
-.milkdown .editor p {
-  margin: 0.5em 0;
-  line-height: var(--skriv-line-height);
-}
-
-.milkdown .editor blockquote {
-  border-left: 4px solid var(--crepe-color-outline, #ddd);
-  margin: 0.8em 0;
-  padding: 0.4em 1em;
-  color: var(--crepe-color-on-surface-variant, #666);
-}
-
-:is(.milkdown .editor, .live-preview-editor .cm-table-preview) code {
-  background: var(--crepe-color-inline-area, #f5f5f5);
-  border-radius: 3px;
-  padding: 0.15em 0.4em;
-  font-size: var(--skriv-code-font-size);
-  font-family: var(--skriv-font-mono);
-}
-
-.milkdown .editor pre {
-  background: var(--crepe-color-surface-low, #f8f8f8);
-  border-radius: 6px;
-  padding: 16px;
-  overflow-x: auto;
-  margin: 0.8em 0;
-}
-
-.milkdown .editor pre code {
-  background: none;
-  padding: 0;
-  font-size: 0.85em;
-  line-height: 1.6;
-}
-
-.milkdown .editor a {
-  color: var(--crepe-color-primary, #4183c4);
-  text-decoration: none;
-}
-
-.milkdown .editor a:hover {
-  text-decoration: underline;
-}
-
-.milkdown .editor img {
-  max-width: 100%;
-  border-radius: 4px;
-  margin: 0.5em 0;
-}
-
-.milkdown .editor hr {
-  border: none;
-  border-top: 1px solid var(--crepe-color-outline, #ddd);
-  margin: 1.5em 0;
-}
-
-:is(.milkdown .editor, .live-preview-editor .cm-table-preview) table {
-  border-collapse: collapse;
-  width: 100%;
-  margin: 0.8em 0;
-}
-
-:is(.milkdown .editor, .live-preview-editor .cm-table-preview) th,
-:is(.milkdown .editor, .live-preview-editor .cm-table-preview) td {
-  border: 1px solid var(--crepe-color-outline, #ddd);
-  padding: 8px 12px;
-  text-align: left;
-  overflow-wrap: break-word;
-  word-break: break-word;
-}
-
-:is(.milkdown .editor, .live-preview-editor .cm-table-preview) th code,
-:is(.milkdown .editor, .live-preview-editor .cm-table-preview) td code {
-  word-break: break-all;
-}
-
-:is(.milkdown .editor, .live-preview-editor .cm-table-preview) th {
-  background: var(--crepe-color-surface-low, #f5f5f5);
-  font-weight: 600;
-}
-
-.milkdown .editor .inline-source {
-  font-family: inherit;
-  border-radius: 2px;
-  background: var(--crepe-color-inline-area, #f5f5f5);
-  caret-color: var(--crepe-color-on-background, #333);
-}
-
-.milkdown .editor .inline-source .syntax-marker {
-  opacity: 0.4;
-}
-
-.milkdown .editor .link-source {
-  font-family: inherit;
-  border-radius: 2px;
-  background: var(--crepe-color-inline-area, #f5f5f5);
-  caret-color: var(--crepe-color-on-background, #333);
-}
-
-.milkdown .editor .link-source .syntax-marker {
-  opacity: 0.4;
-}
-
-.milkdown .editor .link-source .link-url {
-  opacity: 0.6;
-}
-
-.milkdown .editor .heading-source .syntax-marker {
-  opacity: 0.4;
-}
-
-.milkdown .editor .milkdown-list-item-block .marker-input {
-  font-family: var(--crepe-font-code, monospace);
-  font-size: inherit;
-  border: none;
-  background: transparent;
-  color: inherit;
-  opacity: 0.4;
-  width: 24px;
-  text-align: right;
-  padding: 0;
-  outline: none;
-}
-
-.milkdown .editor .milkdown-list-item-block .marker-input:focus {
-  opacity: 0.7;
-}
-
-.milkdown .editor .code-fence {
-  font-family: var(--skriv-font-mono);
-  font-size: 0.85em;
-  line-height: 1.6;
-  padding: 2px 16px;
-  color: var(--crepe-color-on-surface-variant, #666);
-  user-select: none;
-}
-
-.milkdown .editor .code-fence .syntax-marker {
-  opacity: 0.4;
-}
-
-.milkdown .editor .code-fence .fence-language {
-  opacity: 0.6;
-}
-
-.source-editor {
   height: 100%;
 }
 
 /* Background overrides for source editor — oneDark provides syntax colors,
-   CSS variables handle light/dark backgrounds (same pattern as Crepe's
-   .milkdown-code-block overrides in code-mirror.css). */
+   CSS variables handle light/dark backgrounds. */
 .source-editor .cm-editor {
   height: 100%;
   outline: none;
-  background: var(--crepe-color-surface);
-  color: var(--crepe-color-on-surface);
+  background: var(--skriv-color-surface);
+  color: var(--skriv-color-on-surface);
 }
 
 .source-editor .cm-gutters {
-  background: var(--crepe-color-surface);
+  background: var(--skriv-color-surface);
   border-right: none;
-  color: var(--crepe-color-on-surface-variant);
+  color: var(--skriv-color-on-surface-variant);
 }
 
 .source-editor .cm-activeLineGutter,
 .source-editor .cm-activeLine {
-  background: var(--crepe-color-surface-low);
+  background: var(--skriv-color-surface-low);
 }
 
 .source-editor .cm-cursor,
 .source-editor .cm-dropCursor {
-  border-left-color: var(--crepe-color-on-surface);
+  border-left-color: var(--skriv-color-on-surface);
 }
 
 .source-editor .cm-scroller {
@@ -254,36 +75,34 @@ body,
   line-height: var(--skriv-line-height);
 }
 
-/* Live preview editor (#68 spike) — CodeMirror + ProseMark.
+/* Live preview editor — CodeMirror + ProseMark.
    ProseMark themes via --pm-* variables; --font is its prose font hook. */
 .live-preview-editor {
-  height: 100%;
   --font: var(--skriv-font-sans);
 }
 
 .live-preview-editor .cm-editor {
   height: 100%;
   outline: none;
-  background: var(--crepe-color-background);
-  color: var(--crepe-color-on-background);
+  background: var(--skriv-color-background);
+  color: var(--skriv-color-on-background);
 }
 
 /* Extra selector depth to out-rank ProseMark's injected .cm-content rules.
-   Structural --pm-* colors track the crepe theme, which useTheme flips with
-   the system light/dark preference. Fenced-code syntax colors use the
-   oneDark palette in both themes, matching skriv's other CodeMirror
-   surfaces (source mode, code blocks, mermaid editor). */
+   Structural --pm-* colors track the skriv palette (flipped by the system
+   light/dark preference in colors.css). Fenced-code syntax colors use the
+   oneDark palette in both themes, matching the source editor. */
 .live-preview-editor .cm-editor .cm-content {
   font-size: 1rem;
   line-height: var(--skriv-line-height);
-  --pm-cursor-color: var(--crepe-color-on-background);
-  --pm-header-mark-color: var(--crepe-color-outline);
-  --pm-link-color: var(--crepe-color-primary);
-  --pm-muted-color: var(--crepe-color-on-surface-variant);
-  --pm-code-background-color: var(--crepe-color-surface);
-  --pm-code-btn-background-color: var(--crepe-color-surface-low);
-  --pm-code-btn-hover-background-color: var(--crepe-color-outline);
-  --pm-blockquote-vertical-line-background-color: var(--crepe-color-outline);
+  --pm-cursor-color: var(--skriv-color-on-background);
+  --pm-header-mark-color: var(--skriv-color-outline);
+  --pm-link-color: var(--skriv-color-primary);
+  --pm-muted-color: var(--skriv-color-on-surface-variant);
+  --pm-code-background-color: var(--skriv-color-surface);
+  --pm-code-btn-background-color: var(--skriv-color-surface-low);
+  --pm-code-btn-hover-background-color: var(--skriv-color-outline);
+  --pm-blockquote-vertical-line-background-color: var(--skriv-color-outline);
   --pm-syntax-link: #61afef;
   --pm-syntax-keyword: #c678dd;
   --pm-syntax-atom: #d19a66;
@@ -300,10 +119,42 @@ body,
   --pm-syntax-invalid: #e06c75;
 }
 
-/* Table preview widgets (live preview) — table/cell/code rules are shared
-   with the Milkdown editor via the :is() selectors above. */
+/* Table preview widgets */
 .live-preview-editor .cm-table-preview {
   cursor: text;
+}
+
+.live-preview-editor .cm-table-preview table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.8em 0;
+}
+
+.live-preview-editor .cm-table-preview th,
+.live-preview-editor .cm-table-preview td {
+  border: 1px solid var(--skriv-color-outline, #ddd);
+  padding: 8px 12px;
+  text-align: left;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.live-preview-editor .cm-table-preview th code,
+.live-preview-editor .cm-table-preview td code {
+  word-break: break-all;
+}
+
+.live-preview-editor .cm-table-preview th {
+  background: var(--skriv-color-surface-low, #f5f5f5);
+  font-weight: 600;
+}
+
+.live-preview-editor .cm-table-preview code {
+  background: var(--skriv-color-inline-area, #f5f5f5);
+  border-radius: 3px;
+  padding: 0.15em 0.4em;
+  font-size: var(--skriv-code-font-size);
+  font-family: var(--skriv-font-mono);
 }
 
 .live-preview-editor .cm-table-link {
@@ -311,61 +162,49 @@ body,
   text-decoration: underline;
 }
 
-/* Mermaid diagram blocks (both editors) */
-:is(.milkdown .editor, .live-preview-editor) .mermaid-block {
+/* Mermaid diagram blocks */
+.live-preview-editor .mermaid-block {
   margin: 0.8em 0;
 }
 
-.milkdown .editor .mermaid-block.ProseMirror-selectednode {
-  outline: 2px solid var(--crepe-color-primary, #4183c4);
-  outline-offset: 2px;
-}
-
-:is(.milkdown .editor, .live-preview-editor) .mermaid-svg-container {
+.live-preview-editor .mermaid-svg-container {
   overflow: hidden;
   cursor: grab;
   min-height: 60px;
-  border: 1px solid var(--crepe-color-outline, #ddd);
+  border: 1px solid var(--skriv-color-outline, #ddd);
   border-radius: 6px;
-  background: var(--crepe-color-background, #ffffff);
+  background: var(--skriv-color-background, #ffffff);
   position: relative;
 }
 
-:is(.milkdown .editor, .live-preview-editor) .mermaid-svg-container:active {
+.live-preview-editor .mermaid-svg-container:active {
   cursor: grabbing;
 }
 
-:is(.milkdown .editor, .live-preview-editor) .mermaid-svg-wrapper {
+.live-preview-editor .mermaid-svg-wrapper {
   transform-origin: 0 0;
 }
 
 /* Prevent mermaid foreignObject (htmlLabels:true) from clipping node content */
-:is(.milkdown .editor, .live-preview-editor) .mermaid-svg-wrapper foreignObject {
+.live-preview-editor .mermaid-svg-wrapper foreignObject {
   overflow: visible;
 }
 
 /* Shrink edge labels to reduce overlap on dense diagrams */
-:is(.milkdown .editor, .live-preview-editor) .mermaid-svg-wrapper .edgeLabel {
+.live-preview-editor .mermaid-svg-wrapper .edgeLabel {
   font-size: 0.85em;
 }
 
-:is(.milkdown .editor, .live-preview-editor) .mermaid-svg-wrapper svg {
+.live-preview-editor .mermaid-svg-wrapper svg {
   height: auto;
 }
 
-/* Editing container — milkdown-code-block class handles background/padding via Crepe CSS.
-   Only keep border-radius (Crepe code blocks don't have it) and overflow for long lines. */
-.milkdown .editor .mermaid-edit-container {
-  border-radius: 6px;
-  overflow-x: auto;
-}
-
-:is(.milkdown .editor, .live-preview-editor) .mermaid-placeholder {
-  color: var(--crepe-color-on-surface-variant, #999);
+.live-preview-editor .mermaid-placeholder {
+  color: var(--skriv-color-on-surface-variant, #999);
   font-style: italic;
 }
 
-:is(.milkdown .editor, .live-preview-editor) .mermaid-error {
+.live-preview-editor .mermaid-error {
   color: #c0392b;
   font-family: var(--skriv-font-mono);
   font-size: 0.85em;
@@ -393,8 +232,8 @@ body,
 .mermaid-overlay {
   width: 95vw;
   height: 95vh;
-  background: var(--crepe-color-background, #ffffff);
-  border: 1px solid var(--crepe-color-outline, #ddd);
+  background: var(--skriv-color-background, #ffffff);
+  border: 1px solid var(--skriv-color-outline, #ddd);
   border-radius: 8px;
   position: relative;
   overflow: hidden;
@@ -415,8 +254,8 @@ body,
   height: 32px;
   border: none;
   border-radius: 6px;
-  background: var(--crepe-color-surface, rgba(0, 0, 0, 0.05));
-  color: var(--crepe-color-on-surface, #333);
+  background: var(--skriv-color-surface, rgba(0, 0, 0, 0.05));
+  color: var(--skriv-color-on-surface, #333);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -426,7 +265,7 @@ body,
 }
 
 .mermaid-overlay-toolbar button:hover {
-  background: var(--crepe-color-surface-variant, rgba(0, 0, 0, 0.1));
+  background: var(--skriv-color-surface-variant, rgba(0, 0, 0, 0.1));
 }
 
 .mermaid-overlay-content {
@@ -456,7 +295,7 @@ body,
   transition: opacity 150ms ease;
 }
 
-:is(.milkdown .editor, .live-preview-editor) .mermaid-svg-container:hover .mermaid-inline-toolbar {
+.live-preview-editor .mermaid-svg-container:hover .mermaid-inline-toolbar {
   opacity: 1;
 }
 
@@ -465,8 +304,8 @@ body,
   height: 28px;
   border: none;
   border-radius: 6px;
-  background: var(--crepe-color-surface, rgba(0, 0, 0, 0.05));
-  color: var(--crepe-color-on-surface, #333);
+  background: var(--skriv-color-surface, rgba(0, 0, 0, 0.05));
+  color: var(--skriv-color-on-surface, #333);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -476,19 +315,7 @@ body,
 }
 
 .mermaid-inline-toolbar button:hover {
-  background: var(--crepe-color-surface-variant, rgba(0, 0, 0, 0.1));
-}
-
-/* Document search highlights */
-.search-match {
-  background: rgba(255, 200, 0, 0.3);
-  border-radius: 2px;
-}
-
-.search-match-active {
-  background: rgba(255, 165, 0, 0.5);
-  outline: 2px solid rgba(255, 165, 0, 0.8);
-  border-radius: 2px;
+  background: var(--skriv-color-surface-variant, rgba(0, 0, 0, 0.1));
 }
 
 /* Search bar */
@@ -499,8 +326,8 @@ body,
   display: flex;
   align-items: center;
   gap: 4px;
-  background: var(--crepe-color-surface, #fff);
-  border: 1px solid var(--crepe-color-outline, #ddd);
+  background: var(--skriv-color-surface, #fff);
+  border: 1px solid var(--skriv-color-outline, #ddd);
   border-radius: 6px;
   padding: 4px 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
@@ -509,23 +336,23 @@ body,
 }
 
 .search-input {
-  border: 1px solid var(--crepe-color-outline, #ddd);
+  border: 1px solid var(--skriv-color-outline, #ddd);
   border-radius: 4px;
   padding: 4px 8px;
   font-size: 13px;
   font-family: var(--skriv-font-sans);
-  background: var(--crepe-color-background, #fff);
-  color: var(--crepe-color-on-background, #333);
+  background: var(--skriv-color-background, #fff);
+  color: var(--skriv-color-on-background, #333);
   outline: none;
   width: 200px;
 }
 
 .search-input:focus {
-  border-color: var(--crepe-color-primary, #4183c4);
+  border-color: var(--skriv-color-primary, #4183c4);
 }
 
 .search-count {
-  color: var(--crepe-color-on-surface-variant, #666);
+  color: var(--skriv-color-on-surface-variant, #666);
   font-size: 12px;
   min-width: 50px;
   text-align: center;
@@ -536,7 +363,7 @@ body,
   border: none;
   border-radius: 4px;
   background: transparent;
-  color: var(--crepe-color-on-surface-variant, #666);
+  color: var(--skriv-color-on-surface-variant, #666);
   cursor: pointer;
   padding: 2px 6px;
   font-size: 12px;
@@ -547,10 +374,10 @@ body,
 }
 
 .search-btn:hover {
-  background: var(--crepe-color-surface-low, #f5f5f5);
+  background: var(--skriv-color-surface-low, #f5f5f5);
 }
 
 .search-case-toggle.active {
-  background: var(--crepe-color-primary, #4183c4);
+  background: var(--skriv-color-primary, #4183c4);
   color: #fff;
 }

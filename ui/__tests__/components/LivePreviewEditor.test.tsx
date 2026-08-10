@@ -20,6 +20,7 @@ vi.mock("@codemirror/view", () => {
     keymap: { of: vi.fn(() => ({})) },
     dropCursor: vi.fn(() => ({})),
     highlightSpecialChars: vi.fn(() => ({})),
+    placeholder: vi.fn(() => ({})),
   };
 });
 
@@ -79,7 +80,6 @@ vi.mock("@prosemark/core", () => ({
   fixedTabWidthExtension: {},
   softIndentExtension: {},
   codeBlockDecorationsExtension: {},
-  prosemarkMarkdownFormattingKeymap: [],
   prosemarkBaseThemeSetup: vi.fn(() => []),
   prosemarkMarkdownSyntaxExtensions: [],
 }));

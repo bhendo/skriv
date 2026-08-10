@@ -1,5 +1,11 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef } from "react";
-import { EditorView, keymap, dropCursor, highlightSpecialChars } from "@codemirror/view";
+import {
+  EditorView,
+  keymap,
+  dropCursor,
+  highlightSpecialChars,
+  placeholder,
+} from "@codemirror/view";
 import { EditorState } from "@codemirror/state";
 import { indentOnInput, bracketMatching } from "@codemirror/language";
 import { history, historyKeymap, defaultKeymap, indentWithTab } from "@codemirror/commands";
@@ -93,6 +99,7 @@ export const LivePreviewEditor = forwardRef<EditorHandle, LivePreviewEditorProps
             closeBrackets(),
             autocompletion(),
             search(),
+            placeholder("Start writing markdown here…"),
             keymap.of([
               ...livePreviewFormattingKeymap,
               ...closeBracketsKeymap,

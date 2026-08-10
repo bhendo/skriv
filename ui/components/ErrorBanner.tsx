@@ -12,9 +12,9 @@ export const ErrorBanner: FC<ErrorBannerProps> = ({ message, onDismiss }) => {
     <div
       style={{
         padding: "8px 16px",
-        backgroundColor: "var(--crepe-color-surface-low, #fef2f2)",
-        borderBottom: "1px solid var(--crepe-color-outline, #fecaca)",
-        color: "var(--crepe-color-error, #991b1b)",
+        backgroundColor: "var(--skriv-color-surface-low, #fef2f2)",
+        borderBottom: "1px solid var(--skriv-color-outline, #fecaca)",
+        color: "var(--skriv-color-error, #991b1b)",
         fontSize: 13,
         display: "flex",
         justifyContent: "space-between",
@@ -28,7 +28,7 @@ export const ErrorBanner: FC<ErrorBannerProps> = ({ message, onDismiss }) => {
           background: "none",
           border: "none",
           cursor: "pointer",
-          color: "var(--crepe-color-error, #991b1b)",
+          color: "var(--skriv-color-error, #991b1b)",
           fontSize: 16,
         }}
       >

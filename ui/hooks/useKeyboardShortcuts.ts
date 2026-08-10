@@ -5,7 +5,6 @@ interface ShortcutHandlers {
   onSaveAs: () => void;
   onOpen: () => void;
   onNewWindow?: () => void;
-  onToggleSyntax?: () => void;
   onToggleSourceMode?: () => void;
   onSearch?: () => void;
 }
@@ -41,9 +40,6 @@ export function useKeyboardShortcuts(handlers: ShortcutHandlers) {
       } else if (e.key === "o") {
         e.preventDefault();
         ref.current.onOpen();
-      } else if (e.shiftKey && e.key === "e") {
-        e.preventDefault();
-        ref.current.onToggleSyntax?.();
       } else if (e.key === "m") {
         e.preventDefault();
         ref.current.onToggleSourceMode?.();

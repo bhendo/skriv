@@ -1,108 +1,82 @@
 import { test, expect } from "../fixtures";
 
 test.describe("Editor rendering", () => {
-  test("renders headings (h1, h2, h3)", async ({ page, loadApp }) => {
+  test("renders headings", async ({ page, loadApp }) => {
     await loadApp({
       openedFile: "/tmp/test.md",
       fileContent: "# Heading One\n\n## Heading Two\n\n### Heading Three\n",
     });
-    const editor = page.locator(".milkdown .editor");
-    await expect(editor.locator("h1")).toContainText("Heading One");
-    await expect(editor.locator("h2")).toContainText("Heading Two");
-    await expect(editor.locator("h3")).toContainText("Heading Three");
+    const editor = page.locator(".live-preview-editor .cm-content");
+    await expect(editor).toContainText("Heading One");
+    await expect(editor).toContainText("Heading Two");
+    await expect(editor).toContainText("Heading Three");
+    // Cursor-scoped fold behavior is covered in live-preview.spec.ts
   });
 
-  test("renders inline formatting (bold, italic, code)", async ({
-    page,
-    loadApp,
-  }) => {
+  test("renders inline formatting", async ({ page, loadApp }) => {
     await loadApp({
       openedFile: "/tmp/test.md",
-      fileContent:
-        "This is **bold** and *italic* and `inline code` text.\n",
+      fileContent: "Prose first.\n\nThis is **bold** and *italic* and `inline code` text.\n",
     });
-    const editor = page.locator(".milkdown .editor");
-    await expect(editor.locator("strong")).toContainText("bold");
-    await expect(editor.locator("em")).toContainText("italic");
-    await expect(editor.locator("code")).toContainText("inline code");
+    const editor = page.locator(".live-preview-editor .cm-content");
+    await expect(editor).toContainText("bold");
+    await expect(editor).toContainText("italic");
+    await expect(editor).toContainText("inline code");
   });
 
-  test("renders unordered list (3 items)", async ({ page, loadApp }) => {
+  test("renders list markers as bullets", async ({ page, loadApp }) => {
     await loadApp({
       openedFile: "/tmp/test.md",
       fileContent: "- Apple\n- Banana\n- Cherry\n",
     });
-    const editor = page.locator(".milkdown .editor");
-    const listItems = editor.locator("ul .milkdown-list-item-block");
-    await expect(listItems).toHaveCount(3);
-    await expect(listItems.nth(0)).toContainText("Apple");
-    await expect(listItems.nth(1)).toContainText("Banana");
-    await expect(listItems.nth(2)).toContainText("Cherry");
+    const editor = page.locator(".live-preview-editor .cm-content");
+    await expect(editor).toContainText("Apple");
+    await expect(editor).toContainText("Cherry");
+    await expect(editor.locator(".cm-rendered-list-mark").first()).toBeAttached();
   });
 
-  test("renders ordered list (3 items)", async ({ page, loadApp }) => {
-    await loadApp({
-      openedFile: "/tmp/test.md",
-      fileContent: "1. First\n2. Second\n3. Third\n",
-    });
-    const editor = page.locator(".milkdown .editor");
-    const listItems = editor.locator("ol .milkdown-list-item-block");
-    await expect(listItems).toHaveCount(3);
-    await expect(listItems.nth(0)).toContainText("First");
-    await expect(listItems.nth(1)).toContainText("Second");
-    await expect(listItems.nth(2)).toContainText("Third");
-  });
-
-  test("renders code block (CodeMirror)", async ({ page, loadApp }) => {
+  test("renders fenced code with syntax highlighting", async ({ page, loadApp }) => {
     await loadApp({
       openedFile: "/tmp/test.md",
       fileContent: '```js\nconsole.log("hello");\n```\n',
     });
-    const editor = page.locator(".milkdown .editor");
-    const cmEditor = editor.locator(".cm-editor");
-    await expect(cmEditor).toBeVisible();
-    await expect(cmEditor).toContainText('console.log("hello")');
+    const editor = page.locator(".live-preview-editor .cm-content");
+    await expect(editor).toContainText('console.log("hello")');
+    await expect(editor.locator(".cm-fenced-code-line-first")).toBeAttached();
   });
 
-  test("renders blockquote", async ({ page, loadApp }) => {
+  test("renders blockquote with border styling", async ({ page, loadApp }) => {
     await loadApp({
       openedFile: "/tmp/test.md",
       fileContent: "> This is a blockquote.\n",
     });
-    const editor = page.locator(".milkdown .editor");
-    await expect(editor.locator("blockquote")).toContainText(
-      "This is a blockquote.",
-    );
+    const editor = page.locator(".live-preview-editor .cm-content");
+    await expect(editor).toContainText("This is a blockquote.");
+    await expect(editor.locator(".cm-blockquote-line").first()).toBeAttached();
   });
 
-  test("renders horizontal rule", async ({ page, loadApp }) => {
+  test("renders horizontal rule as a widget", async ({ page, loadApp }) => {
     await loadApp({
       openedFile: "/tmp/test.md",
       fileContent: "Above the line.\n\n---\n\nBelow the line.\n",
     });
-    const editor = page.locator(".milkdown .editor");
-    await expect(editor.locator("hr")).toBeVisible();
+    const editor = page.locator(".live-preview-editor .cm-content");
+    await expect(editor.locator(".cm-horizontal-rule-container")).toBeAttached();
   });
 
-  test("loads file content when openedFile is set", async ({
-    page,
-    loadApp,
-  }) => {
+  test("loads file content when openedFile is set", async ({ page, loadApp }) => {
     await loadApp({
       openedFile: "/tmp/my-doc.md",
       fileContent: "# My Document\n\nSome paragraph text here.\n",
     });
-    const editor = page.locator(".milkdown .editor");
+    const editor = page.locator(".live-preview-editor .cm-content");
     await expect(editor).toContainText("My Document");
     await expect(editor).toContainText("Some paragraph text here.");
   });
 
-  test("shows placeholder when no file is opened", async ({
-    page,
-    loadApp,
-  }) => {
+  test("shows placeholder ghost text when no file is opened", async ({ page, loadApp }) => {
     await loadApp();
-    const editor = page.locator(".milkdown .editor");
-    await expect(editor.locator(".crepe-placeholder")).toBeVisible();
+    const editor = page.locator(".live-preview-editor .cm-content");
+    await expect(editor.locator(".cm-placeholder")).toBeVisible();
   });
 });
