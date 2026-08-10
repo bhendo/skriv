@@ -31,3 +31,4 @@ CLAUDE.local.md
 *.njsproj
 *.sln
 *.sw?
+test-results/
