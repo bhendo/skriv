@@ -1,10 +1,11 @@
-import { useEffect, useCallback, useRef, useState } from "react";
+import { useEffect, useCallback, useRef, useState, lazy, Suspense } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { MarkdownEditor, type EditorHandle } from "./components/Editor";
 import { SourceEditor } from "./components/SourceEditor";
+import { isLivePreviewEnabled } from "./flags";
 import { SearchBar } from "./components/SearchBar";
 import { ErrorBanner } from "./components/ErrorBanner";
 import { ReloadBanner } from "./components/ReloadBanner";
@@ -19,6 +20,14 @@ const PLACEHOLDER = `# Welcome to Skriv
 
 Start writing markdown here.
 `;
+
+const livePreview = isLivePreviewEnabled();
+
+// Lazy so the default-off spike (and @prosemark/core's emoji data) stays out
+// of the startup chunk.
+const LivePreviewEditor = lazy(() =>
+  import("./components/LivePreviewEditor").then((m) => ({ default: m.LivePreviewEditor }))
+);
 
 function App() {
   const editorRef = useRef<EditorHandle>(null);
@@ -140,14 +149,19 @@ function App() {
     handleNext,
     handlePrev,
     handleToggleCaseSensitive,
-  } = useSearch({ editorRef, sourceMode, getMilkdownCtx });
+  } = useSearch({
+    editorRef,
+    codeMirrorMode: sourceMode || livePreview,
+    getMilkdownCtx,
+  });
 
   useKeyboardShortcuts({
     onSave: handleSave,
     onSaveAs: handleSaveAs,
     onOpen: handleOpen,
     onNewWindow: handleNewWindow,
-    onToggleSyntax: handleToggleSyntax,
+    // Syntax toggling is a Milkdown-editor concept; meaningless in live preview
+    onToggleSyntax: livePreview ? undefined : handleToggleSyntax,
     onToggleSourceMode: handleToggleSourceMode,
     onSearch: openSearch,
   });
@@ -232,6 +246,14 @@ function App() {
               defaultValue={editorSnapshot ?? content ?? PLACEHOLDER}
               onChange={handleChange}
             />
+          ) : livePreview ? (
+            <Suspense fallback={null}>
+              <LivePreviewEditor
+                ref={editorRef}
+                defaultValue={editorSnapshot ?? content ?? PLACEHOLDER}
+                onChange={handleChange}
+              />
+            </Suspense>
           ) : (
             <MarkdownEditor
               ref={editorRef}

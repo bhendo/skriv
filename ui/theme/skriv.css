@@ -20,10 +20,15 @@ body,
   color: var(--crepe-color-on-background, #333);
 }
 
-.milkdown {
+.milkdown,
+.source-editor,
+.live-preview-editor {
   max-width: var(--skriv-editor-max-width);
   margin: 0 auto;
   padding: var(--skriv-editor-padding);
+}
+
+.milkdown {
   outline: none;
 }
 
@@ -199,9 +204,6 @@ body,
 }
 
 .source-editor {
-  max-width: var(--skriv-editor-max-width);
-  margin: 0 auto;
-  padding: var(--skriv-editor-padding);
   height: 100%;
 }
 
@@ -235,6 +237,52 @@ body,
   font-family: var(--skriv-font-mono);
   font-size: var(--skriv-code-font-size);
   line-height: var(--skriv-line-height);
+}
+
+/* Live preview editor (#68 spike) — CodeMirror + ProseMark.
+   ProseMark themes via --pm-* variables; --font is its prose font hook. */
+.live-preview-editor {
+  height: 100%;
+  --font: var(--skriv-font-sans);
+}
+
+.live-preview-editor .cm-editor {
+  height: 100%;
+  outline: none;
+  background: var(--crepe-color-background);
+  color: var(--crepe-color-on-background);
+}
+
+/* Extra selector depth to out-rank ProseMark's injected .cm-content rules.
+   Structural --pm-* colors track the crepe theme, which useTheme flips with
+   the system light/dark preference. Fenced-code syntax colors use the
+   oneDark palette in both themes, matching skriv's other CodeMirror
+   surfaces (source mode, code blocks, mermaid editor). */
+.live-preview-editor .cm-editor .cm-content {
+  font-size: 1rem;
+  line-height: var(--skriv-line-height);
+  --pm-cursor-color: var(--crepe-color-on-background);
+  --pm-header-mark-color: var(--crepe-color-outline);
+  --pm-link-color: var(--crepe-color-primary);
+  --pm-muted-color: var(--crepe-color-on-surface-variant);
+  --pm-code-background-color: var(--crepe-color-surface);
+  --pm-code-btn-background-color: var(--crepe-color-surface-low);
+  --pm-code-btn-hover-background-color: var(--crepe-color-outline);
+  --pm-blockquote-vertical-line-background-color: var(--crepe-color-outline);
+  --pm-syntax-link: #61afef;
+  --pm-syntax-keyword: #c678dd;
+  --pm-syntax-atom: #d19a66;
+  --pm-syntax-literal: #98c379;
+  --pm-syntax-string: #98c379;
+  --pm-syntax-regexp: #e06c75;
+  --pm-syntax-definition-variable: #61afef;
+  --pm-syntax-local-variable: #abb2bf;
+  --pm-syntax-type-namespace: #56b6c2;
+  --pm-syntax-class-name: #e5c07b;
+  --pm-syntax-special-variable-macro: #c678dd;
+  --pm-syntax-definition-property: #61afef;
+  --pm-syntax-comment: #5c6370;
+  --pm-syntax-invalid: #e06c75;
 }
 
 /* Mermaid diagram blocks */
