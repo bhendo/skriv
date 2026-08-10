@@ -1,17 +1,17 @@
 # Skriv
 
-A Typora-style WYSIWYG markdown editor for macOS, built with Tauri, React, and Milkdown Crepe.
+A Typora-style live-preview markdown editor for macOS, built with Tauri, React, and CodeMirror 6.
 
 ## Features
 
-- **Inline WYSIWYG editing** — write markdown, see it rendered as you type
+- **Live preview editing** — the document is the markdown source; syntax appears when the cursor enters an element and renders away when it leaves, and saves are always byte-faithful
+- **Mermaid diagrams** — rendered with pan/zoom, an inline toolbar, and a fullscreen overlay
+- **Tables, task lists, images** — GFM rendered in place; click a table to edit its source
 - **Syntax-highlighted code blocks** — powered by CodeMirror 6
-- **Tables, images, lists** — full GFM support with interactive editing
-- **Floating toolbar** — appears on text selection for quick formatting
-- **Slash commands** — type `/` to insert blocks
+- **Raw source mode** — `Cmd+M` toggles a plain CodeMirror view with line numbers
 - **In-place file editing** — open a `.md` file, edit it, save back to disk
 - **File watching** — detects external changes and prompts to reload
-- **Keyboard shortcuts** — `Cmd+S` save, `Cmd+Shift+S` save as, `Cmd+O` open
+- **Keyboard shortcuts** — `Cmd+S` save, `Cmd+Shift+S` save as, `Cmd+O` open, `Cmd+F` search, `Cmd+B/I/E/K` formatting
 
 ## Prerequisites
 
@@ -43,7 +43,7 @@ make clean     # Remove build artifacts
 
 ```
 src-tauri/     Rust/Tauri desktop shell
-ui/            React frontend (Milkdown Crepe editor)
+ui/            React frontend (CodeMirror live-preview editor)
 docs/plans/    Design document and implementation plan
 ```
 
@@ -51,7 +51,7 @@ docs/plans/    Design document and implementation plan
 
 - **Tauri v2** — desktop shell
 - **React 18+** with TypeScript — frontend
-- **Milkdown Crepe v7** — WYSIWYG editor (CodeMirror, toolbar, tables, image blocks)
+- **CodeMirror 6 + ProseMark** — live-preview markdown editor
 - **Vite** — frontend build tool
 - **Rust** — backend (notify v8 for file watching, tauri-plugin-dialog for native dialogs)
 

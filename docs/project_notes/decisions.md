@@ -2,6 +2,27 @@
 
 ## Entries
 
+### ADR-003: Editor core pivot to CodeMirror 6 live preview (2026-08-10)
+
+**Context:**
+
+- The product goal is Typora-style editing: syntax appears when the cursor enters an element, renders away when it leaves
+- The original Milkdown Crepe (ProseMirror) implementation required ~2,600 lines of `*-source` plugins that synthesized markdown syntax into special nodes and swapped them under the cursor (see ADR-001/002); essentially every open bug traced to that machinery or the WYSIWYG↔source mode split
+- In a CodeMirror 6 architecture the buffer is the markdown source, so syntax reveal is decoration removal and saves are lossless by construction
+
+**Decision:**
+
+- Replace the editor core with CodeMirror 6 + `@prosemark/core` (MIT), the model used by Obsidian Live Preview and writer-computer
+- Custom fold widgets (mermaid, GFM tables) via ProseMark's `foldableSyntaxFacet`; editor-agnostic mermaid core in `ui/mermaid/`
+- Vendor the Crepe color palette into `ui/theme/colors.css` (`--skriv-color-*`) so theming survives the dependency removal
+- Keep the raw source mode (Cmd+M) as a separate CodeMirror instance
+
+**Consequences:**
+
+- Issues #8, #24, #31, #32, #37, #39, #50, #53, #59, #60 are resolved or obsolete; ADR-001/002 describe deleted code
+- Feature differences vs Crepe: no floating toolbar or slash commands (keyboard-first), no structured table editing (preview + raw pipe editing), emphasis toggles produce `_underscore_` style, no Cmd+/ commenting inside mermaid fences
+- `@prosemark/core` is 0.0.x — pin-and-verify on upgrades; the keymap aliases fail loudly via unit test if upstream renames bindings
+
 ### ADR-001: Inline source mode via ProseMirror node replacement (2026-03-20)
 
 **Context:**

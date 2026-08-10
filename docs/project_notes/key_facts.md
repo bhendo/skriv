@@ -1,36 +1,22 @@
 # Key Facts
 
 Project configuration and important reference information.
+(ProseMirror/Milkdown internals notes were removed with the editor-core
+pivot, ADR-003; see git history if archaeology is ever needed.)
 
-## ProseMirror / Milkdown Internals
+## CodeMirror / ProseMark Internals
 
-- **appendTransaction timing**: Called after EACH dispatch cycle. Receives accumulated transactions. ProseMirror's DOM observer fires SEPARATE selection-only dispatches after input rules settle — these have `docChanged=false` even though they're artifacts of the input-rule conversion.
-- **Input rules**: Fire on text input regardless of parent node's `marks` constraint. A node with `marks:""` still has its text content matched by input rules — marks are applied then stripped by schema enforcement.
-- **handleTextInput vs handleKeyDown**: `handleTextInput` intercepts character insertion (bypasses input rules if returns true). `handleKeyDown` intercepts key events before the keymap. Returning false from handleKeyDown lets the keymap proceed.
-- **Node positions**: For inline node at pos P with nodeSize N: P is BEFORE the opening token (outside), P+1 to P+N-1 is inside, P+N is AFTER the closing token (outside). Use strict inequality (`>` / `<`) for "inside" checks.
-- **Milkdown custom input rules**: Tagged with `MILKDOWN_CUSTOM_INPUTRULES$` meta on their transactions.
+- **Fold driver guard**: ProseMark's `foldableSyntaxFacet` driver only calls a spec's `buildDecorations` while the selection is OUTSIDE the node, unless `keepDecorationOnUnfold` is set. No touch-guard needed inside specs.
+- **Facet auto-enable**: `foldableSyntaxFacet` declares `enables: foldExtension`, so providing any spec installs the fold StateField automatically.
+- **Syntax hiding**: marks are hidden with `.cm-hidden-token { font-size: 0px }` — the text stays in the DOM (assert on the class in tests, not textContent).
+- **Block replace decorations** must cover full lines; expand with `fullLineRange` from `ui/live-preview/fold-widget.ts`.
+- **Widget lifecycle**: CodeMirror reuses widget DOM when `eq()` matches; `destroy(dom)` fires for dropped tiles — pair module-level WeakMap cleanups with it.
+- **ProseMark theming**: all colors flow through `--pm-*` CSS variables set on `.cm-content` (see `ui/theme/skriv.css`); `--font` is its prose font hook.
+- **searchKeymap exclusion**: Cmd+F belongs to the shared SearchBar; the search() extension is installed without its keymap in both editors.
+- **Keyboard shortcuts:** Source mode toggle is `Cmd+M`; Cmd+E / Cmd+Alt+X are aliases onto ProseMark's inline-code/strikethrough commands (`ui/live-preview/keymap.ts`).
 
-## Milkdown / CodeMirror Editor Reference
+## Debugging Frontend Code
 
-See `milkdown-editor-reference` skill for plugin registration patterns, context access, basicSetup contents, CodeMirror search API, theming, and transaction gotchas.
-
-Additional notes not in the skill:
-- **Crepe's CodeMirrorBlock:** Uses `basicSetup` + `drawSelection()` + `keymap.of(defaultKeymap.concat(indentWithTab))` + config extensions. Source at `@milkdown/components/src/code-block/view/node-view.ts`.
-- **`$node()` return type:** Returns `$Node` directly (has `.type(ctx)` method and `.id`). Pass directly to `$view()`, not `.node`.
-- **`$view()` first argument:** Expects `$Node | $Mark`, not a slice or node type.
-- **Keyboard shortcuts:** Source mode toggle is `Cmd+M`. `Cmd+/` is free for CodeMirror's `toggleComment`.
-
-## E2E Style Testing
-
-When adding or modifying custom components that should visually match library-provided ones (code blocks, editors, etc.), **write Playwright e2e tests that compare computed styles** against the reference component. This catches styling drift that unit tests can't detect.
-
-- **Helpers in `e2e/fixtures/index.ts`:** `getComputedStyles(locator, props)` extracts computed CSS values; `dumpStyleDiagnostics(locator, props)` dumps classes, styles, and ancestor chain for debugging.
-- **Test both light and dark mode** using `page.emulateMedia({ colorScheme })`.
-- **Compare against the working component** rather than hardcoding expected values — this way tests stay valid when Crepe's theme changes.
-- See `e2e/tests/mermaid.spec.ts` "Mermaid editor style consistency" and `e2e/tests/source-mode.spec.ts` "Source editor style consistency" for examples.
-
-## Debugging ProseMirror Plugins
-
-- **Always instrument first**: Add console.log to appendTransaction showing decision path, sel positions, docChanged, and transaction metas before attempting fixes
+- **Always instrument first**: add diagnostic logging showing the decision path before attempting fixes
 - **Check the console output in the webview DevTools** (Cmd+Option+I in Tauri), not the terminal — `console.log` from frontend JS goes to the webview
 - **Verify fixes are running**: After adding diagnostic logging, check that expected log lines appear. Vite may serve stale cached code if a previous build had errors.
