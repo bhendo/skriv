@@ -4,7 +4,7 @@ use tauri::Manager;
 const SENSITIVE_DIRS: &[&str] = &[".ssh", ".gnupg", ".aws", ".config", ".kube"];
 
 /// Check whether any component of `dir` (or `dir` itself) is a sensitive directory.
-fn is_inside_sensitive_dir(dir: &Path) -> bool {
+pub(crate) fn is_inside_sensitive_dir(dir: &Path) -> bool {
     for ancestor in dir.ancestors() {
         if let Some(name) = ancestor.file_name() {
             if let Some(name_str) = name.to_str() {
@@ -17,27 +17,33 @@ fn is_inside_sensitive_dir(dir: &Path) -> bool {
     false
 }
 
-/// Expand the asset protocol scope to include the parent directory of the opened file.
-/// This is called internally from Rust — never exposed as a Tauri command.
-pub fn expand_scope_for_file(app: &tauri::AppHandle, file_path: &Path) -> Result<(), String> {
-    let dir = file_path.parent().ok_or("File has no parent directory")?;
-
+/// Full directory-access policy, shared by every entry point that touches a
+/// directory: canonicalize, block root-level dirs, block sensitive dirs.
+/// Returns the canonicalized directory on success.
+pub(crate) fn authorize_dir(dir: &Path) -> Result<std::path::PathBuf, String> {
     let canonical_dir = dir
         .canonicalize()
         .map_err(|e| format!("Failed to canonicalize directory: {}", e))?;
 
-    // Block root-level directories
     if canonical_dir.parent().is_none() {
-        return Err("Cannot scope root directory".into());
+        return Err("Cannot access root directory".into());
     }
 
-    // Reject if the directory itself is inside a sensitive path
     if is_inside_sensitive_dir(&canonical_dir) {
         return Err(format!(
-            "Cannot open files in sensitive directory: {}",
+            "Cannot access files in sensitive directory: {}",
             canonical_dir.display()
         ));
     }
+
+    Ok(canonical_dir)
+}
+
+/// Expand the asset protocol scope to include the parent directory of the opened file.
+/// This is called internally from Rust — never exposed as a Tauri command.
+pub fn expand_scope_for_file(app: &tauri::AppHandle, file_path: &Path) -> Result<(), String> {
+    let dir = file_path.parent().ok_or("File has no parent directory")?;
+    let canonical_dir = authorize_dir(dir)?;
 
     let scope = app.asset_protocol_scope();
 

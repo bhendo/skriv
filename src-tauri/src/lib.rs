@@ -1,4 +1,6 @@
 mod commands;
+mod menu;
+mod recents;
 mod scope;
 mod validated_path;
 pub(crate) mod watcher;
@@ -31,7 +33,7 @@ fn resolve_file_path(arg: &str) -> Option<std::path::PathBuf> {
     None
 }
 
-fn open_or_focus_paths(app: &tauri::AppHandle, paths: Vec<std::path::PathBuf>) {
+pub(crate) fn open_or_focus_paths(app: &tauri::AppHandle, paths: Vec<std::path::PathBuf>) {
     let manager = app.state::<window_manager::WindowManager>();
 
     if paths.is_empty() {
@@ -62,8 +64,9 @@ fn open_or_focus_paths(app: &tauri::AppHandle, paths: Vec<std::path::PathBuf>) {
             manager.set_file_path(&blank_label, Some(canonical));
             if let Some(win) = app.get_webview_window(&blank_label) {
                 let _ = win.set_focus();
-                // Tell the already-loaded frontend to open the file
-                let _ = win.emit("file-opened", path_str);
+                // Tell the already-loaded frontend to open the file.
+                // emit() would broadcast to every window; target this one only.
+                let _ = app.emit_to(&blank_label, "file-opened", path_str);
             }
             continue;
         }
@@ -101,8 +104,17 @@ pub fn run() {
             commands::unwatch_file,
             commands::create_window,
             commands::close_window,
+            commands::focus_existing_window,
+            commands::list_markdown_files,
+            commands::get_recent_files,
         ])
         .setup(|app| {
+            let config_dir = app.path().app_config_dir()?;
+            let _ = std::fs::create_dir_all(&config_dir);
+            app.manage(recents::RecentsStore::load(config_dir.join("recents.json")));
+
+            menu::init(app)?;
+
             let paths: Vec<std::path::PathBuf> = std::env::args()
                 .skip(1)
                 .filter_map(|arg| resolve_file_path(&arg))
@@ -154,9 +166,9 @@ pub fn run() {
                         let manager = app.state::<window_manager::WindowManager>();
                         let labels = manager.labels();
                         for label in labels {
-                            if let Some(win) = app.get_webview_window(&label) {
-                                let _ = win.emit("quit-requested", ());
-                            }
+                            // Per-window emit: a broadcast would deliver N copies
+                            // to every window and trigger duplicate prompts.
+                            let _ = app.emit_to(&label, "quit-requested", ());
                         }
                     }
                     _ => {}

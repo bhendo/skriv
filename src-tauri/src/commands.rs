@@ -14,7 +14,11 @@ fn read_validated(validated: &ValidatedPath) -> Result<String, String> {
 pub fn read_file(path: String, app_handle: tauri::AppHandle) -> Result<String, String> {
     let validated = ValidatedPath::new(&path)?;
     crate::scope::expand_scope_for_file(&app_handle, validated.as_path())?;
-    read_validated(&validated)
+    let content = read_validated(&validated)?;
+    // Every open flow (in-place, sidebar, new-window mount, file association)
+    // funnels through read_file, so recording here covers them all.
+    crate::recents::record_open(&app_handle, validated.as_path());
+    Ok(content)
 }
 
 fn write_validated(validated: &ValidatedPath, content: &str) -> Result<(), String> {
@@ -56,6 +60,8 @@ pub fn write_new_file(
             state.watch(&path, label.clone(), app_handle.clone())
         })
         .unwrap_or(Ok(()))?;
+    // Save As creates a file that was never read — record it as recent here.
+    crate::recents::record_open(&app_handle, validated.as_path());
 
     Ok(())
 }
@@ -117,13 +123,83 @@ pub fn watch_file(
     app_handle: tauri::AppHandle,
     manager: tauri::State<'_, crate::window_manager::WindowManager>,
 ) -> Result<(), String> {
-    crate::validated_path::ValidatedPath::new(&path)?;
+    let validated = ValidatedPath::new(&path)?;
     let label = window.label().to_string();
     manager
         .with_state_mut(&label, |state| {
-            state.watch(&path, label.clone(), app_handle.clone())
+            state.watch(&path, label.clone(), app_handle.clone())?;
+            // Keep the path→window mapping current so find_by_path dedupe
+            // and find_blank reuse stay correct after in-place opens.
+            state.file_path = Some(validated.as_path().to_path_buf());
+            Ok(())
         })
         .unwrap_or(Err("Window not found".to_string()))
+}
+
+/// Focus the window that already has `path` open, if it is a different window.
+/// Returns true when focus was transferred (the caller should not re-open the file).
+#[tauri::command]
+pub fn focus_existing_window(
+    path: String,
+    window: tauri::Window,
+    app_handle: tauri::AppHandle,
+) -> Result<bool, String> {
+    let validated = ValidatedPath::new(&path)?;
+    Ok(
+        crate::window_manager::focus_window_for_path(&app_handle, validated.as_path())
+            .is_some_and(|label| label != window.label()),
+    )
+}
+
+#[derive(Debug, serde::Serialize)]
+pub struct DirEntryInfo {
+    pub name: String,
+    pub path: String,
+}
+
+/// List the markdown files in the directory containing `path` (the currently
+/// open file). Non-recursive; sorted case-insensitively by name.
+/// Async so the directory scan stays off the main thread.
+#[tauri::command]
+pub async fn list_markdown_files(path: String) -> Result<Vec<DirEntryInfo>, String> {
+    let validated = ValidatedPath::new(&path)?;
+    let dir = validated
+        .parent_dir()
+        .ok_or("File has no parent directory")?;
+    let dir = crate::scope::authorize_dir(&dir)?;
+
+    let entries = std::fs::read_dir(&dir)
+        .map_err(|e| format!("Failed to read directory '{}': {}", dir.display(), e))?;
+
+    let mut files: Vec<DirEntryInfo> = entries
+        .filter_map(|entry| entry.ok())
+        .filter_map(|entry| {
+            let entry_path = entry.path();
+            if !crate::validated_path::has_markdown_extension(&entry_path) {
+                return None;
+            }
+            let metadata = entry.metadata().ok()?;
+            if !metadata.is_file() {
+                return None;
+            }
+            Some(DirEntryInfo {
+                name: entry.file_name().to_string_lossy().to_string(),
+                path: entry_path.to_string_lossy().to_string(),
+            })
+        })
+        .collect();
+
+    files.sort_by_cached_key(|f| f.name.to_lowercase());
+    Ok(files)
+}
+
+/// Async so the exists() prune sweep stays off the main thread (a stale entry
+/// on an unreachable network mount can block for seconds).
+#[tauri::command]
+pub async fn get_recent_files(
+    store: tauri::State<'_, crate::recents::RecentsStore>,
+) -> Result<Vec<String>, String> {
+    Ok(store.list())
 }
 
 #[tauri::command]
@@ -260,5 +336,44 @@ mod tests {
         let info = result.unwrap();
         assert_eq!(info.name, "info.md");
         assert!(info.modified > 0);
+    }
+
+    fn list_markdown_files_blocking(path: String) -> Result<Vec<DirEntryInfo>, String> {
+        tauri::async_runtime::block_on(list_markdown_files(path))
+    }
+
+    #[test]
+    fn test_list_markdown_files_filters_and_sorts() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::write(dir.path().join("Beta.md"), "").unwrap();
+        fs::write(dir.path().join("alpha.markdown"), "").unwrap();
+        fs::write(dir.path().join("notes.txt"), "").unwrap();
+        fs::create_dir(dir.path().join("subdir.md")).unwrap();
+        let open_file = dir.path().join("current.md");
+        fs::write(&open_file, "# open").unwrap();
+
+        let result = list_markdown_files_blocking(open_file.to_string_lossy().to_string()).unwrap();
+        let names: Vec<&str> = result.iter().map(|e| e.name.as_str()).collect();
+        assert_eq!(names, vec!["alpha.markdown", "Beta.md", "current.md"]);
+        assert!(result.iter().all(|e| e.path.ends_with(&e.name)));
+    }
+
+    #[test]
+    fn test_list_markdown_files_rejects_sensitive_dir() {
+        let dir = tempfile::tempdir().unwrap();
+        let ssh_dir = dir.path().join(".ssh");
+        fs::create_dir(&ssh_dir).unwrap();
+        let file_path = ssh_dir.join("notes.md");
+        fs::write(&file_path, "").unwrap();
+
+        let result = list_markdown_files_blocking(file_path.to_string_lossy().to_string());
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("sensitive"));
+    }
+
+    #[test]
+    fn test_list_markdown_files_nonexistent_input() {
+        let result = list_markdown_files_blocking("/nonexistent/file.md".to_string());
+        assert!(result.is_err());
     }
 }

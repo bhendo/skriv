@@ -1,12 +1,12 @@
 import { useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { message } from "@tauri-apps/plugin-dialog";
+import { promptUnsavedChanges } from "../utils/unsavedChanges";
 
 interface UseWindowCloseOptions {
   isModified: boolean;
-  onSave: () => Promise<void>;
+  /** Resolves true when the save actually happened (false on cancel/failure). */
+  onSave: () => Promise<boolean>;
 }
 
 export function useWindowClose({ isModified, onSave }: UseWindowCloseOptions) {
@@ -21,24 +21,18 @@ export function useWindowClose({ isModified, onSave }: UseWindowCloseOptions) {
   }, [onSave]);
 
   async function handleUnsavedChanges() {
-    // Custom button labels return the label text as the result, not "Yes"/"No"/"Cancel"
-    const SAVE = "Save";
-    const DONT_SAVE = "Don't Save";
-    const CANCEL = "Cancel";
+    const choice = await promptUnsavedChanges();
 
-    const result = await message("Do you want to save your changes?", {
-      title: "Unsaved Changes",
-      kind: "warning",
-      buttons: { yes: SAVE, no: DONT_SAVE, cancel: CANCEL },
-    });
-
-    if (result === SAVE) {
-      await onSaveRef.current();
-      await invoke("close_window");
-    } else if (result === DONT_SAVE) {
+    if (choice === "save") {
+      // Only close when the save went through — a cancelled Save As or a
+      // write failure must keep the window (and its content) alive.
+      if (await onSaveRef.current()) {
+        await invoke("close_window");
+      }
+    } else if (choice === "dont-save") {
       await invoke("close_window");
     }
-    // "Cancel" or dialog dismissed → do nothing, keep window open
+    // "cancel" or dialog dismissed → do nothing, keep window open
   }
 
   useEffect(() => {
@@ -59,7 +53,9 @@ export function useWindowClose({ isModified, onSave }: UseWindowCloseOptions) {
   }, []);
 
   useEffect(() => {
-    const unlisten = listen("quit-requested", async () => {
+    // Window-scoped: the backend emits quit-requested per window label; a
+    // global listen() would fire once per open window.
+    const unlisten = getCurrentWindow().listen("quit-requested", async () => {
       if (!isModifiedRef.current) {
         await invoke("close_window");
         return;

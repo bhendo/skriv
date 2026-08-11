@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 
 const SELF_WRITE_SUPPRESSION_MS: u64 = 1000;
 const DEBOUNCE_MS: u64 = 300;
@@ -100,6 +100,18 @@ impl WindowState {
         self.debounce_tx = None;
         Ok(())
     }
+}
+
+/// Find the window that has `path` open and focus it. Returns its label.
+/// Shared by every "is this file already open somewhere?" entry point so the
+/// path-matching and focus semantics can never drift apart.
+pub fn focus_window_for_path(app: &tauri::AppHandle, path: &Path) -> Option<String> {
+    let manager = app.state::<WindowManager>();
+    let label = manager.find_by_path(path)?;
+    if let Some(win) = app.get_webview_window(&label) {
+        let _ = win.set_focus();
+    }
+    Some(label)
 }
 
 pub struct WindowManager {

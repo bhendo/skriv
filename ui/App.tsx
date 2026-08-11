@@ -1,6 +1,5 @@
 import { useEffect, useCallback, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { LivePreviewEditor } from "./components/LivePreviewEditor";
@@ -8,10 +7,14 @@ import { SourceEditor } from "./components/SourceEditor";
 import { SearchBar } from "./components/SearchBar";
 import { ErrorBanner } from "./components/ErrorBanner";
 import { ReloadBanner } from "./components/ReloadBanner";
+import { Sidebar } from "./components/Sidebar";
+import { SidebarToggle } from "./components/SidebarToggle";
 import { useFile } from "./hooks/useFile";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
+import { useMenuEvents } from "./hooks/useMenuEvents";
 import { useSearch } from "./hooks/useSearch";
 import { useWindowClose } from "./hooks/useWindowClose";
+import { promptUnsavedChanges } from "./utils/unsavedChanges";
 import type { EditorHandle } from "./types/editor";
 
 function App() {
@@ -30,6 +33,7 @@ function App() {
   } = useFile();
 
   const [showReloadBanner, setShowReloadBanner] = useState(false);
+  const [sidebarVisible, setSidebarVisible] = useState(true);
   const [sourceMode, setSourceMode] = useState(false);
   const [editorSnapshot, setEditorSnapshot] = useState<string | null>(null);
   const isModifiedRef = useRef(isModified);
@@ -46,33 +50,31 @@ function App() {
   }, [markModified]);
 
   const handleSaveAs = useCallback(
-    async (markdown?: string) => {
+    async (markdown?: string): Promise<boolean> => {
       const md = markdown ?? editorRef.current?.getMarkdown();
-      if (md === undefined) return;
+      if (md === undefined) return false;
 
       const selected = await save({
         filters: [{ name: "Markdown", extensions: ["md", "markdown"] }],
       });
-      if (selected) {
-        await saveNewFile(selected, md);
-      }
+      if (!selected) return false;
+      return saveNewFile(selected, md);
     },
     [saveNewFile]
   );
 
-  const handleSave = useCallback(async () => {
+  const handleSave = useCallback(async (): Promise<boolean> => {
     const markdown = editorRef.current?.getMarkdown();
     if (markdown === undefined) {
       console.warn("Save skipped: editor not ready");
-      return;
+      return false;
     }
 
     if (!path) {
-      handleSaveAs(markdown);
-      return;
+      return handleSaveAs(markdown);
     }
 
-    await saveFile(markdown);
+    return saveFile(markdown);
   }, [path, saveFile, handleSaveAs]);
 
   const handleNewWindow = useCallback(async () => {
@@ -93,6 +95,30 @@ function App() {
       await invoke("create_window", { path: selected });
     }
   }, [openFile]);
+
+  const handleOpenInPlace = useCallback(
+    async (nextPath: string) => {
+      if (nextPath === pathRef.current) return;
+
+      const focused = await invoke<boolean>("focus_existing_window", {
+        path: nextPath,
+      });
+      if (focused) return;
+
+      if (isModifiedRef.current) {
+        const choice = await promptUnsavedChanges();
+        if (choice === "cancel") return;
+        if (choice === "save" && !(await handleSave())) return;
+      }
+
+      await openFile(nextPath);
+    },
+    [handleSave, openFile]
+  );
+
+  const handleToggleSidebar = useCallback(() => {
+    setSidebarVisible((prev) => !prev);
+  }, []);
 
   const handleToggleSourceMode = useCallback(() => {
     const markdown = editorRef.current?.getMarkdown();
@@ -122,6 +148,14 @@ function App() {
     onNewWindow: handleNewWindow,
     onToggleSourceMode: handleToggleSourceMode,
     onSearch: openSearch,
+    onToggleSidebar: handleToggleSidebar,
+  });
+
+  useMenuEvents({
+    onOpen: handleOpen,
+    onSave: handleSave,
+    onSaveAs: handleSaveAs,
+    onToggleSidebar: handleToggleSidebar,
   });
 
   useWindowClose({
@@ -138,7 +172,9 @@ function App() {
   }, [openFile]);
 
   useEffect(() => {
-    const unlisten = listen<string>("file-opened", (event) => {
+    // Window-scoped listen: the backend targets this window's label, and a
+    // global listen() would receive every window's file-opened events.
+    const unlisten = getCurrentWindow().listen<string>("file-opened", (event) => {
       openFile(event.payload);
     });
     return () => {
@@ -152,7 +188,7 @@ function App() {
   }, [fileName, isModified]);
 
   useEffect(() => {
-    const unlisten = listen<string>("file-changed", () => {
+    const unlisten = getCurrentWindow().listen<string>("file-changed", () => {
       if (isModifiedRef.current) {
         setShowReloadBanner(true);
       } else {
@@ -182,35 +218,39 @@ function App() {
         }}
         onDismiss={() => setShowReloadBanner(false)}
       />
-      <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
-        {isSearchOpen && (
-          <SearchBar
-            matchCount={searchInfo.matchCount}
-            activeIndex={searchInfo.activeIndex}
-            caseSensitive={searchInfo.caseSensitive}
-            initialQuery={initialQuery}
-            focusKey={focusKey}
-            onQueryChange={handleQueryChange}
-            onNext={handleNext}
-            onPrev={handlePrev}
-            onToggleCaseSensitive={handleToggleCaseSensitive}
-            onClose={closeSearch}
-          />
-        )}
-        <div style={{ height: "100%", overflow: "auto" }}>
-          {sourceMode ? (
-            <SourceEditor
-              ref={editorRef}
-              defaultValue={editorSnapshot ?? content}
-              onChange={handleChange}
-            />
-          ) : (
-            <LivePreviewEditor
-              ref={editorRef}
-              defaultValue={editorSnapshot ?? content}
-              onChange={handleChange}
+      <div style={{ flex: 1, display: "flex", overflow: "hidden", position: "relative" }}>
+        <SidebarToggle visible={sidebarVisible} onToggle={handleToggleSidebar} />
+        {sidebarVisible && <Sidebar currentPath={path} onFileSelect={handleOpenInPlace} />}
+        <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
+          {isSearchOpen && (
+            <SearchBar
+              matchCount={searchInfo.matchCount}
+              activeIndex={searchInfo.activeIndex}
+              caseSensitive={searchInfo.caseSensitive}
+              initialQuery={initialQuery}
+              focusKey={focusKey}
+              onQueryChange={handleQueryChange}
+              onNext={handleNext}
+              onPrev={handlePrev}
+              onToggleCaseSensitive={handleToggleCaseSensitive}
+              onClose={closeSearch}
             />
           )}
+          <div style={{ height: "100%", overflow: "auto" }}>
+            {sourceMode ? (
+              <SourceEditor
+                ref={editorRef}
+                defaultValue={editorSnapshot ?? content}
+                onChange={handleChange}
+              />
+            ) : (
+              <LivePreviewEditor
+                ref={editorRef}
+                defaultValue={editorSnapshot ?? content}
+                onChange={handleChange}
+              />
+            )}
+          </div>
         </div>
       </div>
     </div>
