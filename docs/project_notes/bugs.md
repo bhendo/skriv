@@ -4,6 +4,13 @@ Recurring bugs, root causes, and solutions. Focus on what was learned.
 
 ## Entries
 
+### 2026-08-11 - Window-targeted Tauri events delivered to every window
+
+- **Issue**: With multiple windows open, a file-association/CLI open loaded the file into every window, not just the blank one ("file-opened"); the same broadcast pattern would have made a File > Save menu item save all windows and quit-requested fire N times per window
+- **Root Cause**: Two independent halves both broadcast. (1) `WebviewWindow::emit`/`AppHandle::emit` broadcast to all targets — per-window delivery needs `emit_to(label, ...)`. (2) A frontend global `listen()` from `@tauri-apps/api/event` registers with target `Any` and receives every event **regardless of the Rust-side emit target** — so `emit_to` alone changes nothing observable. The pre-existing `file-changed` flow (emit_to + global listen) only appeared correct because its handler re-opens the window's own path and ignores the payload
+- **Solution**: Pair both halves for every window-targeted event (`file-opened`, `file-changed`, `quit-requested`, `menu-*`): Rust emits via `app.emit_to(label, ...)`, frontend listens via `getCurrentWindow().listen(...)`. Deliberately broadcast events (`recents-changed`) keep plain `emit` + global `listen`
+- **Prevention**: In multi-window code, never use `win.emit(...)` expecting per-window delivery, and never use global `listen()` for an event that is per-window; verified end-to-end by opening files via CLI single-instance forwarding with three windows open
+
 ### 2026-03-20 - Inline formatting lost during structural edits (#38)
 
 - **Issue**: Bold/italic/code text lost formatting when: (a) typing `**text**` triggered input rules that flashed source mode, (b) backspace joining paragraphs destroyed the inline_source node, (c) editing markers inside inline_source had asterisks stripped by Milkdown input rules

@@ -15,6 +15,12 @@ pivot, ADR-003; see git history if archaeology is ever needed.)
 - **searchKeymap exclusion**: Cmd+F belongs to the shared SearchBar; the search() extension is installed without its keymap in both editors.
 - **Keyboard shortcuts:** Source mode toggle is `Cmd+M`; Cmd+E / Cmd+Alt+X are aliases onto ProseMark's inline-code/strikethrough commands (`ui/live-preview/keymap.ts`).
 
+## Tauri Multi-Window Events
+
+- **Per-window events need both halves**: Rust `emit_to(label, ...)` AND frontend `getCurrentWindow().listen(...)`. A global `listen()` from `@tauri-apps/api/event` registers target `Any` and receives every event regardless of the emit target; `win.emit(...)` broadcasts. See bugs.md 2026-08-11.
+- **Menu accelerators are macOS-only** (`accel()` in `src-tauri/src/menu.rs`): on macOS the webview sees keydown FIRST and `preventDefault` suppresses the menu key equivalent (verified: Cmd+M toggles source mode, not the Window menu's Minimize), so `useKeyboardShortcuts` always wins and the accelerators are hints/fallbacks. Windows/Linux interception order differs per backend, so menu items carry no accelerators there.
+- **Recents**: JSON array of canonical paths at `app_config_dir()/recents.json` (`~/Library/Application Support/com.skriv.editor/` on macOS), capped at 15, pruned of deleted files on read. Recording happens in `read_file`/`write_new_file` only — every open flow funnels through `read_file` — and runs on a blocking-task thread; the `recents-changed` broadcast carries the pruned list as payload.
+
 ## Debugging Frontend Code
 
 - **Always instrument first**: add diagnostic logging showing the decision path before attempting fixes
