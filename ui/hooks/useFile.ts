@@ -1,18 +1,12 @@
 import { useState, useCallback, useMemo, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { fileNameFromPath } from "../utils/path";
 
 interface FileState {
   path: string | null;
   content: string;
   isModified: boolean;
   error: string | null;
-}
-
-function fileNameFromPath(path: string | null): string {
-  if (!path) return "Untitled";
-  // Handle both Unix and Windows path separators
-  const name = path.split(/[/\\]/).pop();
-  return name || "Untitled";
 }
 
 const EMPTY_STATE: FileState = {

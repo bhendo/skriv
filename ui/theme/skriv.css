@@ -381,3 +381,91 @@ body,
   background: var(--skriv-color-primary, #4183c4);
   color: #fff;
 }
+
+/* Sidebar */
+.sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  background: var(--skriv-color-surface, #fff);
+  border-right: 1px solid var(--skriv-color-outline, #ddd);
+  font-family: var(--skriv-font-sans);
+  font-size: 13px;
+  /* Top padding clears the floating .sidebar-toggle button */
+  padding: 40px 8px 8px;
+}
+
+.sidebar-toggle {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 10;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--skriv-color-on-surface-variant, #666);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebar-toggle:hover {
+  background: var(--skriv-color-surface-low, #f5f5f5);
+  color: var(--skriv-color-on-surface, #333);
+}
+
+.sidebar-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-bottom: 16px;
+}
+
+.sidebar-section-title {
+  margin: 0 0 4px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--skriv-color-on-surface-variant, #666);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-item {
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--skriv-color-on-surface, #333);
+  cursor: pointer;
+  padding: 4px 8px;
+  font-size: 13px;
+  font-family: var(--skriv-font-sans);
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+
+.sidebar-item:hover {
+  background: var(--skriv-color-surface-low, #f5f5f5);
+}
+
+.sidebar-item.active {
+  background: var(--skriv-color-surface-low, #f5f5f5);
+  color: var(--skriv-color-primary, #4183c4);
+  font-weight: 600;
+}
+
+.sidebar-empty {
+  padding: 4px 8px;
+  color: var(--skriv-color-on-surface-variant, #666);
+  font-style: italic;
+}

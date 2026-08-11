@@ -9,20 +9,32 @@ export interface TauriMockConfig {
   openedFile?: string | null;
   /** Response for read_file — default: empty string */
   fileContent?: string;
+  /** Per-path read_file responses — takes precedence over fileContent */
+  fileContents?: Record<string, string>;
   /** Response for get_file_info — default: basic file info */
   fileInfo?: { size: number; modified: number };
   /** Whether write_file should succeed — default: true */
   writeShouldSucceed?: boolean;
   /** Response for clipboard readText — default: "" (empty clipboard) */
   clipboardText?: string;
+  /** Response for list_markdown_files — default: [] */
+  folderFiles?: Array<{ name: string; path: string }>;
+  /** Response for get_recent_files — default: [] */
+  recentFiles?: string[];
+  /** Button label returned by plugin:dialog|message — default: "Ok" */
+  messageResponse?: string;
 }
 
 const DEFAULT_CONFIG: Required<TauriMockConfig> = {
   openedFile: null,
   fileContent: "",
+  fileContents: {},
   fileInfo: { size: 100, modified: 0 },
   writeShouldSucceed: true,
   clipboardText: "",
+  folderFiles: [],
+  recentFiles: [],
+  messageResponse: "Ok",
 };
 
 /**
@@ -77,8 +89,19 @@ export async function injectTauriMock(
         case "get_opened_file":
           return cfg.openedFile;
 
-        case "read_file":
-          return cfg.fileContent;
+        case "read_file": {
+          const path = args?.path as string;
+          return cfg.fileContents[path] ?? cfg.fileContent;
+        }
+
+        case "list_markdown_files":
+          return cfg.folderFiles;
+
+        case "get_recent_files":
+          return cfg.recentFiles;
+
+        case "focus_existing_window":
+          return false;
 
         case "get_file_info":
           return cfg.fileInfo;
@@ -118,6 +141,9 @@ export async function injectTauriMock(
 
         case "plugin:dialog|save":
           return null;
+
+        case "plugin:dialog|message":
+          return cfg.messageResponse;
 
         // Event plugin — listen returns an event ID
         case "plugin:event|listen":

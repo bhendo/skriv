@@ -7,6 +7,7 @@ interface ShortcutHandlers {
   onNewWindow?: () => void;
   onToggleSourceMode?: () => void;
   onSearch?: () => void;
+  onToggleSidebar?: () => void;
 }
 
 export function useKeyboardShortcuts(handlers: ShortcutHandlers) {
@@ -28,6 +29,12 @@ export function useKeyboardShortcuts(handlers: ShortcutHandlers) {
       if (e.key === "n" && !e.shiftKey) {
         e.preventDefault();
         ref.current.onNewWindow?.();
+        return;
+      }
+
+      if (e.key === "b" && !e.shiftKey) {
+        e.preventDefault();
+        ref.current.onToggleSidebar?.();
         return;
       }
 

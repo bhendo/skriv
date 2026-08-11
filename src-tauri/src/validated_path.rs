@@ -9,9 +9,14 @@ pub struct ValidatedPath {
     inner: PathBuf,
 }
 
-fn validate_extension(path: &Path) -> Result<(), String> {
+/// Whether the path has a markdown extension (.md or .markdown).
+pub(crate) fn has_markdown_extension(path: &Path) -> bool {
     let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
-    if !ALLOWED_EXTENSIONS.contains(&ext) {
+    ALLOWED_EXTENSIONS.contains(&ext)
+}
+
+fn validate_extension(path: &Path) -> Result<(), String> {
+    if !has_markdown_extension(path) {
         return Err(format!(
             "File '{}' is not a markdown file (expected .md or .markdown)",
             path.display()

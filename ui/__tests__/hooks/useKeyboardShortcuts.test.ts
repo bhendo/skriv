@@ -65,4 +65,21 @@ describe("useKeyboardShortcuts", () => {
     // Should not throw
     fireKey("m", { metaKey: true });
   });
+
+  it("Cmd+B fires onToggleSidebar", () => {
+    const onToggleSidebar = vi.fn();
+    renderHook(() => useKeyboardShortcuts({ ...handlers, onToggleSidebar }));
+
+    fireKey("b", { metaKey: true });
+
+    expect(onToggleSidebar).toHaveBeenCalledOnce();
+    expect(handlers.onSave).not.toHaveBeenCalled();
+  });
+
+  it("Cmd+B does nothing when handler not provided", () => {
+    renderHook(() => useKeyboardShortcuts(handlers));
+
+    // Should not throw
+    fireKey("b", { metaKey: true });
+  });
 });
