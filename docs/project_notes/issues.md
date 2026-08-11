@@ -2,6 +2,12 @@
 
 ## Entries
 
+### 2026-08-11 - Native File menu + left sidebar (folder files & recents)
+
+- **Status**: Completed on branch `feature/file-menu-and-sidebar` (not yet merged)
+- **Description**: First native menu (`src-tauri/src/menu.rs`): App/File/Edit/View/Window submenus; File has New Window, Open…, Save, Save As…, Close Window; menu events route to the focused window via `emit_to` + window-scoped listeners (`ui/hooks/useMenuEvents.ts`). Accelerators are macOS-only (see key_facts.md for the verified interception order). Left sidebar (`ui/components/Sidebar.tsx`, Cmd+B / View menu / on-screen button toggle): markdown siblings of the open file (new `list_markdown_files` command) plus persistent recents (new `RecentsStore` in `src-tauri/src/recents.rs`, JSON at `app_config_dir()/recents.json`, recorded in `read_file`/`write_new_file`, broadcast `recents-changed` with the pruned list as payload). Sidebar clicks open in place with a Save / Don't Save / Cancel prompt (shared `ui/utils/unsavedChanges.ts`); a file already open elsewhere focuses that window (`focus_existing_window` → shared `focus_window_for_path`).
+- **Notes**: Fixed three latent bugs along the way: (1) `watch_file` never updated `WindowState.file_path`, so in-place opens broke `find_by_path` dedupe and `find_blank`; (2) `useWindowClose` destroyed the window even when the save it awaited was cancelled/failed (data loss) — save handlers now return booleans; (3) window-targeted events were broadcast to every window (see bugs.md 2026-08-11). Follow-ups deliberately out of scope: directory watcher for live folder refresh (v1 refetches on path change/window focus), Open Recent submenu, sidebar visibility/width persistence, drag-drop. Deferred from the polish review (real but architectural): consolidate the open flow into one atomic `open_document` command — today "open in window" is assembled from focus_existing_window + read_file + watch_file, so a failed read with a successful watch can leave the path→window mapping claiming a file the window doesn't show, and recents treat every `read_file` (including reload-after-external-change) as a user open; also a single frontend shortcut registry shared by useKeyboardShortcuts/useMenuEvents with a parity check against menu.rs accelerator strings.
+
 ### 2026-08-10 - #68: Milkdown removal — live preview becomes the editor
 
 - **Status**: Completed
