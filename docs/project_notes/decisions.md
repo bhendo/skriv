@@ -20,7 +20,7 @@
 
 - Match semantics changes (regex, whole-word) must touch both `countMatches` in `useSearch` and `searchHighlight` — they walk the same query API but independently
 - The counter's `activeIndex` means "next match from the cursor", so navigation recounts the document; fine at Skriv document sizes, revisit only if it ever shows up in profiling
-- Search shortcuts live in `useKeyboardShortcuts` (platform seam in `ui/utils/platform.ts`); menu accelerators remain macOS-only hints, and the chord strings in tooltips/menu/hook are triplicated until #78 lands a shared registry
+- Search shortcuts live in `useKeyboardShortcuts` (platform seam in `ui/utils/platform.ts`); menu accelerators remain macOS-only hints. The tooltip/menu/hook chord triplication this ADR noted was resolved by the #78 shared registry (`ui/utils/shortcuts.ts`)
 
 ### ADR-003: Editor core pivot to CodeMirror 6 live preview (2026-08-10)
 

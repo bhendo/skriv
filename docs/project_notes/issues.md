@@ -2,6 +2,13 @@
 
 ## Entries
 
+### 2026-08-12 - #78: Single frontend shortcut registry with menu.rs parity check
+
+- **Status**: Completed on branch `refactor/78-shortcut-registry`
+- **Description**: New `ui/utils/shortcuts.ts` is the single source of truth for global chords: per-shortcut `id`, `label`, canonical Tauri accelerator string (`chord`), optional `nonMacChord` where the convention differs (replace's Ctrl+H), and menu presence (`"event"` emits `menu-<id>`, `"native"` is handled in Rust). Keydown matchers are *derived* from the chord strings by `parseChord`/`shortcutBindings` — nothing is written twice, and an Alt chord automatically becomes an `e.code` matcher (mac hardware rewrites `e.key` under Alt, the trap that previously lived in a comment). `nonMacChord` drives both the tooltip and a `mac: false` binding, so displayed and bound chords cannot drift. Both hooks consume the registry — App passes one id-keyed `ShortcutHandlers` map to `useKeyboardShortcuts` (a thin `matchShortcut` dispatch) and `useMenuEvents` (listens for `MENU_EVENT_SHORTCUTS`); their hardcoded chord/event tables are gone. SearchBar and SidebarToggle tooltips render via `displayChord` (mac ⌥⇧⌘ symbols, Ctrl+… text elsewhere). Parity with `src-tauri/src/menu.rs` is test-enforced: `ui/__tests__/utils/shortcuts.test.ts` imports the Rust source via Vite `?raw` and regex-diffs ids/labels/accelerators/emit events against the registry in both directions, plus the silent-failure paths: every built item is `.item(&x)`-attached to a submenu and every menu id has an `on_menu_event` arm (canary test so regex rot fails loudly). Shared test mocks in `ui/__tests__/mocks/shortcuts.ts` (`makeShortcutHandlers`, `stubPlatform`, UA constants).
+- **URL**: https://github.com/bhendo/skriv/issues/78
+- **Notes**: Keydown matching is now exact on Alt/Shift, so Ctrl+Alt+S on Windows no longer fires plain Save (AltGr safety); Cmd+Alt+F replace still binds on all platforms as before. Cmd+E / Cmd+Alt+X stay in the ProseMark keymap (`ui/live-preview/keymap.ts`) — editor-internal, not global, so not in the registry. Gotcha: under Vitest's jsdom environment `import.meta.url` is `http://localhost/...`, so the parity test reads menu.rs via `?raw` import instead of `node:fs` (also avoids needing `@types/node`). Considered and skipped: a catch-all `id => emit_to_focused(app, &format!("menu-{id}"))` arm in menu.rs would remove one per-shortcut edit site but emits spurious events for predefined items; the parity test already catches a missing arm. Unblocks #33 (cheat sheet can render from the registry).
+
 ### 2026-08-12 - #23: Find and replace
 
 - **Status**: Completed on branch `feature/23-find-and-replace` (not yet merged)
