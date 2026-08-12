@@ -7,6 +7,7 @@ import {
   placeholder,
 } from "@codemirror/view";
 import { EditorState } from "@codemirror/state";
+import type { EditorSelection } from "@codemirror/state";
 import { indentOnInput, bracketMatching } from "@codemirror/language";
 import { history, historyKeymap, defaultKeymap, indentWithTab } from "@codemirror/commands";
 import {
@@ -35,15 +36,18 @@ import {
   livePreviewFormattingKeymap,
 } from "../live-preview";
 import { markdownSyntaxExtensions } from "../markdown/parser";
+import type { EditorPosition } from "../utils/editorPosition";
 import type { EditorHandle } from "../types/editor";
 
 interface LivePreviewEditorProps {
   defaultValue: string;
   onChange: () => void;
+  /** Position carried over from the editor this one replaces. */
+  restorePosition?: EditorPosition | null;
 }
 
 export const LivePreviewEditor = forwardRef<EditorHandle, LivePreviewEditorProps>(
-  ({ defaultValue, onChange }, ref) => {
+  ({ defaultValue, onChange, restorePosition }, ref) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const viewRef = useRef<EditorView | null>(null);
     const onChangeRef = useRef(onChange);
@@ -72,9 +76,10 @@ export const LivePreviewEditor = forwardRef<EditorHandle, LivePreviewEditorProps
     );
 
     const createState = useCallback(
-      (doc: string) =>
+      (doc: string, selection?: EditorSelection) =>
         EditorState.create({
           doc,
+          selection,
           extensions: [
             // ProseMark live-preview core: prosemarkBasicSetup() from
             // @prosemark/core 0.0.9, minus searchKeymap (Cmd+F belongs to
@@ -128,11 +133,17 @@ export const LivePreviewEditor = forwardRef<EditorHandle, LivePreviewEditorProps
       if (!containerRef.current) return;
 
       const view = new EditorView({
-        state: createState(defaultValue),
+        state: createState(defaultValue, restorePosition?.selection),
         parent: containerRef.current,
+        // Anchor the carried-over top line, not the cursor: same content
+        // stays visible even when the cursor is off-screen.
+        scrollTo: restorePosition
+          ? EditorView.scrollIntoView(restorePosition.topPos, { y: "start" })
+          : undefined,
       });
       viewRef.current = view;
       lastSyncedRef.current = defaultValue;
+      if (restorePosition) view.focus();
 
       return () => {
         view.destroy();

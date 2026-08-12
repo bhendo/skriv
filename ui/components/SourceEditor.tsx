@@ -32,15 +32,18 @@ import { highlightSelectionMatches, search } from "@codemirror/search";
 import { markdown } from "@codemirror/lang-markdown";
 import { languages } from "@codemirror/language-data";
 import { oneDark } from "@codemirror/theme-one-dark";
+import type { EditorPosition } from "../utils/editorPosition";
 import type { EditorHandle } from "../types/editor";
 
 interface SourceEditorProps {
   defaultValue: string;
   onChange: () => void;
+  /** Position carried over from the editor this one replaces. */
+  restorePosition?: EditorPosition | null;
 }
 
 export const SourceEditor = forwardRef<EditorHandle, SourceEditorProps>(
-  ({ defaultValue, onChange }, ref) => {
+  ({ defaultValue, onChange, restorePosition }, ref) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const viewRef = useRef<EditorView | null>(null);
     const onChangeRef = useRef(onChange);
@@ -61,6 +64,7 @@ export const SourceEditor = forwardRef<EditorHandle, SourceEditorProps>(
       const view = new EditorView({
         state: EditorState.create({
           doc: defaultValue,
+          selection: restorePosition?.selection,
           extensions: [
             lineNumbers(),
             highlightActiveLineGutter(),
@@ -100,9 +104,15 @@ export const SourceEditor = forwardRef<EditorHandle, SourceEditorProps>(
           ],
         }),
         parent: containerRef.current,
+        // Anchor the carried-over top line, not the cursor: same content
+        // stays visible even when the cursor is off-screen.
+        scrollTo: restorePosition
+          ? EditorView.scrollIntoView(restorePosition.topPos, { y: "start" })
+          : undefined,
       });
 
       viewRef.current = view;
+      if (restorePosition) view.focus();
 
       return () => {
         view.destroy();

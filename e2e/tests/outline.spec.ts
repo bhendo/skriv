@@ -1,24 +1,6 @@
-import { test, expect, MOD } from "../fixtures";
+import { test, expect, MOD, longDoc, headingLine } from "../fixtures";
 
 const SHORT_DOC = "# One\n\nIntro text\n\n## Two\n\nMore text\n\n### Three\n";
-
-// Anchored: hasText strings match case-insensitive substrings, which would
-// also hit "…of section N…" paragraph lines. The optional "# " covers the
-// syntax marks live preview reveals once the cursor lands on the heading.
-function headingLine(n: number): RegExp {
-  return new RegExp(`^(# )?Section ${n}$`);
-}
-
-function longDoc(sections: number): string {
-  let doc = "";
-  for (let i = 1; i <= sections; i++) {
-    doc += `# Section ${i}\n\n`;
-    for (let p = 1; p <= 25; p++) {
-      doc += `Paragraph ${p} of section ${i}, long enough to make each section scroll.\n\n`;
-    }
-  }
-  return doc;
-}
 
 test.describe("Outline", () => {
   test("lists headings in order with hierarchy indentation", async ({ page, loadApp }) => {
