@@ -2,6 +2,26 @@
 
 ## Entries
 
+### ADR-004: React search bar over the @codemirror/search panel (2026-08-12)
+
+**Context:**
+
+- #23 (find and replace) built on the existing custom React `SearchBar`, which drives CodeMirror through the query API (`setSearchQuery`, `findNext`, `replaceNext`, `replaceAll`) with `searchKeymap` deliberately excluded from both editors
+- `@codemirror/search` ships a complete find/replace panel, but it renders its own DOM inside the editor and its match highlighter only draws while that panel is open — so a custom bar gets no highlighting for free
+- All other Skriv chrome (sidebar, banners, prompts) is React; a CM panel would be the one non-React surface and would need CM-theme styling to match
+
+**Decision:**
+
+- Keep the React `SearchBar` as the only search UI; CodeMirror state holds the authoritative query, the bar owns transient UI state (query text, replace text, row visibility), `useSearch` mediates commands and match counts
+- Ship a custom `searchHighlight` ViewPlugin for viewport match highlighting, bundled with `search()` as the single `searchExtensions` export (`ui/utils/searchHighlight.ts`) so an editor cannot wire one without the other
+- Use custom `.skriv-search-match` classes rather than reusing `.cm-searchMatch`: CM injects its base theme at runtime, so restyling the stock classes is a specificity contest; the one interaction rule that matters (no selection-match tint inside a search match) is mirrored in skriv.css
+
+**Consequences:**
+
+- Match semantics changes (regex, whole-word) must touch both `countMatches` in `useSearch` and `searchHighlight` — they walk the same query API but independently
+- The counter's `activeIndex` means "next match from the cursor", so navigation recounts the document; fine at Skriv document sizes, revisit only if it ever shows up in profiling
+- Search shortcuts live in `useKeyboardShortcuts` (platform seam in `ui/utils/platform.ts`); menu accelerators remain macOS-only hints, and the chord strings in tooltips/menu/hook are triplicated until #78 lands a shared registry
+
 ### ADR-003: Editor core pivot to CodeMirror 6 live preview (2026-08-10)
 
 **Context:**
