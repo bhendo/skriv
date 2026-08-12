@@ -2,7 +2,8 @@
 	lint lint-ui lint-tauri \
 	format format-ui format-tauri \
 	check check-ui check-tauri \
-	test test-ui test-tauri test-e2e
+	test test-ui test-tauri test-e2e \
+	typecheck-ui
 
 ## Setup — install all dependencies (run once after clone)
 setup:
@@ -28,6 +29,10 @@ test-tauri:
 
 test-e2e:
 	pnpm test:e2e
+
+## Typecheck
+typecheck-ui:
+	pnpm tsc --noEmit
 
 ## Lint
 lint: lint-ui lint-tauri
