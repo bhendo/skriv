@@ -7,9 +7,9 @@ import { type Page } from "@playwright/test";
 export interface TauriMockConfig {
   /** Response for get_opened_file — default: null (no file on launch) */
   openedFile?: string | null;
-  /** Response for read_file — default: empty string */
+  /** Response for open_document — default: empty string */
   fileContent?: string;
-  /** Per-path read_file responses — takes precedence over fileContent */
+  /** Per-path open_document responses — takes precedence over fileContent */
   fileContents?: Record<string, string>;
   /** Response for get_file_info — default: basic file info */
   fileInfo?: { size: number; modified: number };
@@ -89,7 +89,7 @@ export async function injectTauriMock(
         case "get_opened_file":
           return cfg.openedFile;
 
-        case "read_file": {
+        case "open_document": {
           const path = args?.path as string;
           return cfg.fileContents[path] ?? cfg.fileContent;
         }
@@ -124,9 +124,6 @@ export async function injectTauriMock(
           });
           return undefined;
         }
-
-        case "watch_file":
-          return undefined;
 
         case "unwatch_file":
           return undefined;

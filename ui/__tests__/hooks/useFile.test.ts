@@ -7,8 +7,7 @@ vi.mock("@tauri-apps/api/core", () => ({ invoke }));
 import { useFile } from "../../hooks/useFile";
 
 async function renderWithFile(path: string, content: string) {
-  invoke.mockResolvedValueOnce(content); // read_file
-  invoke.mockResolvedValueOnce(undefined); // watch_file
+  invoke.mockResolvedValueOnce(content); // open_document
 
   const hook = renderHook(() => useFile());
   await act(() => hook.result.current.openFile(path));
@@ -30,16 +29,32 @@ describe("useFile", () => {
     expect(result.current.error).toBeNull();
   });
 
-  it("opens a file and watches it", async () => {
+  it("opens a file and records it as recent", async () => {
     const { result } = await renderWithFile("/docs/hello.md", "# Hello");
 
-    expect(invoke).toHaveBeenCalledWith("read_file", { path: "/docs/hello.md" });
-    expect(invoke).toHaveBeenCalledWith("watch_file", { path: "/docs/hello.md" });
+    expect(invoke).toHaveBeenCalledWith("open_document", {
+      path: "/docs/hello.md",
+      recordRecent: true,
+    });
     expect(result.current.path).toBe("/docs/hello.md");
     expect(result.current.content).toBe("# Hello");
     expect(result.current.fileName).toBe("hello.md");
     expect(result.current.isModified).toBe(false);
     expect(result.current.error).toBeNull();
+  });
+
+  it("reloads a file without recording it as recent", async () => {
+    const { result } = await renderWithFile("/docs/hello.md", "# Hello");
+
+    invoke.mockResolvedValueOnce("# Changed");
+    await act(() => result.current.reloadFile("/docs/hello.md"));
+
+    expect(invoke).toHaveBeenLastCalledWith("open_document", {
+      path: "/docs/hello.md",
+      recordRecent: false,
+    });
+    expect(result.current.content).toBe("# Changed");
+    expect(result.current.isModified).toBe(false);
   });
 
   it("sets error when openFile fails", async () => {

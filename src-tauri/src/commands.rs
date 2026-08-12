@@ -10,15 +10,45 @@ fn read_validated(validated: &ValidatedPath) -> Result<String, String> {
     std::fs::read_to_string(validated.as_path()).map_err(|e| file_error("read", validated, e))
 }
 
+/// Open a document in this window: read it, watch it, and update the
+/// path→window mapping as one operation. The mapping changes only after
+/// both the read and the watch have succeeded (watch_and_track), and a
+/// failed open drops a pre-claimed mapping that was never fulfilled
+/// (release_unfulfilled_claim), so a partial failure can never leave the
+/// mapping claiming a file the window doesn't show.
+///
+/// `record_recent` is false for reload-after-external-change, which re-opens
+/// the same path and would otherwise pollute the recents list.
 #[tauri::command]
-pub fn read_file(path: String, app_handle: tauri::AppHandle) -> Result<String, String> {
+pub fn open_document(
+    path: String,
+    record_recent: bool,
+    window: tauri::Window,
+    app_handle: tauri::AppHandle,
+    manager: tauri::State<'_, crate::window_manager::WindowManager>,
+) -> Result<String, String> {
     let validated = ValidatedPath::new(&path)?;
-    crate::scope::expand_scope_for_file(&app_handle, validated.as_path())?;
-    let content = read_validated(&validated)?;
-    // Every open flow (in-place, sidebar, new-window mount, file association)
-    // funnels through read_file, so recording here covers them all.
-    crate::recents::record_open(&app_handle, validated.as_path());
-    Ok(content)
+    let label = window.label().to_string();
+
+    let result: Result<String, String> = (|| {
+        crate::scope::expand_scope_for_file(&app_handle, validated.as_path())?;
+        let content = read_validated(&validated)?;
+        manager.watch_and_track(&label, validated.as_path(), app_handle.clone())?;
+        Ok(content)
+    })();
+
+    match result {
+        Ok(content) => {
+            if record_recent {
+                crate::recents::record_open(&app_handle, validated.as_path());
+            }
+            Ok(content)
+        }
+        Err(e) => {
+            manager.release_unfulfilled_claim(&label, validated.as_path());
+            Err(e)
+        }
+    }
 }
 
 fn write_validated(validated: &ValidatedPath, content: &str) -> Result<(), String> {
@@ -51,15 +81,9 @@ pub fn write_new_file(
     write_validated(&validated, &content)?;
 
     // After successful write, update backend state
-    let canonical = validated.as_path().to_path_buf();
     let label = window.label().to_string();
-    manager.set_file_path(&label, Some(canonical));
     crate::scope::expand_scope_for_file(&app_handle, validated.as_path())?;
-    manager
-        .with_state_mut(&label, |state| {
-            state.watch(&path, label.clone(), app_handle.clone())
-        })
-        .unwrap_or(Ok(()))?;
+    manager.watch_and_track(&label, validated.as_path(), app_handle.clone())?;
     // Save As creates a file that was never read — record it as recent here.
     crate::recents::record_open(&app_handle, validated.as_path());
 
@@ -114,26 +138,6 @@ pub fn get_opened_file(
                 .map(|p| p.to_string_lossy().into_owned())
         })
         .flatten()
-}
-
-#[tauri::command]
-pub fn watch_file(
-    path: String,
-    window: tauri::Window,
-    app_handle: tauri::AppHandle,
-    manager: tauri::State<'_, crate::window_manager::WindowManager>,
-) -> Result<(), String> {
-    let validated = ValidatedPath::new(&path)?;
-    let label = window.label().to_string();
-    manager
-        .with_state_mut(&label, |state| {
-            state.watch(&path, label.clone(), app_handle.clone())?;
-            // Keep the path→window mapping current so find_by_path dedupe
-            // and find_blank reuse stay correct after in-place opens.
-            state.file_path = Some(validated.as_path().to_path_buf());
-            Ok(())
-        })
-        .unwrap_or(Err("Window not found".to_string()))
 }
 
 /// Focus the window that already has `path` open, if it is a different window.
@@ -283,7 +287,7 @@ mod tests {
     }
 
     #[test]
-    fn test_read_file_success() {
+    fn test_read_validated_success() {
         let dir = tempfile::tempdir().unwrap();
         let file_path = dir.path().join("test.md");
         fs::write(&file_path, "# Hello").unwrap();
@@ -292,7 +296,7 @@ mod tests {
     }
 
     #[test]
-    fn test_read_file_rejects_non_markdown() {
+    fn test_read_validated_rejects_non_markdown() {
         let dir = tempfile::tempdir().unwrap();
         let file_path = dir.path().join("test.txt");
         fs::write(&file_path, "hello").unwrap();
@@ -302,7 +306,7 @@ mod tests {
     }
 
     #[test]
-    fn test_read_file_not_found() {
+    fn test_read_validated_not_found() {
         let result = read_test_file("/nonexistent/file.md");
         assert!(result.is_err());
     }

@@ -26,12 +26,11 @@ export function useFile() {
     setFileState((prev) => ({ ...prev, error: null }));
   }, []);
 
-  const openFile = useCallback(async (path: string) => {
+  const openDocument = useCallback(async (path: string, recordRecent: boolean) => {
     try {
-      const [content] = await Promise.all([
-        invoke<string>("read_file", { path }),
-        invoke("watch_file", { path }),
-      ]);
+      // One command reads, watches, and updates backend window state
+      // atomically — a partial failure leaves the previous document intact.
+      const content = await invoke<string>("open_document", { path, recordRecent });
       pathRef.current = path;
       setFileState({
         path,
@@ -46,6 +45,12 @@ export function useFile() {
       }));
     }
   }, []);
+
+  const openFile = useCallback((path: string) => openDocument(path, true), [openDocument]);
+
+  // Re-reads the already-open file (external change); not a user open, so it
+  // must not touch the recents list.
+  const reloadFile = useCallback((path: string) => openDocument(path, false), [openDocument]);
 
   const saveFile = useCallback(async (content: string) => {
     const path = pathRef.current;
@@ -94,6 +99,7 @@ export function useFile() {
     ...fileState,
     fileName,
     openFile,
+    reloadFile,
     saveFile,
     saveNewFile,
     markModified,

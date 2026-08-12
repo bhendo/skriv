@@ -38,20 +38,15 @@ impl WindowState {
         *self.last_self_write.lock().unwrap() = Some(Instant::now());
     }
 
-    pub fn watch(
+    /// `path` must already be canonical (callers hold a ValidatedPath), so it
+    /// matches the form find_by_path compares against.
+    pub fn watch<R: tauri::Runtime>(
         &mut self,
-        path: &str,
+        path: &Path,
         label: String,
-        app_handle: AppHandle,
+        app_handle: AppHandle<R>,
     ) -> Result<(), String> {
-        self.unwatch()?;
-
-        let path = PathBuf::from(path);
-        let canonical = path
-            .canonicalize()
-            .map_err(|e| format!("Failed to resolve path: {}", e))?;
-
-        let emit_path = canonical.to_string_lossy().into_owned();
+        let emit_path = path.to_string_lossy().into_owned();
         let last_self_write_ref = self.last_self_write.clone();
 
         let (tx, rx) = std::sync::mpsc::channel();
@@ -81,11 +76,14 @@ impl WindowState {
         .map_err(|e| format!("Failed to create watcher: {}", e))?;
 
         watcher
-            .watch(canonical.as_ref(), RecursiveMode::NonRecursive)
-            .map_err(|e| format!("Failed to watch '{}': {}", canonical.display(), e))?;
+            .watch(path, RecursiveMode::NonRecursive)
+            .map_err(|e| format!("Failed to watch '{}': {}", path.display(), e))?;
 
+        // Swap only after the new watch is live, so any failure above leaves
+        // the previous watch (and the state describing it) untouched.
+        self.unwatch()?;
         self.watcher = Some(watcher);
-        self.watched_path = Some(canonical);
+        self.watched_path = Some(path.to_path_buf());
         self.debounce_tx = Some(tx);
 
         Ok(())
@@ -174,6 +172,37 @@ impl WindowManager {
         });
     }
 
+    /// Watch `path` for `label` and update the path→window mapping as one
+    /// step: the mapping changes only after the watch is live, so a failed
+    /// watch can never leave it claiming a file the window doesn't show.
+    /// `path` must be canonical (callers hold a ValidatedPath).
+    pub fn watch_and_track<R: tauri::Runtime>(
+        &self,
+        label: &str,
+        path: &Path,
+        app_handle: AppHandle<R>,
+    ) -> Result<(), String> {
+        self.with_state_mut(label, |state| {
+            state.watch(path, label.to_string(), app_handle)?;
+            state.file_path = Some(path.to_path_buf());
+            Ok(())
+        })
+        .unwrap_or(Err("Window not found".to_string()))
+    }
+
+    /// Drop a path→window mapping that a failed open left unfulfilled.
+    /// A window whose open ever succeeded has a live watcher, so a missing
+    /// watcher marks the claim as provisional (create_window and
+    /// open_or_focus_paths pre-claim before the webview mounts); a window
+    /// still showing a previously loaded copy of the file keeps its mapping.
+    pub fn release_unfulfilled_claim(&self, label: &str, path: &Path) {
+        self.with_state_mut(label, |state| {
+            if state.watcher.is_none() && state.file_path.as_deref() == Some(path) {
+                state.file_path = None;
+            }
+        });
+    }
+
     /// Find a window with no file open (blank window).
     pub fn find_blank(&self) -> Option<String> {
         let windows = self.windows.lock().unwrap();
@@ -252,6 +281,71 @@ mod tests {
 
         assert_eq!(mgr.find_by_path(&target), Some("win-0".to_string()));
         assert_eq!(mgr.find_by_path(&PathBuf::from("/other.md")), None);
+    }
+
+    #[test]
+    fn failed_watch_keeps_previous_watch() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("watched.md");
+        std::fs::write(&file, "").unwrap();
+
+        let mut state = WindowState::new();
+        let app = tauri::test::mock_app();
+        state
+            .watch(&file, "win-0".into(), app.handle().clone())
+            .unwrap();
+        let watched = state.watched_path.clone();
+
+        let missing = dir.path().join("missing.md");
+        let result = state.watch(&missing, "win-0".into(), app.handle().clone());
+
+        assert!(result.is_err());
+        assert!(state.watcher.is_some());
+        assert_eq!(state.watched_path, watched);
+    }
+
+    #[test]
+    fn watch_and_track_failure_leaves_mapping_untouched() {
+        let mgr = WindowManager::new();
+        mgr.register("win-0");
+        let app = tauri::test::mock_app();
+
+        let missing = PathBuf::from("/nonexistent/missing.md");
+        let result = mgr.watch_and_track("win-0", &missing, app.handle().clone());
+
+        assert!(result.is_err());
+        assert_eq!(mgr.find_by_path(&missing), None);
+    }
+
+    #[test]
+    fn release_unfulfilled_claim_clears_unwatched_claim() {
+        let mgr = WindowManager::new();
+        mgr.register("win-0");
+        let path = PathBuf::from("/docs/claimed.md");
+        // Pre-claim with no live watcher, as create_window does.
+        mgr.set_file_path("win-0", Some(path.clone()));
+
+        mgr.release_unfulfilled_claim("win-0", &path);
+
+        assert_eq!(mgr.find_by_path(&path), None);
+    }
+
+    #[test]
+    fn release_unfulfilled_claim_keeps_watched_mapping() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("loaded.md");
+        std::fs::write(&file, "").unwrap();
+
+        let mgr = WindowManager::new();
+        mgr.register("win-0");
+        let app = tauri::test::mock_app();
+        mgr.watch_and_track("win-0", &file, app.handle().clone())
+            .unwrap();
+
+        // A failed reload of an already-loaded file must not drop the mapping.
+        mgr.release_unfulfilled_claim("win-0", &file);
+
+        assert_eq!(mgr.find_by_path(&file), Some("win-0".to_string()));
     }
 
     #[test]
