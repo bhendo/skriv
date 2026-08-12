@@ -42,7 +42,7 @@ jobs:
           node-version: lts/*
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm tsc --noEmit
+      - run: make typecheck-ui
 
   test-ui:
     name: Test UI
