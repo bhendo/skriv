@@ -14,6 +14,8 @@ describe("SearchBar", () => {
     onNext: vi.fn(),
     onPrev: vi.fn(),
     onToggleCaseSensitive: vi.fn(),
+    onReplace: vi.fn(),
+    onReplaceAll: vi.fn(),
     onClose: vi.fn(),
   };
 
@@ -84,5 +86,65 @@ describe("SearchBar", () => {
   it("auto-focuses input on render", () => {
     render(<SearchBar {...defaultProps} />);
     expect(document.activeElement).toBe(screen.getByRole("textbox"));
+  });
+
+  it("hides the replace row by default", () => {
+    render(<SearchBar {...defaultProps} />);
+    expect(screen.queryByPlaceholderText("Replace...")).toBeNull();
+    expect(screen.queryByLabelText("Replace")).toBeNull();
+  });
+
+  it("chevron toggles the replace row", async () => {
+    render(<SearchBar {...defaultProps} />);
+    await userEvent.click(screen.getByLabelText("Toggle replace"));
+    expect(screen.getByPlaceholderText("Replace...")).not.toBeNull();
+    await userEvent.click(screen.getByLabelText("Toggle replace"));
+    expect(screen.queryByPlaceholderText("Replace...")).toBeNull();
+  });
+
+  it("shows replace input and buttons when initialShowReplace is set", () => {
+    render(<SearchBar {...defaultProps} initialShowReplace />);
+    expect(screen.getByPlaceholderText("Replace...")).not.toBeNull();
+    expect(screen.getByLabelText("Replace")).not.toBeNull();
+    expect(screen.getByLabelText("Replace all")).not.toBeNull();
+  });
+
+  it("still auto-focuses the find input when replace row is shown", () => {
+    render(<SearchBar {...defaultProps} initialShowReplace />);
+    expect(document.activeElement).toBe(screen.getByPlaceholderText("Find..."));
+  });
+
+  it("passes the typed replace text when Enter is pressed in the replace input", async () => {
+    const onReplace = vi.fn();
+    render(<SearchBar {...defaultProps} initialShowReplace onReplace={onReplace} />);
+    await userEvent.type(screen.getByPlaceholderText("Replace..."), "world");
+    await userEvent.keyboard("{Enter}");
+    expect(onReplace).toHaveBeenCalledWith("world");
+  });
+
+  it("calls onClose when Escape is pressed in the replace input", async () => {
+    const onClose = vi.fn();
+    render(<SearchBar {...defaultProps} initialShowReplace onClose={onClose} />);
+    await userEvent.click(screen.getByPlaceholderText("Replace..."));
+    await userEvent.keyboard("{Escape}");
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it("passes the typed replace text to the Replace and All buttons", async () => {
+    const onReplace = vi.fn();
+    const onReplaceAll = vi.fn();
+    render(
+      <SearchBar
+        {...defaultProps}
+        initialShowReplace
+        onReplace={onReplace}
+        onReplaceAll={onReplaceAll}
+      />
+    );
+    await userEvent.type(screen.getByPlaceholderText("Replace..."), "world");
+    await userEvent.click(screen.getByLabelText("Replace"));
+    expect(onReplace).toHaveBeenCalledWith("world");
+    await userEvent.click(screen.getByLabelText("Replace all"));
+    expect(onReplaceAll).toHaveBeenCalledWith("world");
   });
 });

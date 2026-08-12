@@ -22,7 +22,10 @@ describe("useKeyboardShortcuts", () => {
     handlers.onOpen.mockClear();
   });
 
-  afterEach(cleanup);
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
 
   it("Cmd+S fires onSave", () => {
     renderHook(() => useKeyboardShortcuts(handlers));
@@ -64,6 +67,54 @@ describe("useKeyboardShortcuts", () => {
 
     // Should not throw
     fireKey("m", { metaKey: true });
+  });
+
+  it("Cmd+Alt+F fires onReplace", () => {
+    const onReplace = vi.fn();
+    renderHook(() => useKeyboardShortcuts({ ...handlers, onReplace }));
+
+    // Alt turns the key into "ƒ" on mac hardware; the hook matches on code
+    fireKey("ƒ", { metaKey: true, altKey: true, code: "KeyF" });
+
+    expect(onReplace).toHaveBeenCalledOnce();
+  });
+
+  it("Ctrl+H fires onReplace on non-mac platforms", () => {
+    vi.spyOn(window.navigator, "userAgent", "get").mockReturnValue(
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+    );
+    const onReplace = vi.fn();
+    renderHook(() => useKeyboardShortcuts({ ...handlers, onReplace }));
+
+    fireKey("h", { ctrlKey: true });
+
+    expect(onReplace).toHaveBeenCalledOnce();
+  });
+
+  it("Cmd+H is left to macOS Hide", () => {
+    vi.spyOn(window.navigator, "userAgent", "get").mockReturnValue(
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
+    );
+    const onReplace = vi.fn();
+    renderHook(() => useKeyboardShortcuts({ ...handlers, onReplace }));
+
+    fireKey("h", { metaKey: true });
+
+    expect(onReplace).not.toHaveBeenCalled();
+  });
+
+  it("Cmd+G fires onFindNext, Cmd+Shift+G fires onFindPrev", () => {
+    const onFindNext = vi.fn();
+    const onFindPrev = vi.fn();
+    renderHook(() => useKeyboardShortcuts({ ...handlers, onFindNext, onFindPrev }));
+
+    fireKey("g", { metaKey: true });
+    expect(onFindNext).toHaveBeenCalledOnce();
+    expect(onFindPrev).not.toHaveBeenCalled();
+
+    fireKey("G", { metaKey: true, shiftKey: true });
+    expect(onFindPrev).toHaveBeenCalledOnce();
+    expect(onFindNext).toHaveBeenCalledOnce();
   });
 
   it("Cmd+B fires onToggleSidebar", () => {

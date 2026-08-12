@@ -68,6 +68,16 @@ pub fn init(app: &tauri::App) -> tauri::Result<()> {
         .close_window()
         .build()?;
 
+    let find = accel(MenuItemBuilder::with_id("find", "Find…"), "CmdOrCtrl+F").build(handle)?;
+    // Cmd+Alt+F is the macOS convention for replace (Cmd+H belongs to Hide);
+    // the webview hook claims the same chord, so the accelerator is the menu
+    // hint plus fallback like every other item here.
+    let replace = accel(
+        MenuItemBuilder::with_id("replace", "Find and Replace…"),
+        "CmdOrCtrl+Alt+F",
+    )
+    .build(handle)?;
+
     // Replacing the default menu removes the stock Edit menu; without these
     // items Cmd+C/V/X/Z stop working in the webview on macOS.
     let edit_menu = SubmenuBuilder::new(handle, "Edit")
@@ -78,6 +88,9 @@ pub fn init(app: &tauri::App) -> tauri::Result<()> {
         .copy()
         .paste()
         .select_all()
+        .separator()
+        .item(&find)
+        .item(&replace)
         .build()?;
 
     let toggle_sidebar = accel(
@@ -121,6 +134,8 @@ pub fn init(app: &tauri::App) -> tauri::Result<()> {
         "save-as" => emit_to_focused(app, "menu-save-as"),
         "toggle-sidebar" => emit_to_focused(app, "menu-toggle-sidebar"),
         "toggle-outline" => emit_to_focused(app, "menu-toggle-outline"),
+        "find" => emit_to_focused(app, "menu-find"),
+        "replace" => emit_to_focused(app, "menu-replace"),
         _ => {}
     });
 

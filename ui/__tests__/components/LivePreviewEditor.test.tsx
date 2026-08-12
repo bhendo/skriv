@@ -21,6 +21,8 @@ vi.mock("@codemirror/view", () => {
     dropCursor: vi.fn(() => ({})),
     highlightSpecialChars: vi.fn(() => ({})),
     placeholder: vi.fn(() => ({})),
+    Decoration: { mark: vi.fn(() => ({})), none: {} },
+    ViewPlugin: { fromClass: vi.fn(() => ({})) },
   };
 });
 

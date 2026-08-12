@@ -16,7 +16,6 @@ import {
   autocompletion,
   completionKeymap,
 } from "@codemirror/autocomplete";
-import { search } from "@codemirror/search";
 import { markdown } from "@codemirror/lang-markdown";
 import { languages } from "@codemirror/language-data";
 import {
@@ -38,6 +37,7 @@ import {
 import { markdownSyntaxExtensions } from "../markdown/parser";
 import { holdScrollAnchor } from "../utils/editorPosition";
 import type { EditorPosition } from "../utils/editorPosition";
+import { searchExtensions } from "../utils/searchHighlight";
 import type { EditorHandle } from "../types/editor";
 
 interface LivePreviewEditorProps {
@@ -103,7 +103,7 @@ export const LivePreviewEditor = forwardRef<EditorHandle, LivePreviewEditorProps
             bracketMatching(),
             closeBrackets(),
             autocompletion(),
-            search(),
+            searchExtensions,
             placeholder("Start writing markdown here…"),
             keymap.of([
               ...livePreviewFormattingKeymap,
