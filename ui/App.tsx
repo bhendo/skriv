@@ -9,6 +9,7 @@ import { ErrorBanner } from "./components/ErrorBanner";
 import { ReloadBanner } from "./components/ReloadBanner";
 import { Sidebar } from "./components/Sidebar";
 import { SidebarToggle } from "./components/SidebarToggle";
+import { useEditorView } from "./hooks/useEditorView";
 import { useFile } from "./hooks/useFile";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { useMenuEvents } from "./hooks/useMenuEvents";
@@ -16,11 +17,14 @@ import { useSearch } from "./hooks/useSearch";
 import { useToc } from "./hooks/useToc";
 import { useWindowClose } from "./hooks/useWindowClose";
 import { promptUnsavedChanges } from "./utils/unsavedChanges";
+import { captureEditorPosition } from "./utils/editorPosition";
+import type { EditorPosition } from "./utils/editorPosition";
 import type { EditorHandle } from "./types/editor";
 import type { SidebarTab } from "./types/toc";
 
 function App() {
   const editorRef = useRef<EditorHandle>(null);
+  const getView = useEditorView(editorRef);
   const {
     content,
     path,
@@ -38,7 +42,15 @@ function App() {
   const [sidebarVisible, setSidebarVisible] = useState(true);
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>("files");
   const [sourceMode, setSourceMode] = useState(false);
-  const [editorSnapshot, setEditorSnapshot] = useState<string | null>(null);
+  // Document and cursor/scroll position carried atomically from the outgoing
+  // editor to its replacement on a mode toggle — one object so a position can
+  // never pair with a document it wasn't captured from. The mounting editor
+  // applies it, not an App effect: StrictMode's dev remount rebuilds the view
+  // after parent effects have run, which would silently discard the restore.
+  const [editorHandoff, setEditorHandoff] = useState<{
+    markdown: string;
+    position: EditorPosition;
+  } | null>(null);
   const isModifiedRef = useRef(isModified);
   useEffect(() => {
     isModifiedRef.current = isModified;
@@ -144,12 +156,15 @@ function App() {
   }, [sidebarVisible, sidebarTab]);
 
   const handleToggleSourceMode = useCallback(() => {
-    const markdown = editorRef.current?.getMarkdown();
-    if (markdown !== undefined) {
-      setEditorSnapshot(markdown);
+    const view = getView();
+    if (view) {
+      setEditorHandoff({
+        markdown: view.state.doc.toString(),
+        position: captureEditorPosition(view),
+      });
     }
     setSourceMode((prev) => !prev);
-  }, []);
+  }, [getView]);
 
   const {
     isSearchOpen,
@@ -228,7 +243,7 @@ function App() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- synchronizing banner visibility with file state
     setShowReloadBanner(false);
-    setEditorSnapshot(null);
+    setEditorHandoff(null);
     setSourceMode(false);
   }, [path, content]);
 
@@ -276,14 +291,16 @@ function App() {
             {sourceMode ? (
               <SourceEditor
                 ref={editorRef}
-                defaultValue={editorSnapshot ?? content}
+                defaultValue={editorHandoff?.markdown ?? content}
                 onChange={handleChange}
+                restorePosition={editorHandoff?.position ?? null}
               />
             ) : (
               <LivePreviewEditor
                 ref={editorRef}
-                defaultValue={editorSnapshot ?? content}
+                defaultValue={editorHandoff?.markdown ?? content}
                 onChange={handleChange}
+                restorePosition={editorHandoff?.position ?? null}
               />
             )}
           </div>
