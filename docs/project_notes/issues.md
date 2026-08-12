@@ -2,6 +2,13 @@
 
 ## Entries
 
+### 2026-08-12 - #77: Atomic open_document command
+
+- **Status**: Completed on branch `refactor/77-atomic-open-document` (not yet merged)
+- **Description**: The read_file + watch_file pair (fired concurrently via Promise.all in `useFile.openFile`) is now one `open_document` command: scope expansion → read → `WindowManager::watch_and_track`, with state changing only after every fallible step succeeds. `WindowState::watch` builds the new watcher *before* dropping the old (swap-on-success), so a failed watch keeps the previous watch and its state intact; it also now takes the already-canonical `&Path` from ValidatedPath instead of re-canonicalizing a raw string. On failure, `release_unfulfilled_claim` drops the file_path that `create_window`/`open_or_focus_paths` pre-claim before the webview mounts — guarded on `watcher.is_none()`, because a window whose open ever succeeded has a live watcher, so a failed *reload* of an already-loaded file keeps its mapping (the window still shows the file). `write_new_file` switched to `watch_and_track` too, losing its claim-before-watch ordering (the same defect class). Recents: recording moved out of the read path; `open_document` takes `record_recent`, and the frontend's new `reloadFile` passes false for both reload-after-external-change paths, so reloads no longer pollute the recents list.
+- **URL**: https://github.com/bhendo/skriv/issues/77
+- **Notes**: `focus_existing_window` deliberately stays a separate command: the unsaved-changes prompt must sit between the focus check and the buffer swap, so folding it in would either prompt users whose file is already open elsewhere or mutate backend state before the user confirms. Rust-side test seam: dev-dependency `tauri = { features = ["test"] }` + `tauri::test::mock_app()`, with `watch`/`watch_and_track` generic over `tauri::Runtime` (the documented Tauri pattern). Simplify-review skips, recorded: one `open_document(record_recent)` command instead of split open/reload commands (frontend already wraps the flag in named `openFile`/`reloadFile`); `unwatch_file` was found to have no frontend caller ever — dead command surface, left for a separate cleanup.
+
 ### 2026-08-12 - #33: Keyboard shortcut cheatsheet
 
 - **Status**: Completed on branch `feature/33-shortcut-cheatsheet` (not yet merged)
