@@ -95,12 +95,11 @@ pub fn run() {
             open_or_focus_paths(app, paths);
         }))
         .invoke_handler(tauri::generate_handler![
-            commands::read_file,
+            commands::open_document,
             commands::write_file,
             commands::write_new_file,
             commands::get_file_info,
             commands::get_opened_file,
-            commands::watch_file,
             commands::unwatch_file,
             commands::create_window,
             commands::close_window,

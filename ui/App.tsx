@@ -34,6 +34,7 @@ function App() {
     isModified,
     error,
     openFile,
+    reloadFile,
     markModified,
     clearError,
     saveFile,
@@ -241,13 +242,13 @@ function App() {
       if (isModifiedRef.current) {
         setShowReloadBanner(true);
       } else {
-        if (path) openFile(path);
+        if (path) reloadFile(path);
       }
     });
     return () => {
       unlisten.then((fn) => fn());
     };
-  }, [path, openFile]);
+  }, [path, reloadFile]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- synchronizing banner visibility with file state
@@ -263,7 +264,7 @@ function App() {
         visible={showReloadBanner}
         onReload={() => {
           setShowReloadBanner(false);
-          if (path) openFile(path);
+          if (path) reloadFile(path);
         }}
         onDismiss={() => setShowReloadBanner(false)}
       />
