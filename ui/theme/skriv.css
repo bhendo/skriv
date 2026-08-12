@@ -377,7 +377,8 @@ body,
   white-space: nowrap;
 }
 
-.search-btn {
+/* Small borderless icon button, shared by the search bar and the cheatsheet */
+.icon-btn {
   border: none;
   border-radius: 4px;
   background: transparent;
@@ -391,7 +392,7 @@ body,
   justify-content: center;
 }
 
-.search-btn:hover {
+.icon-btn:hover {
   background: var(--skriv-color-surface-low, #f5f5f5);
 }
 
@@ -417,6 +418,81 @@ body,
 /* Mirror @codemirror/search's rule: no selection-match tint inside a search match */
 .skriv-search-match .cm-selectionMatch {
   background: transparent;
+}
+
+/* Shortcut cheatsheet */
+.cheatsheet-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+}
+
+.cheatsheet {
+  background: var(--skriv-color-surface, #fff);
+  color: var(--skriv-color-on-surface, #333);
+  border: 1px solid var(--skriv-color-outline, #ddd);
+  border-radius: 8px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+  padding: 16px 24px 20px;
+  max-width: 640px;
+  max-height: 80vh;
+  overflow-y: auto;
+  font-family: var(--skriv-font-sans);
+  font-size: 13px;
+  outline: none;
+}
+
+.cheatsheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.cheatsheet-header h2 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.cheatsheet-sections {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(240px, 1fr));
+  gap: 4px 40px;
+}
+
+.cheatsheet-section h3 {
+  margin: 12px 0 4px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--skriv-color-on-surface-variant, #666);
+}
+
+.cheatsheet-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 3px 0;
+}
+
+.cheatsheet-keys {
+  display: flex;
+  gap: 4px;
+}
+
+.cheatsheet kbd {
+  background: var(--skriv-color-surface-low, #f5f5f5);
+  border: 1px solid var(--skriv-color-outline, #ddd);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-family: var(--skriv-font-mono);
+  font-size: 11px;
+  white-space: nowrap;
 }
 
 /* Sidebar */

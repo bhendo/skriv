@@ -78,7 +78,7 @@ export function SearchBar({
   return (
     <div className="search-bar" role="search">
       <button
-        className="search-btn search-replace-toggle"
+        className="icon-btn search-replace-toggle"
         aria-label="Toggle replace"
         title="Toggle replace"
         onClick={() => setShowReplace((prev) => !prev)}
@@ -100,7 +100,7 @@ export function SearchBar({
           />
           <span className="search-count">{countDisplay}</span>
           <button
-            className="search-btn"
+            className="icon-btn"
             aria-label="Previous match"
             title={`Previous match (${displayChord("find-prev")})`}
             onClick={onPrev}
@@ -109,7 +109,7 @@ export function SearchBar({
             &#9650;
           </button>
           <button
-            className="search-btn"
+            className="icon-btn"
             aria-label="Next match"
             title={`Next match (${displayChord("find-next")})`}
             onClick={onNext}
@@ -118,7 +118,7 @@ export function SearchBar({
             &#9660;
           </button>
           <button
-            className={`search-btn search-case-toggle ${caseSensitive ? "active" : ""}`}
+            className={`icon-btn search-case-toggle ${caseSensitive ? "active" : ""}`}
             aria-label="Case sensitive"
             title="Match case"
             onClick={onToggleCaseSensitive}
@@ -127,7 +127,7 @@ export function SearchBar({
             Aa
           </button>
           <button
-            className="search-btn"
+            className="icon-btn"
             aria-label="Close search"
             title="Close (Esc)"
             onClick={onClose}
@@ -147,7 +147,7 @@ export function SearchBar({
               onKeyDown={fieldKeyDown(() => onReplace(replaceText))}
             />
             <button
-              className="search-btn search-replace-btn"
+              className="icon-btn search-replace-btn"
               aria-label="Replace"
               title="Replace current match"
               onClick={() => onReplace(replaceText)}
@@ -156,7 +156,7 @@ export function SearchBar({
               Replace
             </button>
             <button
-              className="search-btn search-replace-btn"
+              className="icon-btn search-replace-btn"
               aria-label="Replace all"
               title="Replace all matches"
               onClick={() => onReplaceAll(replaceText)}

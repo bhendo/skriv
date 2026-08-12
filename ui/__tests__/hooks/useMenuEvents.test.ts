@@ -27,6 +27,7 @@ describe("useMenuEvents", () => {
       "menu-toggle-outline",
       "menu-find",
       "menu-replace",
+      "menu-keyboard-shortcuts",
     ]) {
       expect(listen).toHaveBeenCalledWith(event, expect.any(Function));
     }
@@ -48,6 +49,7 @@ describe("useMenuEvents", () => {
     ["menu-toggle-outline", "toggle-outline"],
     ["menu-find", "find"],
     ["menu-replace", "replace"],
+    ["menu-keyboard-shortcuts", "keyboard-shortcuts"],
   ] as const)("%s dispatches to %s only", async (event, handlerName) => {
     const handlers = makeShortcutHandlers();
     renderHook(() => useMenuEvents(handlers));

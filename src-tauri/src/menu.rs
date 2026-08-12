@@ -116,12 +116,24 @@ pub fn init(app: &tauri::App) -> tauri::Result<()> {
     #[cfg(target_os = "macos")]
     window_menu.set_as_windows_menu_for_nsapp()?;
 
+    let keyboard_shortcuts = accel(
+        MenuItemBuilder::with_id("keyboard-shortcuts", "Keyboard Shortcuts"),
+        "CmdOrCtrl+/",
+    )
+    .build(handle)?;
+    let help_menu = SubmenuBuilder::new(handle, "Help")
+        .item(&keyboard_shortcuts)
+        .build()?;
+    #[cfg(target_os = "macos")]
+    help_menu.set_as_help_menu_for_nsapp()?;
+
     let menu = MenuBuilder::new(handle)
         .item(&app_menu)
         .item(&file_menu)
         .item(&edit_menu)
         .item(&view_menu)
         .item(&window_menu)
+        .item(&help_menu)
         .build()?;
 
     app.set_menu(menu)?;
@@ -136,6 +148,7 @@ pub fn init(app: &tauri::App) -> tauri::Result<()> {
         "toggle-outline" => emit_to_focused(app, "menu-toggle-outline"),
         "find" => emit_to_focused(app, "menu-find"),
         "replace" => emit_to_focused(app, "menu-replace"),
+        "keyboard-shortcuts" => emit_to_focused(app, "menu-keyboard-shortcuts"),
         _ => {}
     });
 

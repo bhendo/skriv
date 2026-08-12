@@ -5,6 +5,7 @@ import menuRs from "../../../src-tauri/src/menu.rs?raw";
 import {
   SHORTCUTS,
   displayChord,
+  displayEditorChord,
   menuEventName,
   parseChord,
   shortcutBindings,
@@ -12,7 +13,9 @@ import {
 } from "../../utils/shortcuts";
 import { MAC_UA, WINDOWS_UA, stubPlatform } from "../mocks/shortcuts";
 
-const CHORD_GRAMMAR = /^CmdOrCtrl(\+Alt)?(\+Shift)?\+[A-Z]$/;
+// "/" is allowed only without Alt: parseChord derives Alt matchers as
+// e.code "Key<letter>", which has no equivalent for punctuation.
+const CHORD_GRAMMAR = /^CmdOrCtrl((\+Alt)?(\+Shift)?\+[A-Z]|(\+Shift)?\+\/)$/;
 const NON_MAC_CHORD_GRAMMAR = /^Ctrl(\+Alt)?(\+Shift)?\+[A-Z]$/;
 
 /** The single letter a binding targets, whether it uses key or code. */
@@ -84,6 +87,7 @@ describe("displayChord", () => {
     expect(displayChord("find-prev")).toBe("⇧⌘G");
     expect(displayChord("save-as")).toBe("⇧⌘S");
     expect(displayChord("replace")).toBe("⌥⌘F");
+    expect(displayChord("keyboard-shortcuts")).toBe("⌘/");
   });
 
   it("renders Ctrl chords elsewhere", () => {
@@ -91,11 +95,33 @@ describe("displayChord", () => {
     expect(displayChord("find-next")).toBe("Ctrl+G");
     expect(displayChord("find-prev")).toBe("Ctrl+Shift+G");
     expect(displayChord("save-as")).toBe("Ctrl+Shift+S");
+    expect(displayChord("keyboard-shortcuts")).toBe("Ctrl+/");
   });
 
   it("uses the non-mac chord override where the convention differs", () => {
     stubPlatform(WINDOWS_UA);
     expect(displayChord("replace")).toBe("Ctrl+H");
+  });
+});
+
+describe("displayEditorChord", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("renders CodeMirror keys as mac symbols", () => {
+    stubPlatform(MAC_UA);
+    expect(displayEditorChord("Mod-b")).toBe("⌘B");
+    expect(displayEditorChord("Mod-`")).toBe("⌘`");
+    expect(displayEditorChord("Mod-Alt-x")).toBe("⌥⌘X");
+    expect(displayEditorChord("Mod-Shift-x")).toBe("⇧⌘X");
+  });
+
+  it("renders CodeMirror keys as Ctrl chords elsewhere", () => {
+    stubPlatform(WINDOWS_UA);
+    expect(displayEditorChord("Mod-b")).toBe("Ctrl+B");
+    expect(displayEditorChord("Mod-Alt-x")).toBe("Ctrl+Alt+X");
+    expect(displayEditorChord("Mod-Shift-x")).toBe("Ctrl+Shift+X");
   });
 });
 
