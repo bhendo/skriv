@@ -9,7 +9,7 @@ import {
 import { EditorState } from "@codemirror/state";
 import type { EditorSelection } from "@codemirror/state";
 import { indentOnInput, bracketMatching } from "@codemirror/language";
-import { history, historyKeymap, defaultKeymap, indentWithTab } from "@codemirror/commands";
+import { history, historyKeymap, indentWithTab } from "@codemirror/commands";
 import {
   closeBrackets,
   closeBracketsKeymap,
@@ -35,6 +35,7 @@ import {
   livePreviewFormattingKeymap,
 } from "../live-preview";
 import { markdownSyntaxExtensions } from "../markdown/parser";
+import { appDefaultKeymap } from "../utils/editorKeymap";
 import { holdScrollAnchor } from "../utils/editorPosition";
 import type { EditorPosition } from "../utils/editorPosition";
 import { searchExtensions } from "../utils/searchHighlight";
@@ -108,7 +109,7 @@ export const LivePreviewEditor = forwardRef<EditorHandle, LivePreviewEditorProps
             keymap.of([
               ...livePreviewFormattingKeymap,
               ...closeBracketsKeymap,
-              ...defaultKeymap,
+              ...appDefaultKeymap,
               // searchKeymap intentionally excluded — search is handled by SearchBar
               ...historyKeymap,
               ...completionKeymap,

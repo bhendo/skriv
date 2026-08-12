@@ -23,8 +23,12 @@ export interface KeyBinding {
   mac?: boolean;
 }
 
+export type ShortcutGroup = "File" | "Search" | "View" | "Help";
+
 export interface ShortcutDef {
   id: string;
+  /** Cheatsheet section. */
+  group: ShortcutGroup;
   /** For menu shortcuts, must match the menu.rs item label exactly (parity-tested). */
   label: string;
   /** Tauri accelerator syntax; for menu shortcuts, menu.rs must use this exact string (parity-tested). */
@@ -38,30 +42,35 @@ export interface ShortcutDef {
 const REGISTRY = [
   {
     id: "new-window",
+    group: "File",
     label: "New Window",
     chord: "CmdOrCtrl+N",
     menu: "native",
   },
   {
     id: "open",
+    group: "File",
     label: "Open…",
     chord: "CmdOrCtrl+O",
     menu: "event",
   },
   {
     id: "save",
+    group: "File",
     label: "Save",
     chord: "CmdOrCtrl+S",
     menu: "event",
   },
   {
     id: "save-as",
+    group: "File",
     label: "Save As…",
     chord: "CmdOrCtrl+Shift+S",
     menu: "event",
   },
   {
     id: "find",
+    group: "Search",
     label: "Find…",
     chord: "CmdOrCtrl+F",
     menu: "event",
@@ -70,6 +79,7 @@ const REGISTRY = [
     // Cmd+Alt+F is the macOS convention for replace (Cmd+H belongs to Hide);
     // Ctrl+H is the convention everywhere else.
     id: "replace",
+    group: "Search",
     label: "Find and Replace…",
     chord: "CmdOrCtrl+Alt+F",
     nonMacChord: "Ctrl+H",
@@ -77,29 +87,41 @@ const REGISTRY = [
   },
   {
     id: "find-next",
+    group: "Search",
     label: "Find Next",
     chord: "CmdOrCtrl+G",
   },
   {
     id: "find-prev",
+    group: "Search",
     label: "Find Previous",
     chord: "CmdOrCtrl+Shift+G",
   },
   {
     id: "toggle-source-mode",
+    group: "View",
     label: "Toggle Source Mode",
     chord: "CmdOrCtrl+M",
   },
   {
     id: "toggle-sidebar",
+    group: "View",
     label: "Toggle Sidebar",
     chord: "CmdOrCtrl+B",
     menu: "event",
   },
   {
     id: "toggle-outline",
+    group: "View",
     label: "Toggle Outline",
     chord: "CmdOrCtrl+Shift+L",
+    menu: "event",
+  },
+  {
+    id: "keyboard-shortcuts",
+    group: "Help",
+    label: "Keyboard Shortcuts",
+    chord: "CmdOrCtrl+/",
     menu: "event",
   },
 ] as const satisfies readonly ShortcutDef[];
@@ -167,18 +189,30 @@ export function matchShortcut(e: KeyboardEvent): ShortcutId | null {
   return null;
 }
 
-/** Chord for tooltips: mac symbols in the platform's ⌥⇧⌘ order, Ctrl+Shift+X text elsewhere. */
+/** Modifier parts + final key → mac symbols in the platform's ⌥⇧⌘ order, Ctrl+Alt+Shift+X text elsewhere. */
+function displayParts(parts: readonly string[]): string {
+  const key = parts[parts.length - 1].toUpperCase();
+  const alt = parts.includes("Alt");
+  const shift = parts.includes("Shift");
+  if (isMacPlatform()) {
+    return `${alt ? "⌥" : ""}${shift ? "⇧" : ""}⌘${key}`;
+  }
+  return ["Ctrl", alt && "Alt", shift && "Shift", key].filter(Boolean).join("+");
+}
+
+/** Chord for tooltips: mac symbols, Ctrl+Shift+X text elsewhere (honoring nonMacChord). */
 export function displayChord(id: ShortcutId): string {
   const shortcut = SHORTCUTS.find((s) => s.id === id);
   if (!shortcut) throw new Error(`Unknown shortcut: ${id}`);
-  if (!isMacPlatform()) {
-    return (shortcut.nonMacChord ?? shortcut.chord).replace("CmdOrCtrl", "Ctrl");
-  }
-  const parts = shortcut.chord.split("+");
-  return (
-    (parts.includes("Alt") ? "⌥" : "") +
-    (parts.includes("Shift") ? "⇧" : "") +
-    "⌘" +
-    parts[parts.length - 1]
-  );
+  const chord = isMacPlatform() ? shortcut.chord : (shortcut.nonMacChord ?? shortcut.chord);
+  return displayParts(chord.split("+"));
+}
+
+/**
+ * Display form of a CodeMirror keymap key ("Mod-Alt-x"), for shortcuts that
+ * live in the editor keymap rather than the registry (Mod = Cmd or Ctrl,
+ * like CmdOrCtrl in accelerator syntax).
+ */
+export function displayEditorChord(key: string): string {
+  return displayParts(key.split("-"));
 }

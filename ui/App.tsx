@@ -7,6 +7,7 @@ import { SourceEditor } from "./components/SourceEditor";
 import { SearchBar } from "./components/SearchBar";
 import { ErrorBanner } from "./components/ErrorBanner";
 import { ReloadBanner } from "./components/ReloadBanner";
+import { ShortcutCheatsheet } from "./components/ShortcutCheatsheet";
 import { Sidebar } from "./components/Sidebar";
 import { SidebarToggle } from "./components/SidebarToggle";
 import { useEditorView } from "./hooks/useEditorView";
@@ -40,6 +41,7 @@ function App() {
   } = useFile();
 
   const [showReloadBanner, setShowReloadBanner] = useState(false);
+  const [showCheatsheet, setShowCheatsheet] = useState(false);
   const [sidebarVisible, setSidebarVisible] = useState(true);
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>("files");
   const [sourceMode, setSourceMode] = useState(false);
@@ -198,6 +200,8 @@ function App() {
     "toggle-source-mode": handleToggleSourceMode,
     "toggle-sidebar": handleToggleSidebar,
     "toggle-outline": handleToggleOutline,
+    // Toggle, so the chord that opens the cheatsheet also dismisses it.
+    "keyboard-shortcuts": () => setShowCheatsheet((prev) => !prev),
   };
 
   useKeyboardShortcuts(shortcutHandlers);
@@ -263,6 +267,7 @@ function App() {
         }}
         onDismiss={() => setShowReloadBanner(false)}
       />
+      {showCheatsheet && <ShortcutCheatsheet onClose={() => setShowCheatsheet(false)} />}
       <div style={{ flex: 1, display: "flex", overflow: "hidden", position: "relative" }}>
         <SidebarToggle visible={sidebarVisible} onToggle={handleToggleSidebar} />
         {sidebarVisible && (

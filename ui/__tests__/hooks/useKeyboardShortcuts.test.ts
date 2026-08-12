@@ -143,6 +143,14 @@ describe("useKeyboardShortcuts", () => {
     expectOnly(handlers, "toggle-sidebar");
   });
 
+  it("Cmd+/ fires keyboard-shortcuts", () => {
+    const handlers = renderShortcuts();
+
+    fireKey("/", { metaKey: true });
+
+    expectOnly(handlers, "keyboard-shortcuts");
+  });
+
   it("Cmd+Shift+L fires toggle-outline", () => {
     const handlers = renderShortcuts();
 

@@ -21,7 +21,7 @@ import {
   bracketMatching,
   foldKeymap,
 } from "@codemirror/language";
-import { history, historyKeymap, defaultKeymap } from "@codemirror/commands";
+import { history, historyKeymap } from "@codemirror/commands";
 import {
   closeBrackets,
   closeBracketsKeymap,
@@ -32,6 +32,7 @@ import { highlightSelectionMatches } from "@codemirror/search";
 import { markdown } from "@codemirror/lang-markdown";
 import { languages } from "@codemirror/language-data";
 import { oneDark } from "@codemirror/theme-one-dark";
+import { appDefaultKeymap } from "../utils/editorKeymap";
 import { holdScrollAnchor } from "../utils/editorPosition";
 import type { EditorPosition } from "../utils/editorPosition";
 import { searchExtensions } from "../utils/searchHighlight";
@@ -89,7 +90,7 @@ export const SourceEditor = forwardRef<EditorHandle, SourceEditorProps>(
             placeholder("Start writing markdown here…"),
             keymap.of([
               ...closeBracketsKeymap,
-              ...defaultKeymap,
+              ...appDefaultKeymap,
               // searchKeymap intentionally excluded — search is handled by SearchBar
               ...historyKeymap,
               ...foldKeymap,
