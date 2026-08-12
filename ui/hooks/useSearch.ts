@@ -7,6 +7,8 @@ import {
   findNext,
   findPrevious,
   getSearchQuery,
+  replaceNext,
+  replaceAll,
 } from "@codemirror/search";
 import type { EditorView } from "@codemirror/view";
 
@@ -42,6 +44,7 @@ function countMatches(view: EditorView): { matchCount: number; activeIndex: numb
 
 export function useSearch({ editorRef }: UseSearchOptions) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [initialShowReplace, setInitialShowReplace] = useState(false);
   const [searchInfo, setSearchInfo] = useState<SearchInfo>({
     matchCount: 0,
     activeIndex: -1,
@@ -93,6 +96,36 @@ export function useSearch({ editorRef }: UseSearchOptions) {
   const handleNext = useCallback(() => navigateMatch(findNext), [navigateMatch]);
   const handlePrev = useCallback(() => navigateMatch(findPrevious), [navigateMatch]);
 
+  // The replace text lives in SearchBar and rides in only when a replace is
+  // actually invoked, so typing in the replace field costs no editor
+  // transactions. replaceNext only replaces when the selection sits on a
+  // match; otherwise it moves to the next match, so the first invocation
+  // selects rather than edits.
+  const replaceCommand = useCallback(
+    (replaceText: string, command: (view: EditorView) => boolean) => {
+      const view = getView();
+      if (!view) return;
+      const sq = new SearchQuery({
+        search: getSearchQuery(view.state).search,
+        caseSensitive: caseSensitiveRef.current,
+        replace: replaceText,
+      });
+      view.dispatch({ effects: setSearchQuery.of(sq) });
+      command(view);
+      setSearchInfo((prev) => ({ ...prev, ...countMatches(view) }));
+    },
+    [getView]
+  );
+
+  const handleReplace = useCallback(
+    (replaceText: string) => replaceCommand(replaceText, replaceNext),
+    [replaceCommand]
+  );
+  const handleReplaceAll = useCallback(
+    (replaceText: string) => replaceCommand(replaceText, replaceAll),
+    [replaceCommand]
+  );
+
   const handleToggleCaseSensitive = useCallback(() => {
     const newValue = !caseSensitiveRef.current;
     caseSensitiveRef.current = newValue;
@@ -104,17 +137,24 @@ export function useSearch({ editorRef }: UseSearchOptions) {
     setSearchInfo({ ...countMatches(view), caseSensitive: newValue });
   }, [getView, applyQuery]);
 
-  const openSearch = useCallback(() => {
-    const selected = getSelectedText();
-    if (selected) {
-      setInitialQuery(selected);
-      handleQueryChange(selected);
-    } else {
-      setInitialQuery("");
-    }
-    setIsSearchOpen(true);
-    setFocusKey((k) => k + 1);
-  }, [getSelectedText, handleQueryChange]);
+  const open = useCallback(
+    (withReplace: boolean) => {
+      const selected = getSelectedText();
+      if (selected) {
+        setInitialQuery(selected);
+        handleQueryChange(selected);
+      } else {
+        setInitialQuery("");
+      }
+      setInitialShowReplace(withReplace);
+      setIsSearchOpen(true);
+      setFocusKey((k) => k + 1);
+    },
+    [getSelectedText, handleQueryChange]
+  );
+
+  const openSearch = useCallback(() => open(false), [open]);
+  const openReplace = useCallback(() => open(true), [open]);
 
   const closeSearch = useCallback(() => {
     setIsSearchOpen(false);
@@ -132,14 +172,18 @@ export function useSearch({ editorRef }: UseSearchOptions) {
 
   return {
     isSearchOpen,
+    initialShowReplace,
     searchInfo,
     initialQuery,
     focusKey,
     openSearch,
+    openReplace,
     closeSearch,
     handleQueryChange,
     handleNext,
     handlePrev,
     handleToggleCaseSensitive,
+    handleReplace,
+    handleReplaceAll,
   };
 }

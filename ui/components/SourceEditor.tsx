@@ -28,12 +28,13 @@ import {
   autocompletion,
   completionKeymap,
 } from "@codemirror/autocomplete";
-import { highlightSelectionMatches, search } from "@codemirror/search";
+import { highlightSelectionMatches } from "@codemirror/search";
 import { markdown } from "@codemirror/lang-markdown";
 import { languages } from "@codemirror/language-data";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { holdScrollAnchor } from "../utils/editorPosition";
 import type { EditorPosition } from "../utils/editorPosition";
+import { searchExtensions } from "../utils/searchHighlight";
 import type { EditorHandle } from "../types/editor";
 
 interface SourceEditorProps {
@@ -84,7 +85,7 @@ export const SourceEditor = forwardRef<EditorHandle, SourceEditorProps>(
             crosshairCursor(),
             highlightActiveLine(),
             highlightSelectionMatches(),
-            search(),
+            searchExtensions,
             placeholder("Start writing markdown here…"),
             keymap.of([
               ...closeBracketsKeymap,

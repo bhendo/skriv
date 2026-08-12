@@ -18,6 +18,8 @@ vi.mock("@codemirror/view", () => {
     EditorView: MockEditorView,
     keymap: { of: vi.fn(() => ({})) },
     placeholder: vi.fn(() => ({})),
+    Decoration: { mark: vi.fn(() => ({})), none: {} },
+    ViewPlugin: { fromClass: vi.fn(() => ({})) },
     lineNumbers: vi.fn(() => ({})),
     highlightActiveLineGutter: vi.fn(() => ({})),
     highlightSpecialChars: vi.fn(() => ({})),

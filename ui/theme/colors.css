@@ -15,6 +15,8 @@
   --skriv-color-primary: #805610;
   --skriv-color-error: #ba1a1a;
   --skriv-color-inline-area: #e4d8cc;
+  --skriv-color-search-match: rgba(255, 187, 0, 0.3);
+  --skriv-color-search-match-active: rgba(255, 132, 0, 0.5);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -30,5 +32,7 @@
     --skriv-color-primary: #f4bd6f;
     --skriv-color-error: #ffb4ab;
     --skriv-color-inline-area: #3f3830;
+    --skriv-color-search-match: rgba(244, 189, 111, 0.25);
+    --skriv-color-search-match-active: rgba(244, 189, 111, 0.55);
   }
 }

@@ -168,15 +168,19 @@ function App() {
 
   const {
     isSearchOpen,
+    initialShowReplace,
     searchInfo,
     initialQuery,
     focusKey,
     openSearch,
+    openReplace,
     closeSearch,
     handleQueryChange,
     handleNext,
     handlePrev,
     handleToggleCaseSensitive,
+    handleReplace,
+    handleReplaceAll,
   } = useSearch({ editorRef });
 
   useKeyboardShortcuts({
@@ -186,6 +190,9 @@ function App() {
     onNewWindow: handleNewWindow,
     onToggleSourceMode: handleToggleSourceMode,
     onSearch: openSearch,
+    onReplace: openReplace,
+    onFindNext: handleNext,
+    onFindPrev: handlePrev,
     onToggleSidebar: handleToggleSidebar,
     onToggleOutline: handleToggleOutline,
   });
@@ -196,6 +203,8 @@ function App() {
     onSaveAs: handleSaveAs,
     onToggleSidebar: handleToggleSidebar,
     onToggleOutline: handleToggleOutline,
+    onFind: openSearch,
+    onReplace: openReplace,
   });
 
   useWindowClose({
@@ -277,12 +286,15 @@ function App() {
               matchCount={searchInfo.matchCount}
               activeIndex={searchInfo.activeIndex}
               caseSensitive={searchInfo.caseSensitive}
+              initialShowReplace={initialShowReplace}
               initialQuery={initialQuery}
               focusKey={focusKey}
               onQueryChange={handleQueryChange}
               onNext={handleNext}
               onPrev={handlePrev}
               onToggleCaseSensitive={handleToggleCaseSensitive}
+              onReplace={handleReplace}
+              onReplaceAll={handleReplaceAll}
               onClose={closeSearch}
             />
           )}

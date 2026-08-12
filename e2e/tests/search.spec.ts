@@ -133,6 +133,124 @@ test.describe("Document search (Cmd+F)", () => {
     await expect(count).toContainText("/3", { timeout: 3_000 });
   });
 
+  test("matches are highlighted, active match marked after find next", async ({
+    page,
+    loadApp,
+  }) => {
+    await loadApp({
+      openedFile: "/tmp/test.md",
+      fileContent: SEARCH_CONTENT,
+    });
+
+    await page.keyboard.press(`${MOD}+f`);
+    await page.locator(".search-bar input").fill("hello");
+
+    await expect(page.locator(".skriv-search-match")).toHaveCount(3, { timeout: 3_000 });
+
+    await page.click("[aria-label='Next match']");
+    await expect(page.locator(".skriv-search-match-active")).toHaveCount(1);
+  });
+
+  test("Cmd+G / Cmd+Shift+G navigate matches", async ({ page, loadApp }) => {
+    await loadApp({
+      openedFile: "/tmp/test.md",
+      fileContent: SEARCH_CONTENT,
+    });
+
+    await page.keyboard.press(`${MOD}+f`);
+    await page.locator(".search-bar input").fill("hello");
+    const count = page.locator(".search-count");
+    await expect(count).toContainText("1/3", { timeout: 3_000 });
+
+    await page.keyboard.press(`${MOD}+g`);
+    await expect(count).toContainText("2/3");
+
+    await page.keyboard.press(`${MOD}+Shift+g`);
+    await expect(count).toContainText("/3");
+  });
+
+  test("Cmd+Alt+F opens search bar with the replace row", async ({ page, loadApp }) => {
+    await loadApp({
+      openedFile: "/tmp/test.md",
+      fileContent: SEARCH_CONTENT,
+    });
+
+    await page.keyboard.press(`${MOD}+Alt+f`);
+    await expect(page.locator(".search-bar")).toBeVisible({ timeout: 2_000 });
+    await expect(page.locator("[placeholder='Replace...']")).toBeVisible();
+
+    // Find input keeps focus so the query can be typed immediately
+    await expect(page.locator("[placeholder='Find...']")).toBeFocused();
+  });
+
+  test("chevron toggles the replace row", async ({ page, loadApp }) => {
+    await loadApp({
+      openedFile: "/tmp/test.md",
+      fileContent: SEARCH_CONTENT,
+    });
+
+    await page.keyboard.press(`${MOD}+f`);
+    await expect(page.locator(".search-bar")).toBeVisible({ timeout: 2_000 });
+    await expect(page.locator("[placeholder='Replace...']")).not.toBeVisible();
+
+    await page.click("[aria-label='Toggle replace']");
+    await expect(page.locator("[placeholder='Replace...']")).toBeVisible();
+
+    await page.click("[aria-label='Toggle replace']");
+    await expect(page.locator("[placeholder='Replace...']")).not.toBeVisible();
+  });
+
+  test("replace substitutes the current match and advances", async ({ page, loadApp }) => {
+    await loadApp({
+      openedFile: "/tmp/test.md",
+      fileContent: SEARCH_CONTENT,
+    });
+
+    await page.keyboard.press(`${MOD}+Alt+f`);
+    await page.locator("[placeholder='Find...']").fill("hello");
+    await expect(page.locator(".search-count")).toContainText("/3", { timeout: 3_000 });
+    await page.locator("[placeholder='Replace...']").fill("howdy");
+
+    // First activation selects the match, second replaces it (CM semantics)
+    await page.click("[aria-label='Replace']");
+    await page.click("[aria-label='Replace']");
+
+    await expect(page.locator(".search-count")).toContainText("/2");
+    await expect(page.locator(".cm-content")).toContainText("howdy");
+  });
+
+  test("replace all substitutes every match", async ({ page, loadApp }) => {
+    await loadApp({
+      openedFile: "/tmp/test.md",
+      fileContent: SEARCH_CONTENT,
+    });
+
+    await page.keyboard.press(`${MOD}+Alt+f`);
+    await page.locator("[placeholder='Find...']").fill("hello");
+    await expect(page.locator(".search-count")).toContainText("/3", { timeout: 3_000 });
+    await page.locator("[placeholder='Replace...']").fill("goodbye");
+
+    await page.click("[aria-label='Replace all']");
+
+    await expect(page.locator(".search-count")).toContainText("No results");
+    const text = await page.locator(".cm-content").innerText();
+    expect(text).not.toContain("hello");
+    expect((text.match(/goodbye/g) ?? []).length).toBe(3);
+  });
+
+  test("Escape closes the replace bar", async ({ page, loadApp }) => {
+    await loadApp({
+      openedFile: "/tmp/test.md",
+      fileContent: SEARCH_CONTENT,
+    });
+
+    await page.keyboard.press(`${MOD}+Alt+f`);
+    await expect(page.locator(".search-bar")).toBeVisible({ timeout: 2_000 });
+
+    await page.keyboard.press("Escape");
+    await expect(page.locator(".search-bar")).not.toBeVisible();
+  });
+
   test("search persists when switching to source mode", async ({ page, loadApp }) => {
     await loadApp({
       openedFile: "/tmp/test.md",

@@ -330,7 +330,7 @@ body,
   top: 8px;
   right: 8px;
   display: flex;
-  align-items: center;
+  align-items: stretch;
   gap: 4px;
   background: var(--skriv-color-surface, #fff);
   border: 1px solid var(--skriv-color-outline, #ddd);
@@ -339,6 +339,18 @@ body,
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
   z-index: 100;
   font-size: 13px;
+}
+
+.search-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.search-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .search-input {
@@ -386,6 +398,25 @@ body,
 .search-case-toggle.active {
   background: var(--skriv-color-primary, #4183c4);
   color: #fff;
+}
+
+/* Chevron spans both rows via the bar's align-items: stretch */
+.search-replace-toggle {
+  padding: 2px 2px;
+}
+
+.skriv-search-match {
+  background: var(--skriv-color-search-match, rgba(255, 187, 0, 0.3));
+  border-radius: 2px;
+}
+
+.skriv-search-match-active {
+  background: var(--skriv-color-search-match-active, rgba(255, 132, 0, 0.5));
+}
+
+/* Mirror @codemirror/search's rule: no selection-match tint inside a search match */
+.skriv-search-match .cm-selectionMatch {
+  background: transparent;
 }
 
 /* Sidebar */
