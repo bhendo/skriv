@@ -14,7 +14,8 @@ pivot, ADR-003; see git history if archaeology is ever needed.)
 - **ProseMark theming**: all colors flow through `--pm-*` CSS variables set on `.cm-content` (see `ui/theme/skriv.css`); `--font` is its prose font hook.
 - **searchKeymap exclusion**: Cmd+F belongs to the shared SearchBar; the search() extension is installed without its keymap in both editors.
 - **Keyboard shortcuts:** Source mode toggle is `Cmd+M`; Cmd+E / Cmd+Alt+X are aliases onto ProseMark's inline-code/strikethrough commands (`ui/live-preview/keymap.ts`); Cmd+Shift+L is the outline three-state toggle.
-- **Height-map position lookup**: `view.lineBlockAtHeight(screenY - view.documentTop)` resolves scroll positions OUTSIDE the rendered viewport (CM height estimates); `coordsAtPos` returns null there. Used by the outline scroll-spy (`ui/hooks/useToc.ts`). `.cm-scroller` (`view.scrollDOM`) is the real scroll container, not the wrapper div in App.tsx.
+- **Height-map position lookup**: `view.lineBlockAtHeight(screenY - view.documentTop)` resolves scroll positions OUTSIDE the rendered viewport (CM height estimates); `coordsAtPos` returns null there. Used by the outline scroll-spy (`ui/hooks/useToc.ts`) and the mode-toggle position capture (`ui/utils/editorPosition.ts`). `.cm-scroller` (`view.scrollDOM`) is the real scroll container, not the wrapper div in App.tsx.
+- **StrictMode remount discards parent-effect dispatches**: child effects run before parent effects, so an App-level effect does find a freshly mounted EditorView — but in dev, StrictMode then unmounts/remounts the new component, rebuilding the view AFTER parent effects ran. One-shot state applied from a parent effect (selection, scroll) is silently lost; persistent wiring (listeners that re-probe, like the outline scroll-spy) self-heals. Apply one-shot restores in the component's own mount effect (see `restorePosition` in the editor components, #65).
 
 ## Tauri Multi-Window Events
 
