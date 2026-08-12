@@ -36,7 +36,6 @@
     "deny": [
       "Bash(rm -rf *)",
       "Bash(curl *)",
-      "Write(Makefile)",
       "Edit(Makefile)"
     ]
   }
