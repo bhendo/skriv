@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { isMacPlatform } from "../utils/platform";
+import { displayChord } from "../utils/shortcuts";
 
 interface SearchBarProps {
   matchCount: number;
@@ -75,8 +75,6 @@ export function SearchBar({
   const countDisplay =
     matchCount > 0 ? `${activeIndex + 1}/${matchCount}` : query ? "No results" : "";
 
-  const mac = isMacPlatform();
-
   return (
     <div className="search-bar" role="search">
       <button
@@ -104,7 +102,7 @@ export function SearchBar({
           <button
             className="search-btn"
             aria-label="Previous match"
-            title={`Previous match (${mac ? "⇧⌘G" : "Ctrl+Shift+G"})`}
+            title={`Previous match (${displayChord("find-prev")})`}
             onClick={onPrev}
             tabIndex={-1}
           >
@@ -113,7 +111,7 @@ export function SearchBar({
           <button
             className="search-btn"
             aria-label="Next match"
-            title={`Next match (${mac ? "⌘G" : "Ctrl+G"})`}
+            title={`Next match (${displayChord("find-next")})`}
             onClick={onNext}
             tabIndex={-1}
           >

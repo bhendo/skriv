@@ -1,3 +1,5 @@
+import { displayChord } from "../utils/shortcuts";
+
 interface SidebarToggleProps {
   visible: boolean;
   onToggle: () => void;
@@ -9,7 +11,7 @@ export function SidebarToggle({ visible, onToggle }: SidebarToggleProps) {
       className="sidebar-toggle"
       aria-label="Toggle sidebar"
       aria-pressed={visible}
-      title="Toggle sidebar (⌘B)"
+      title={`Toggle sidebar (${displayChord("toggle-sidebar")})`}
       onClick={onToggle}
     >
       <svg
