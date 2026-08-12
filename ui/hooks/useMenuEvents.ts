@@ -1,33 +1,15 @@
 import { useEffect, useRef } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-
-interface MenuHandlers {
-  onOpen: () => void;
-  onSave: () => void;
-  onSaveAs: () => void;
-  onToggleSidebar: () => void;
-  onToggleOutline: () => void;
-  onFind: () => void;
-  onReplace: () => void;
-}
-
-const MENU_EVENTS: ReadonlyArray<[string, keyof MenuHandlers]> = [
-  ["menu-open", "onOpen"],
-  ["menu-save", "onSave"],
-  ["menu-save-as", "onSaveAs"],
-  ["menu-toggle-sidebar", "onToggleSidebar"],
-  ["menu-toggle-outline", "onToggleOutline"],
-  ["menu-find", "onFind"],
-  ["menu-replace", "onReplace"],
-];
+import { MENU_EVENT_SHORTCUTS, menuEventName, type ShortcutHandlers } from "../utils/shortcuts";
 
 /**
- * Bridge native menu items to frontend handlers. The Rust menu handler emits
- * these events to the focused window only (src-tauri/src/menu.rs), so the
- * listener must be window-scoped — a global listen() receives every window's
- * events regardless of the emit target.
+ * Bridge native menu items to frontend handlers, for every registry shortcut
+ * with an event-emitting menu item (ui/utils/shortcuts.ts). The Rust menu
+ * handler emits these events to the focused window only
+ * (src-tauri/src/menu.rs), so the listener must be window-scoped — a global
+ * listen() receives every window's events regardless of the emit target.
  */
-export function useMenuEvents(handlers: MenuHandlers) {
+export function useMenuEvents(handlers: ShortcutHandlers) {
   const ref = useRef(handlers);
   useEffect(() => {
     ref.current = handlers;
@@ -35,9 +17,9 @@ export function useMenuEvents(handlers: MenuHandlers) {
 
   useEffect(() => {
     const win = getCurrentWindow();
-    const unlistens = MENU_EVENTS.map(([event, handler]) =>
-      win.listen(event, () => {
-        ref.current[handler]();
+    const unlistens = MENU_EVENT_SHORTCUTS.map((shortcut) =>
+      win.listen(menuEventName(shortcut.id), () => {
+        ref.current[shortcut.id]();
       })
     );
     return () => {

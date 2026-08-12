@@ -17,6 +17,7 @@ import { useSearch } from "./hooks/useSearch";
 import { useToc } from "./hooks/useToc";
 import { useWindowClose } from "./hooks/useWindowClose";
 import { promptUnsavedChanges } from "./utils/unsavedChanges";
+import type { ShortcutHandlers } from "./utils/shortcuts";
 import { captureEditorPosition } from "./utils/editorPosition";
 import type { EditorPosition } from "./utils/editorPosition";
 import type { EditorHandle } from "./types/editor";
@@ -183,29 +184,24 @@ function App() {
     handleReplaceAll,
   } = useSearch({ editorRef });
 
-  useKeyboardShortcuts({
-    onSave: handleSave,
-    onSaveAs: handleSaveAs,
-    onOpen: handleOpen,
-    onNewWindow: handleNewWindow,
-    onToggleSourceMode: handleToggleSourceMode,
-    onSearch: openSearch,
-    onReplace: openReplace,
-    onFindNext: handleNext,
-    onFindPrev: handlePrev,
-    onToggleSidebar: handleToggleSidebar,
-    onToggleOutline: handleToggleOutline,
-  });
+  // One handler per registry shortcut; keyboard chords and menu items
+  // dispatch through the same map (ui/utils/shortcuts.ts).
+  const shortcutHandlers: ShortcutHandlers = {
+    "new-window": handleNewWindow,
+    open: handleOpen,
+    save: handleSave,
+    "save-as": handleSaveAs,
+    find: openSearch,
+    replace: openReplace,
+    "find-next": handleNext,
+    "find-prev": handlePrev,
+    "toggle-source-mode": handleToggleSourceMode,
+    "toggle-sidebar": handleToggleSidebar,
+    "toggle-outline": handleToggleOutline,
+  };
 
-  useMenuEvents({
-    onOpen: handleOpen,
-    onSave: handleSave,
-    onSaveAs: handleSaveAs,
-    onToggleSidebar: handleToggleSidebar,
-    onToggleOutline: handleToggleOutline,
-    onFind: openSearch,
-    onReplace: openReplace,
-  });
+  useKeyboardShortcuts(shortcutHandlers);
+  useMenuEvents(shortcutHandlers);
 
   useWindowClose({
     isModified,

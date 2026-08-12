@@ -9,25 +9,15 @@ vi.mock("@tauri-apps/api/window", () => ({
 }));
 
 import { useMenuEvents } from "../../hooks/useMenuEvents";
-
-function makeHandlers() {
-  return {
-    onOpen: vi.fn(),
-    onSave: vi.fn(),
-    onSaveAs: vi.fn(),
-    onToggleSidebar: vi.fn(),
-    onToggleOutline: vi.fn(),
-    onFind: vi.fn(),
-    onReplace: vi.fn(),
-  };
-}
+import { menuEventName } from "../../utils/shortcuts";
+import { makeShortcutHandlers } from "../mocks/shortcuts";
 
 describe("useMenuEvents", () => {
   beforeEach(resetTauriMocks);
   afterEach(cleanup);
 
   it("registers a listener for each menu event", () => {
-    renderHook(() => useMenuEvents(makeHandlers()));
+    renderHook(() => useMenuEvents(makeShortcutHandlers()));
 
     for (const event of [
       "menu-open",
@@ -42,16 +32,24 @@ describe("useMenuEvents", () => {
     }
   });
 
+  it("does not listen for shortcuts without an event-emitting menu item", () => {
+    renderHook(() => useMenuEvents(makeShortcutHandlers()));
+
+    // new-window is handled natively in Rust; find-next has no menu item.
+    expect(listen).not.toHaveBeenCalledWith(menuEventName("new-window"), expect.any(Function));
+    expect(listen).not.toHaveBeenCalledWith(menuEventName("find-next"), expect.any(Function));
+  });
+
   it.each([
-    ["menu-open", "onOpen"],
-    ["menu-save", "onSave"],
-    ["menu-save-as", "onSaveAs"],
-    ["menu-toggle-sidebar", "onToggleSidebar"],
-    ["menu-toggle-outline", "onToggleOutline"],
-    ["menu-find", "onFind"],
-    ["menu-replace", "onReplace"],
+    ["menu-open", "open"],
+    ["menu-save", "save"],
+    ["menu-save-as", "save-as"],
+    ["menu-toggle-sidebar", "toggle-sidebar"],
+    ["menu-toggle-outline", "toggle-outline"],
+    ["menu-find", "find"],
+    ["menu-replace", "replace"],
   ] as const)("%s dispatches to %s only", async (event, handlerName) => {
-    const handlers = makeHandlers();
+    const handlers = makeShortcutHandlers();
     renderHook(() => useMenuEvents(handlers));
 
     await fireListeners(event);
@@ -66,8 +64,8 @@ describe("useMenuEvents", () => {
   });
 
   it("uses the latest handlers after rerender", async () => {
-    const first = makeHandlers();
-    const second = makeHandlers();
+    const first = makeShortcutHandlers();
+    const second = makeShortcutHandlers();
     const { rerender } = renderHook(({ handlers }) => useMenuEvents(handlers), {
       initialProps: { handlers: first },
     });
@@ -75,7 +73,7 @@ describe("useMenuEvents", () => {
     rerender({ handlers: second });
     await fireListeners("menu-save");
 
-    expect(first.onSave).not.toHaveBeenCalled();
-    expect(second.onSave).toHaveBeenCalledOnce();
+    expect(first.save).not.toHaveBeenCalled();
+    expect(second.save).toHaveBeenCalledOnce();
   });
 });
