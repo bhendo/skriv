@@ -7,6 +7,7 @@ vi.mock("@tauri-apps/api/core", () => ({ invoke }));
 vi.mock("@tauri-apps/api/event", () => ({ listen }));
 
 import { Sidebar, type DirEntryInfo } from "../../components/Sidebar";
+import type { TocHeading } from "../../types/toc";
 
 const FOLDER_FILES: DirEntryInfo[] = [
   { name: "alpha.md", path: "/notes/alpha.md" },
@@ -21,13 +22,28 @@ function mockCommands({ folderFiles = FOLDER_FILES, recentFiles = [] as string[]
   });
 }
 
+function renderSidebar(overrides: Partial<React.ComponentProps<typeof Sidebar>> = {}) {
+  return render(
+    <Sidebar
+      currentPath="/notes/current.md"
+      onFileSelect={vi.fn()}
+      activeTab="files"
+      onTabChange={vi.fn()}
+      headings={[]}
+      activeHeadingIndex={-1}
+      onHeadingSelect={vi.fn()}
+      {...overrides}
+    />
+  );
+}
+
 describe("Sidebar", () => {
   beforeEach(resetTauriMocks);
   afterEach(cleanup);
 
   it("lists folder files with the current file highlighted", async () => {
     mockCommands();
-    render(<Sidebar currentPath="/notes/current.md" onFileSelect={vi.fn()} />);
+    renderSidebar();
 
     const current = await screen.findByRole("button", { name: "current.md" });
     const sibling = await screen.findByRole("button", { name: "alpha.md" });
@@ -38,7 +54,7 @@ describe("Sidebar", () => {
 
   it("hides the folder section when no file is open", async () => {
     mockCommands({ recentFiles: ["/notes/old.md"] });
-    render(<Sidebar currentPath={null} onFileSelect={vi.fn()} />);
+    renderSidebar({ currentPath: null });
 
     await screen.findByRole("button", { name: "old.md" });
 
@@ -49,7 +65,7 @@ describe("Sidebar", () => {
   it("calls onFileSelect with the clicked file's path", async () => {
     mockCommands();
     const onFileSelect = vi.fn();
-    render(<Sidebar currentPath="/notes/current.md" onFileSelect={onFileSelect} />);
+    renderSidebar({ onFileSelect });
 
     await userEvent.click(await screen.findByRole("button", { name: "alpha.md" }));
 
@@ -59,7 +75,7 @@ describe("Sidebar", () => {
   it("shows recents without the current file and selects on click", async () => {
     mockCommands({ recentFiles: ["/notes/current.md", "/elsewhere/history.md"] });
     const onFileSelect = vi.fn();
-    render(<Sidebar currentPath="/notes/current.md" onFileSelect={onFileSelect} />);
+    renderSidebar({ onFileSelect });
 
     const recent = await screen.findByRole("button", { name: "history.md" });
     // current.md appears once (folder section) — not repeated under Recent
@@ -71,14 +87,14 @@ describe("Sidebar", () => {
 
   it("shows an empty state when there are no recents", async () => {
     mockCommands({ recentFiles: [] });
-    render(<Sidebar currentPath="/notes/current.md" onFileSelect={vi.fn()} />);
+    renderSidebar();
 
     expect(await screen.findByText("No recent files")).not.toBeNull();
   });
 
   it("updates recents from the recents-changed payload", async () => {
     mockCommands({ recentFiles: [] });
-    render(<Sidebar currentPath={null} onFileSelect={vi.fn()} />);
+    renderSidebar({ currentPath: null });
     await screen.findByText("No recent files");
 
     await act(async () => {
@@ -90,8 +106,45 @@ describe("Sidebar", () => {
 
   it("tolerates null command results (e2e mock default)", async () => {
     invoke.mockResolvedValue(null);
-    render(<Sidebar currentPath="/notes/current.md" onFileSelect={vi.fn()} />);
+    renderSidebar();
 
     expect(await screen.findByText("No recent files")).not.toBeNull();
+  });
+
+  it("renders Files and Outline tabs with the active tab selected", async () => {
+    mockCommands();
+    renderSidebar();
+
+    const filesTab = screen.getByRole("tab", { name: "Files" });
+    const outlineTab = screen.getByRole("tab", { name: "Outline" });
+
+    expect(filesTab.getAttribute("aria-selected")).toBe("true");
+    expect(outlineTab.getAttribute("aria-selected")).toBe("false");
+    await screen.findByText("No recent files");
+  });
+
+  it("fires onTabChange when a tab is clicked", async () => {
+    mockCommands();
+    const onTabChange = vi.fn();
+    renderSidebar({ onTabChange });
+
+    await userEvent.click(screen.getByRole("tab", { name: "Outline" }));
+
+    expect(onTabChange).toHaveBeenCalledWith("outline");
+  });
+
+  it("shows the outline panel instead of file sections on the outline tab", async () => {
+    mockCommands({ recentFiles: ["/notes/old.md"] });
+    const headings: TocHeading[] = [{ level: 1, text: "Intro", pos: 0 }];
+    const onHeadingSelect = vi.fn();
+    renderSidebar({ activeTab: "outline", headings, onHeadingSelect });
+
+    expect(screen.queryByText("Recent")).toBeNull();
+    expect(screen.queryByText("current.md")).toBeNull();
+    // The directory scan is gated on the Files tab
+    expect(invoke).not.toHaveBeenCalledWith("list_markdown_files", expect.anything());
+
+    await userEvent.click(screen.getByRole("button", { name: "Intro" }));
+    expect(onHeadingSelect).toHaveBeenCalledWith(headings[0]);
   });
 });

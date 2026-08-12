@@ -8,6 +8,7 @@ interface ShortcutHandlers {
   onToggleSourceMode?: () => void;
   onSearch?: () => void;
   onToggleSidebar?: () => void;
+  onToggleOutline?: () => void;
 }
 
 export function useKeyboardShortcuts(handlers: ShortcutHandlers) {
@@ -35,6 +36,13 @@ export function useKeyboardShortcuts(handlers: ShortcutHandlers) {
       if (e.key === "b" && !e.shiftKey) {
         e.preventDefault();
         ref.current.onToggleSidebar?.();
+        return;
+      }
+
+      // toLowerCase: with Shift held, key can report as "L" on real hardware
+      if (e.shiftKey && e.key.toLowerCase() === "l") {
+        e.preventDefault();
+        ref.current.onToggleOutline?.();
         return;
       }
 

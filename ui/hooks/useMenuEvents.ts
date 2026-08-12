@@ -6,6 +6,7 @@ interface MenuHandlers {
   onSave: () => void;
   onSaveAs: () => void;
   onToggleSidebar: () => void;
+  onToggleOutline: () => void;
 }
 
 const MENU_EVENTS: ReadonlyArray<[string, keyof MenuHandlers]> = [
@@ -13,6 +14,7 @@ const MENU_EVENTS: ReadonlyArray<[string, keyof MenuHandlers]> = [
   ["menu-save", "onSave"],
   ["menu-save-as", "onSaveAs"],
   ["menu-toggle-sidebar", "onToggleSidebar"],
+  ["menu-toggle-outline", "onToggleOutline"],
 ];
 
 /**

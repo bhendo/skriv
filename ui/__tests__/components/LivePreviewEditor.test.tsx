@@ -61,14 +61,15 @@ vi.mock("@codemirror/autocomplete", () => ({
   completionKeymap: [],
 }));
 
-vi.mock("@lezer/markdown", () => ({
-  GFM: {},
-}));
-
 vi.mock("../../live-preview", () => ({
   mermaidPreviewExtension: {},
   tablePreviewExtension: {},
   livePreviewFormattingKeymap: [],
+}));
+
+vi.mock("../../markdown/parser", () => ({
+  markdownSyntaxExtensions: [],
+  sourceMarkdownParser: { parse: vi.fn() },
 }));
 
 vi.mock("@prosemark/core", () => ({

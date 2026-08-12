@@ -5,7 +5,8 @@
   --skriv-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
   --skriv-font-mono: "SF Mono", "Fira Code", "Fira Mono", Menlo, monospace;
   --skriv-editor-max-width: 860px;
-  --skriv-editor-padding: 20px 60px;
+  --skriv-editor-padding-y: 20px;
+  --skriv-editor-padding-x: 60px;
   --skriv-line-height: 1.7;
   --skriv-code-font-size: 0.9em;
 }
@@ -38,9 +39,14 @@ body,
 
 .source-editor,
 .live-preview-editor {
-  max-width: var(--skriv-editor-max-width);
+  /* border-box so height: 100% includes the vertical padding — content-box
+     made the box 40px taller than the pane, giving the wrapper a second
+     scrollbar over the editor's own (.cm-scroller must stay the only scroll
+     container). max-width compensates to keep the prose column width. */
+  box-sizing: border-box;
+  max-width: calc(var(--skriv-editor-max-width) + 2 * var(--skriv-editor-padding-x));
   margin: 0 auto;
-  padding: var(--skriv-editor-padding);
+  padding: var(--skriv-editor-padding-y) var(--skriv-editor-padding-x);
   height: 100%;
 }
 
@@ -416,6 +422,37 @@ body,
 .sidebar-toggle:hover {
   background: var(--skriv-color-surface-low, #f5f5f5);
   color: var(--skriv-color-on-surface, #333);
+}
+
+.sidebar-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.sidebar-tab {
+  flex: 1;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--skriv-color-on-surface-variant, #666);
+  cursor: pointer;
+  padding: 4px 8px;
+  font-family: var(--skriv-font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.sidebar-tab:hover {
+  background: var(--skriv-color-surface-low, #f5f5f5);
+  color: var(--skriv-color-on-surface, #333);
+}
+
+.sidebar-tab.active {
+  background: var(--skriv-color-surface-low, #f5f5f5);
+  color: var(--skriv-color-primary, #4183c4);
 }
 
 .sidebar-section {

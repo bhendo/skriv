@@ -1,14 +1,12 @@
 import { Decoration, EditorView, WidgetType } from "@codemirror/view";
-import { foldableSyntaxFacet, prosemarkMarkdownSyntaxExtensions } from "@prosemark/core";
-import { parser as markdownParser, GFM } from "@lezer/markdown";
+import { foldableSyntaxFacet } from "@prosemark/core";
 import type { SyntaxNode } from "@lezer/common";
+import { sourceMarkdownParser } from "../markdown/parser";
 import { focusWidgetSource, fullLineRange } from "./fold-widget";
 
-// Standalone parser so the widget renders from the table's source text alone
-// (a pure source → DOM function, unit-testable without an editor instance).
-// Configured like the editor's markdown language so cell content parses
-// identically inside and outside tables.
-const tableParser = markdownParser.configure([GFM, prosemarkMarkdownSyntaxExtensions]);
+// The shared standalone parser lets the widget render from the table's source
+// text alone (a pure source → DOM function, unit-testable without an editor
+// instance), with cell content parsing identically inside and outside tables.
 
 export type ColumnAlignment = "left" | "center" | "right" | null;
 
@@ -100,7 +98,7 @@ export function renderTablePreview(source: string): HTMLElement {
   const dom = document.createElement("div");
   dom.className = "cm-table-preview";
 
-  const tree = tableParser.parse(source);
+  const tree = sourceMarkdownParser.parse(source);
   const tableNode = tree.topNode.getChild("Table");
   if (!tableNode) {
     const pre = document.createElement("pre");

@@ -18,7 +18,6 @@ import {
 import { search } from "@codemirror/search";
 import { markdown } from "@codemirror/lang-markdown";
 import { languages } from "@codemirror/language-data";
-import { GFM } from "@lezer/markdown";
 import {
   defaultHideExtensions,
   defaultFoldableSyntaxExtensions,
@@ -29,13 +28,13 @@ import {
   softIndentExtension,
   codeBlockDecorationsExtension,
   prosemarkBaseThemeSetup,
-  prosemarkMarkdownSyntaxExtensions,
 } from "@prosemark/core";
 import {
   mermaidPreviewExtension,
   tablePreviewExtension,
   livePreviewFormattingKeymap,
 } from "../live-preview";
+import { markdownSyntaxExtensions } from "../markdown/parser";
 import type { EditorHandle } from "../types/editor";
 
 interface LivePreviewEditorProps {
@@ -112,7 +111,7 @@ export const LivePreviewEditor = forwardRef<EditorHandle, LivePreviewEditorProps
             EditorView.lineWrapping,
             markdown({
               codeLanguages: languages,
-              extensions: [GFM, prosemarkMarkdownSyntaxExtensions],
+              extensions: markdownSyntaxExtensions,
             }),
             EditorView.updateListener.of((update) => {
               if (update.docChanged) {

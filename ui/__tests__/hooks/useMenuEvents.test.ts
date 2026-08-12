@@ -16,6 +16,7 @@ function makeHandlers() {
     onSave: vi.fn(),
     onSaveAs: vi.fn(),
     onToggleSidebar: vi.fn(),
+    onToggleOutline: vi.fn(),
   };
 }
 
@@ -26,7 +27,13 @@ describe("useMenuEvents", () => {
   it("registers a listener for each menu event", () => {
     renderHook(() => useMenuEvents(makeHandlers()));
 
-    for (const event of ["menu-open", "menu-save", "menu-save-as", "menu-toggle-sidebar"]) {
+    for (const event of [
+      "menu-open",
+      "menu-save",
+      "menu-save-as",
+      "menu-toggle-sidebar",
+      "menu-toggle-outline",
+    ]) {
       expect(listen).toHaveBeenCalledWith(event, expect.any(Function));
     }
   });
@@ -36,6 +43,7 @@ describe("useMenuEvents", () => {
     ["menu-save", "onSave"],
     ["menu-save-as", "onSaveAs"],
     ["menu-toggle-sidebar", "onToggleSidebar"],
+    ["menu-toggle-outline", "onToggleOutline"],
   ] as const)("%s dispatches to %s only", async (event, handlerName) => {
     const handlers = makeHandlers();
     renderHook(() => useMenuEvents(handlers));
