@@ -4,6 +4,13 @@ Recurring bugs, root causes, and solutions. Focus on what was learned.
 
 ## Entries
 
+### 2026-08-12 - Mode-toggle scroll restore snapped to block starts (worst with large tables)
+
+- **Issue**: After the #65 position restore landed, toggling source → live preview rendered "a bit off": the viewport jumped to the top of whatever block was at the viewport top, most visibly snapping to the start of a large table the user had scrolled partway past. Cursor position was correct.
+- **Root Cause**: The capture stored only the top block's start offset and restored with `scrollIntoView(pos, {y:"start"})`, discarding the partial scroll into that block. Block granularity differs across modes — a table is many raw lines in source but ONE fold-widget block in live preview — so the lost offset could be nearly the whole table height. CodeMirror's own `scrollSnapshot()` has the same flaw for this case (it anchors line + pixel offset; the line resolves to the whole widget block). A first fix that applied the captured block's height-fraction to the target block was still wrong in the row→widget direction (sub-row fraction applied to the whole widget); the e2e round-trip caught it landing at row 3 instead of ~11.
+- **Solution**: `ScrollAnchor` = top block's doc range + fractional depth. Restore reduces it to a virtual doc position (`from + frac * (to - from)`) and places that position proportionally by doc offset within whatever block contains it in the target view (`anchorScrollTop` in `ui/utils/editorPosition.ts`); `holdScrollAnchor` re-applies it over a few frames while fold widgets materialize, cancelling on user input or unmount.
+- **Prevention**: Any scroll save/restore across the two editors must be granularity-proof: never anchor a bare document position when the range around it can collapse into (or expand out of) a single fold-widget block. Doc-offset proportionality is the workable approximation (uniform table rows map row N → row N).
+
 ### 2026-08-12 - Double scrollbar over the editor pane
 
 - **Issue**: Two nested scrollbars on the content area (fullscreen or not, unrelated to the sidebar): the inner one scrolls the document, the outer one scrolls the editor box itself by ~40px

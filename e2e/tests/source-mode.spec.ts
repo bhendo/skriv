@@ -150,6 +150,79 @@ test.describe("Position preserved across mode toggle (#65)", () => {
       page.locator(".live-preview-editor .cm-line", { hasText: headingLine(1) })
     ).not.toBeInViewport();
   });
+
+  test("partial scroll into a large table survives the granularity change", async ({
+    page,
+    loadApp,
+  }) => {
+    // A table is many raw lines in source mode but ONE fold-widget block in
+    // live preview; a position-only anchor would snap to the table start.
+    let doc = "# Title\n\nIntro paragraph.\n\n";
+    doc += "| Col A | Col B | Col C |\n| --- | --- | --- |\n";
+    for (let r = 1; r <= 30; r++) {
+      doc += `| cell a${r} | cell b${r} | cell c${r} |\n`;
+    }
+    doc += "\n";
+    for (let p = 1; p <= 20; p++) {
+      doc += `Paragraph ${p} below the table.\n\n`;
+    }
+    await loadApp({ openedFile: "/tmp/table.md", fileContent: doc });
+
+    // Cursor below the table so it folds in live preview.
+    await page.locator(".live-preview-editor .cm-line", { hasText: /^Paragraph 3 below/ }).click();
+    await page.keyboard.press("End");
+
+    await page.keyboard.press(`${MOD}+m`);
+    await expect(page.locator(".source-editor .cm-editor")).toBeVisible({ timeout: 5_000 });
+
+    // Scroll so the viewport top is well inside the raw table.
+    await page.locator(".source-editor .cm-scroller").evaluate((el) => {
+      el.scrollTop = 400;
+    });
+    await expect(
+      page.locator(".source-editor .cm-line", { hasText: /^\| cell a1 \|/ })
+    ).not.toBeInViewport();
+
+    await page.keyboard.press(`${MOD}+m`);
+    await expect(page.locator(".live-preview-editor .cm-content")).toBeVisible({ timeout: 5_000 });
+
+    // The rendered table's top must sit well above the viewport top — the
+    // partial scroll into the table carried over instead of snapping to its
+    // start (which would put the widget top at ~0).
+    await expect
+      .poll(
+        () =>
+          page.locator(".live-preview-editor .cm-scroller").evaluate((el) => {
+            const widget = el.querySelector(".cm-table-preview");
+            if (!widget) return 0;
+            return widget.getBoundingClientRect().top - el.getBoundingClientRect().top;
+          }),
+        { timeout: 5_000 }
+      )
+      .toBeLessThan(-100);
+
+    // And back: the widget block expands to raw lines again, with the
+    // viewport top landing in the mid-table area instead of snapping to
+    // the first or last row.
+    await page.keyboard.press(`${MOD}+m`);
+    await expect(page.locator(".source-editor .cm-editor")).toBeVisible({ timeout: 5_000 });
+    await expect
+      .poll(
+        () =>
+          page.locator(".source-editor .cm-scroller").evaluate((el) => {
+            const top = el.getBoundingClientRect().top;
+            for (const line of el.querySelectorAll(".cm-line")) {
+              if (line.getBoundingClientRect().bottom > top + 1) {
+                const match = /^\| cell a(\d+) \|/.exec(line.textContent ?? "");
+                return match ? Number(match[1]) : -1;
+              }
+            }
+            return -1;
+          }),
+        { timeout: 5_000 }
+      )
+      .toBeGreaterThan(4);
+  });
 });
 
 test.describe("Source editor features", () => {
