@@ -2,6 +2,13 @@
 
 ## Entries
 
+### 2026-08-12 - #33: Keyboard shortcut cheatsheet
+
+- **Status**: Completed on branch `feature/33-shortcut-cheatsheet` (not yet merged)
+- **Description**: Cmd+/ (Ctrl+/ elsewhere) or Help ▸ Keyboard Shortcuts toggles a modal dialog listing all shortcuts; Esc, backdrop click, or ✕ dismiss it. The registry (`ui/utils/shortcuts.ts`) gains a required `group` field so the sheet's sections derive from the single source of truth; formatting rows derive from new `FORMATTING_SHORTCUTS` in `ui/live-preview/keymap.ts`, which now also *generates* `livePreviewFormattingKeymap` (label ↔ keys ↔ command declared once; the keymap parity test moved to the ProseMark package boundary, where derivation is impossible). New `ui/utils/editorKeymap.ts` exports `appDefaultKeymap` — CodeMirror's defaultKeymap minus bindings on registry chords, shared by both editors — because markdown defines HTML block-comment tokens, so toggleComment (Mod-/) would otherwise claim Cmd+/ inside the editor. menu.rs gains a Help submenu (`set_as_help_menu_for_nsapp` on macOS) with the parity-tested item; `displayEditorChord` renders CodeMirror key syntax via the same formatter as `displayChord`.
+- **URL**: https://github.com/bhendo/skriv/issues/33
+- **Notes**: The chord grammar in shortcuts.test.ts allows "/" only without Alt (Alt matchers derive `e.code` "Key\<letter\>", which has no punctuation form; generalize parseChord with a punctuation→code map if a chord like Cmd+, ever lands). `.search-btn` renamed to `.icon-btn`, now shared by SearchBar and the cheatsheet close button. Pre-existing bug found and e2e-verified while choosing the chord, **not fixed here**: Cmd+B with editor focus fires both ProseMark bold and the window-level toggle-sidebar handler — CodeMirror keymaps preventDefault but don't stopPropagation, and useKeyboardShortcuts doesn't check `e.defaultPrevented`; every registry chord that overlaps an editor binding double-fires this way. Needs a design call (bold-wins with the guard vs. re-chording the sidebar). Issue #33's shortcut list predates the #68 pivot (Cmd+Shift+E syntax toggling no longer exists).
+
 ### 2026-08-12 - #78: Single frontend shortcut registry with menu.rs parity check
 
 - **Status**: Completed on branch `refactor/78-shortcut-registry`
