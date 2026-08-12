@@ -2,6 +2,13 @@
 
 ## Entries
 
+### 2026-08-12 - #23: Find and replace
+
+- **Status**: Completed on branch `feature/23-find-and-replace` (not yet merged)
+- **Description**: Replace row added to the search bar: Cmd+Alt+F opens it (Ctrl+H on Windows/Linux; Cmd+H deliberately left to macOS Hide), a chevron on the bar toggles it, Enter in the replace field replaces, Replace/All buttons (All is one undo step via CM `replaceAll`). Edit menu gains Find…/Find and Replace…. Cmd+G / Cmd+Shift+G find next/previous. Match highlighting was missing entirely — the built-in highlighter is panel-gated — so new `ui/utils/searchHighlight.ts` provides a viewport-scanning ViewPlugin, exported with `search()` as one `searchExtensions` bundle (ADR-004); the active match gets a stronger tint via new `--skriv-color-search-*` vars (light + dark). New `ui/utils/platform.ts` `isMacPlatform()` seam; tooltips show platform-correct chords. Replace text lives only in `SearchBar` and rides in at invocation, so typing in the replace field costs no editor transactions.
+- **URL**: https://github.com/bhendo/skriv/issues/23
+- **Notes**: First Replace activation selects the match, the second replaces it (CM `replaceNext` semantics, same as VS Code). Alt+F reports `key: "ƒ"` on mac hardware — the hook matches on `e.code`. Deferred from the simplify review: `countMatches` rescans the whole document on navigation (the counter's "next match from cursor" semantics depend on it; cheap at real document sizes), and match iteration exists in both `countMatches` and `searchHighlight` — unify if regex/whole-word search ever lands. Relates #78 (shortcut registry) for the tooltip/menu/hook chord triplication.
+
 ### 2026-08-12 - #65: Preserve cursor/scroll position across source-mode toggle
 
 - **Status**: Completed on branch `feature/65-preserve-editor-position`
