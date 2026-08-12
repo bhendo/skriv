@@ -4,6 +4,13 @@ Recurring bugs, root causes, and solutions. Focus on what was learned.
 
 ## Entries
 
+### 2026-08-12 - Double scrollbar over the editor pane
+
+- **Issue**: Two nested scrollbars on the content area (fullscreen or not, unrelated to the sidebar): the inner one scrolls the document, the outer one scrolls the editor box itself by ~40px
+- **Root Cause**: `.source-editor`/`.live-preview-editor` had `height: 100%` plus `padding: 20px 60px` under default `content-box` sizing, so the editor box was exactly 40px (the vertical padding) taller than its pane; the wrapper div's `overflow: auto` then grew a second scrollbar over CodeMirror's own `.cm-scroller`. Pre-existing on main, surfaced during #19 testing. Measured before fixing: wrapper scrollHeight 760 vs clientHeight 720
+- **Solution**: `box-sizing: border-box` on the editor containers, with `max-width: calc(var(--skriv-editor-max-width) + 2 * var(--skriv-editor-padding-x))` compensating so the prose column keeps its width (the padding var split into `-x`/`-y` components); the wrapper is now `overflow: hidden`
+- **Prevention**: `.cm-scroller` is the only intended scroll container (key_facts.md). Any ancestor with `overflow: auto` that gains a few px of overflow will silently stack a second scrollbar — keep editor ancestors `overflow: hidden`, and remember `height: 100%` + padding needs `border-box`
+
 ### 2026-08-11 - Window-targeted Tauri events delivered to every window
 
 - **Issue**: With multiple windows open, a file-association/CLI open loaded the file into every window, not just the blank one ("file-opened"); the same broadcast pattern would have made a File > Save menu item save all windows and quit-requested fire N times per window
