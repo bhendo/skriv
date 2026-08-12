@@ -85,8 +85,14 @@ pub fn init(app: &tauri::App) -> tauri::Result<()> {
         "CmdOrCtrl+B",
     )
     .build(handle)?;
+    let toggle_outline = accel(
+        MenuItemBuilder::with_id("toggle-outline", "Toggle Outline"),
+        "CmdOrCtrl+Shift+L",
+    )
+    .build(handle)?;
     let view_menu = SubmenuBuilder::new(handle, "View")
         .item(&toggle_sidebar)
+        .item(&toggle_outline)
         .build()?;
 
     let window_menu = SubmenuBuilder::new(handle, "Window")
@@ -114,6 +120,7 @@ pub fn init(app: &tauri::App) -> tauri::Result<()> {
         "save" => emit_to_focused(app, "menu-save"),
         "save-as" => emit_to_focused(app, "menu-save-as"),
         "toggle-sidebar" => emit_to_focused(app, "menu-toggle-sidebar"),
+        "toggle-outline" => emit_to_focused(app, "menu-toggle-outline"),
         _ => {}
     });
 

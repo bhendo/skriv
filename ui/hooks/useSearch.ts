@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from "react";
 import type { EditorHandle } from "../types/editor";
+import { useEditorView } from "./useEditorView";
 import {
   SearchQuery,
   setSearchQuery,
@@ -50,9 +51,7 @@ export function useSearch({ editorRef }: UseSearchOptions) {
   const [focusKey, setFocusKey] = useState(0);
   const caseSensitiveRef = useRef(false);
 
-  const getView = useCallback(() => {
-    return editorRef.current?.getCodeMirrorView() ?? null;
-  }, [editorRef]);
+  const getView = useEditorView(editorRef);
 
   const getSelectedText = useCallback((): string => {
     const view = getView();

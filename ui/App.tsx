@@ -13,9 +13,11 @@ import { useFile } from "./hooks/useFile";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { useMenuEvents } from "./hooks/useMenuEvents";
 import { useSearch } from "./hooks/useSearch";
+import { useToc } from "./hooks/useToc";
 import { useWindowClose } from "./hooks/useWindowClose";
 import { promptUnsavedChanges } from "./utils/unsavedChanges";
 import type { EditorHandle } from "./types/editor";
+import type { SidebarTab } from "./types/toc";
 
 function App() {
   const editorRef = useRef<EditorHandle>(null);
@@ -34,6 +36,7 @@ function App() {
 
   const [showReloadBanner, setShowReloadBanner] = useState(false);
   const [sidebarVisible, setSidebarVisible] = useState(true);
+  const [sidebarTab, setSidebarTab] = useState<SidebarTab>("files");
   const [sourceMode, setSourceMode] = useState(false);
   const [editorSnapshot, setEditorSnapshot] = useState<string | null>(null);
   const isModifiedRef = useRef(isModified);
@@ -45,9 +48,17 @@ function App() {
     pathRef.current = path;
   }, [path]);
 
+  const { headings, activeIndex, navigateToHeading, notifyDocChanged } = useToc({
+    editorRef,
+    sourceMode,
+    content,
+    enabled: sidebarVisible && sidebarTab === "outline",
+  });
+
   const handleChange = useCallback(() => {
     markModified();
-  }, [markModified]);
+    notifyDocChanged();
+  }, [markModified, notifyDocChanged]);
 
   const handleSaveAs = useCallback(
     async (markdown?: string): Promise<boolean> => {
@@ -120,6 +131,18 @@ function App() {
     setSidebarVisible((prev) => !prev);
   }, []);
 
+  // Three-state: hidden → show on Outline; on Files → switch; on Outline → hide.
+  const handleToggleOutline = useCallback(() => {
+    if (!sidebarVisible) {
+      setSidebarVisible(true);
+      setSidebarTab("outline");
+    } else if (sidebarTab !== "outline") {
+      setSidebarTab("outline");
+    } else {
+      setSidebarVisible(false);
+    }
+  }, [sidebarVisible, sidebarTab]);
+
   const handleToggleSourceMode = useCallback(() => {
     const markdown = editorRef.current?.getMarkdown();
     if (markdown !== undefined) {
@@ -149,6 +172,7 @@ function App() {
     onToggleSourceMode: handleToggleSourceMode,
     onSearch: openSearch,
     onToggleSidebar: handleToggleSidebar,
+    onToggleOutline: handleToggleOutline,
   });
 
   useMenuEvents({
@@ -156,6 +180,7 @@ function App() {
     onSave: handleSave,
     onSaveAs: handleSaveAs,
     onToggleSidebar: handleToggleSidebar,
+    onToggleOutline: handleToggleOutline,
   });
 
   useWindowClose({
@@ -220,7 +245,17 @@ function App() {
       />
       <div style={{ flex: 1, display: "flex", overflow: "hidden", position: "relative" }}>
         <SidebarToggle visible={sidebarVisible} onToggle={handleToggleSidebar} />
-        {sidebarVisible && <Sidebar currentPath={path} onFileSelect={handleOpenInPlace} />}
+        {sidebarVisible && (
+          <Sidebar
+            currentPath={path}
+            onFileSelect={handleOpenInPlace}
+            activeTab={sidebarTab}
+            onTabChange={setSidebarTab}
+            headings={headings}
+            activeHeadingIndex={activeIndex}
+            onHeadingSelect={navigateToHeading}
+          />
+        )}
         <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
           {isSearchOpen && (
             <SearchBar
@@ -236,7 +271,8 @@ function App() {
               onClose={closeSearch}
             />
           )}
-          <div style={{ height: "100%", overflow: "auto" }}>
+          {/* overflow hidden: .cm-scroller is the only intended scroll container */}
+          <div style={{ height: "100%", overflow: "hidden" }}>
             {sourceMode ? (
               <SourceEditor
                 ref={editorRef}

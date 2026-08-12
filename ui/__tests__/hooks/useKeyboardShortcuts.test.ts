@@ -82,4 +82,31 @@ describe("useKeyboardShortcuts", () => {
     // Should not throw
     fireKey("b", { metaKey: true });
   });
+
+  it("Cmd+Shift+L fires onToggleOutline", () => {
+    const onToggleOutline = vi.fn();
+    renderHook(() => useKeyboardShortcuts({ ...handlers, onToggleOutline }));
+
+    fireKey("l", { metaKey: true, shiftKey: true });
+
+    expect(onToggleOutline).toHaveBeenCalledOnce();
+  });
+
+  it("Cmd+Shift+L fires onToggleOutline when key reports uppercase", () => {
+    const onToggleOutline = vi.fn();
+    renderHook(() => useKeyboardShortcuts({ ...handlers, onToggleOutline }));
+
+    fireKey("L", { metaKey: true, shiftKey: true });
+
+    expect(onToggleOutline).toHaveBeenCalledOnce();
+  });
+
+  it("Cmd+L without Shift does nothing", () => {
+    const onToggleOutline = vi.fn();
+    renderHook(() => useKeyboardShortcuts({ ...handlers, onToggleOutline }));
+
+    fireKey("l", { metaKey: true });
+
+    expect(onToggleOutline).not.toHaveBeenCalled();
+  });
 });
