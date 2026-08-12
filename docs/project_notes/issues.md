@@ -2,6 +2,18 @@
 
 ## Entries
 
+### 2026-08-12 - #19: Outline tab in sidebar (TOC v2)
+
+- **Status**: Completed on branch `feature/19-toc-sidebar-v2` (not yet merged)
+- **Description**: TOC reimplemented post-pivot, replacing closed PR #66 with the Typora model: a Files/Outline tab bar in the existing sidebar (tab state in App, session-lifetime, unpersisted like sidebar visibility). New `ui/toc/extract.ts` — pure lezer parse with the tables.ts parser config, so the outline agrees with editor rendering (setext, closing-hash ATX, fences nested in lists all correct, unlike the old branch's regex). New `ui/hooks/useToc.ts` — extraction gated on outline-enabled, 200 ms debounce on keystrokes (via `handleChange`), immediate on open/Cmd+M/tab-enable; click-to-navigate dispatches selection + `scrollIntoView` (y:start, yMargin 50); scroll-spy listens on `view.scrollDOM` and probes a reading line 20% down the viewport with `lineBlockAtHeight`, bottom-of-scroll pins the last heading. `OutlinePanel.tsx` renders `.sidebar-item` buttons with per-level indent and `aria-current`. Cmd+Shift+L three-state toggle (hidden→show outline, files→switch, outline→hide) + View ▸ Toggle Outline menu item.
+- **URL**: https://github.com/bhendo/skriv/issues/19
+- **Notes**: No editor-component changes were needed: child effects run before parent effects, so App-level `[enabled, sourceMode]`-keyed effects always find the freshly built EditorView after a Cmd+M swap, and `onChange` (docChanged) already reaches App. Salvaged from the old branch: `TocHeading` shape, `headingsEqual`, indent formula, rAF scroll throttle, extraction test cases. Follow-ups: strip inline emphasis markers from outline text; tab/visibility persistence (existing deferred item); from the polish review — move the prose max-width from the editor containers to the content layer so `.cm-scroller` spans the full pane (scrollbar and wheel at the pane edge instead of the column edge; needs an answer for the source editor's gutter), and consider extracting headings from the editor's incremental `syntaxTree` instead of a standalone full parse if large-document typing jank ever shows up (trade-off: `ensureSyntaxTree` completeness vs the pure-function unit tests).
+
+### 2026-08-11 - Triage: closed stale pre-pivot PRs #55 and #66
+
+- **Status**: Completed
+- **Description**: Both PRs predated the #68 editor pivot and targeted deleted code. PR #55 (robinsandborg, task-list rendering/marker editing) improved `ui/plugins/list-source/`, removed with the Milkdown path; closed with a note inviting a fresh issue/PR against the live-preview core (its `test-results/` gitignore change had already landed separately; its CLAUDE.md→AGENTS.md rename did not). PR #66 (TOC sidebar) was built for the dual PM/CM architecture; closed, issue #19 stays open. `feature/19-toc-sidebar` branch kept — `extract-cm.ts` and `TocSidebar.tsx` are reusable references for a post-pivot implementation, which also needs a design call on how a TOC coexists with the new file sidebar.
+
 ### 2026-08-11 - Native File menu + left sidebar (folder files & recents)
 
 - **Status**: Completed on branch `feature/file-menu-and-sidebar` (not yet merged)

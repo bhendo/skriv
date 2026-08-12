@@ -13,7 +13,8 @@ pivot, ADR-003; see git history if archaeology is ever needed.)
 - **Widget lifecycle**: CodeMirror reuses widget DOM when `eq()` matches; `destroy(dom)` fires for dropped tiles — pair module-level WeakMap cleanups with it.
 - **ProseMark theming**: all colors flow through `--pm-*` CSS variables set on `.cm-content` (see `ui/theme/skriv.css`); `--font` is its prose font hook.
 - **searchKeymap exclusion**: Cmd+F belongs to the shared SearchBar; the search() extension is installed without its keymap in both editors.
-- **Keyboard shortcuts:** Source mode toggle is `Cmd+M`; Cmd+E / Cmd+Alt+X are aliases onto ProseMark's inline-code/strikethrough commands (`ui/live-preview/keymap.ts`).
+- **Keyboard shortcuts:** Source mode toggle is `Cmd+M`; Cmd+E / Cmd+Alt+X are aliases onto ProseMark's inline-code/strikethrough commands (`ui/live-preview/keymap.ts`); Cmd+Shift+L is the outline three-state toggle.
+- **Height-map position lookup**: `view.lineBlockAtHeight(screenY - view.documentTop)` resolves scroll positions OUTSIDE the rendered viewport (CM height estimates); `coordsAtPos` returns null there. Used by the outline scroll-spy (`ui/hooks/useToc.ts`). `.cm-scroller` (`view.scrollDOM`) is the real scroll container, not the wrapper div in App.tsx.
 
 ## Tauri Multi-Window Events
 
@@ -26,3 +27,4 @@ pivot, ADR-003; see git history if archaeology is ever needed.)
 - **Always instrument first**: add diagnostic logging showing the decision path before attempting fixes
 - **Check the console output in the webview DevTools** (Cmd+Option+I in Tauri), not the terminal — `console.log` from frontend JS goes to the webview
 - **Verify fixes are running**: After adding diagnostic logging, check that expected log lines appear. Vite may serve stale cached code if a previous build had errors.
+- **Playwright `hasText` strings are case-insensitive substrings**: `{ hasText: "Section 5" }` also matches "…of section 5…" body lines. Anchor with a regex (`{ hasText: /^Section 5$/ }`) when text can collide.
