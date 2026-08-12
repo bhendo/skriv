@@ -36,6 +36,7 @@ import {
   livePreviewFormattingKeymap,
 } from "../live-preview";
 import { markdownSyntaxExtensions } from "../markdown/parser";
+import { holdScrollAnchor } from "../utils/editorPosition";
 import type { EditorPosition } from "../utils/editorPosition";
 import type { EditorHandle } from "../types/editor";
 
@@ -135,17 +136,24 @@ export const LivePreviewEditor = forwardRef<EditorHandle, LivePreviewEditorProps
       const view = new EditorView({
         state: createState(defaultValue, restorePosition?.selection),
         parent: containerRef.current,
-        // Anchor the carried-over top line, not the cursor: same content
-        // stays visible even when the cursor is off-screen.
+        // Anchor the carried-over top block, not the cursor: same content
+        // stays visible even when the cursor is off-screen. holdScrollAnchor
+        // then applies the fractional depth into that block once real
+        // heights are measured.
         scrollTo: restorePosition
-          ? EditorView.scrollIntoView(restorePosition.topPos, { y: "start" })
+          ? EditorView.scrollIntoView(restorePosition.anchor.from, { y: "start" })
           : undefined,
       });
       viewRef.current = view;
       lastSyncedRef.current = defaultValue;
-      if (restorePosition) view.focus();
+      let cancelHold: (() => void) | undefined;
+      if (restorePosition) {
+        view.focus();
+        cancelHold = holdScrollAnchor(view, restorePosition.anchor);
+      }
 
       return () => {
+        cancelHold?.();
         view.destroy();
         viewRef.current = null;
       };

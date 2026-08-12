@@ -32,6 +32,7 @@ import { highlightSelectionMatches, search } from "@codemirror/search";
 import { markdown } from "@codemirror/lang-markdown";
 import { languages } from "@codemirror/language-data";
 import { oneDark } from "@codemirror/theme-one-dark";
+import { holdScrollAnchor } from "../utils/editorPosition";
 import type { EditorPosition } from "../utils/editorPosition";
 import type { EditorHandle } from "../types/editor";
 
@@ -104,17 +105,24 @@ export const SourceEditor = forwardRef<EditorHandle, SourceEditorProps>(
           ],
         }),
         parent: containerRef.current,
-        // Anchor the carried-over top line, not the cursor: same content
-        // stays visible even when the cursor is off-screen.
+        // Anchor the carried-over top block, not the cursor: same content
+        // stays visible even when the cursor is off-screen. holdScrollAnchor
+        // then applies the fractional depth into that block once real
+        // heights are measured.
         scrollTo: restorePosition
-          ? EditorView.scrollIntoView(restorePosition.topPos, { y: "start" })
+          ? EditorView.scrollIntoView(restorePosition.anchor.from, { y: "start" })
           : undefined,
       });
 
       viewRef.current = view;
-      if (restorePosition) view.focus();
+      let cancelHold: (() => void) | undefined;
+      if (restorePosition) {
+        view.focus();
+        cancelHold = holdScrollAnchor(view, restorePosition.anchor);
+      }
 
       return () => {
+        cancelHold?.();
         view.destroy();
         viewRef.current = null;
       };
