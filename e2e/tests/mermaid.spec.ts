@@ -1,3 +1,4 @@
+import type { Locator } from "@playwright/test";
 import { test, expect } from "../fixtures";
 
 const MERMAID_CONTENT = `# Diagram Test
@@ -14,6 +15,40 @@ const JS_CODE_BLOCK = `# Code Test
 console.log("hello");
 \`\`\`
 `;
+
+// Renders ~1325px wide with the flowchart spacing config — wider than the
+// editor pane at the default 1280px viewport (#83).
+const WIDE_MERMAID_CONTENT = `# Wide Diagram Test
+
+\`\`\`mermaid
+flowchart LR
+    A[Open document] --> B{Valid path?}
+    B -->|Yes| C[Render live preview]
+    B -->|No| D[Show error dialog]
+    C --> E[Watch file for changes]
+\`\`\`
+`;
+
+const INVALID_MERMAID_CONTENT = `# Broken Diagram Test
+
+\`\`\`mermaid
+flowchart LR
+    A[unterminated --> B
+\`\`\`
+`;
+
+/** True when `inner`'s visual bounding box sits inside `outer`'s (1px tolerance). */
+async function isInside(inner: Locator, outer: Locator): Promise<boolean> {
+  const innerBox = await inner.boundingBox();
+  const outerBox = await outer.boundingBox();
+  if (!innerBox || !outerBox) return false;
+  return (
+    innerBox.x >= outerBox.x - 1 &&
+    innerBox.y >= outerBox.y - 1 &&
+    innerBox.x + innerBox.width <= outerBox.x + outerBox.width + 1 &&
+    innerBox.y + innerBox.height <= outerBox.y + outerBox.height + 1
+  );
+}
 
 test.describe("Mermaid diagram rendering", () => {
   test("renders mermaid block as SVG", async ({ page, loadApp }) => {
@@ -155,5 +190,65 @@ test.describe("Mermaid expand overlay", () => {
 
     await page.locator('.mermaid-overlay-toolbar button[aria-label="Close"]').click();
     await expect(page.locator(".mermaid-overlay")).not.toBeVisible();
+  });
+});
+
+test.describe("Mermaid layout width (#83)", () => {
+  test("wide flowchart scales to fit without inflating the content plane", async ({
+    page,
+    loadApp,
+  }) => {
+    await loadApp({
+      openedFile: "/tmp/test.md",
+      fileContent: WIDE_MERMAID_CONTENT,
+    });
+
+    const block = page.locator(".cm-mermaid-block");
+    const svg = block.locator(".mermaid-svg-wrapper svg");
+    const container = block.locator(".mermaid-svg-container");
+    await expect(svg).toBeVisible({ timeout: 10_000 });
+
+    // The SVG's natural width must stay out of layout flow: the content
+    // plane keeps the pane width instead of overflowing horizontally.
+    await expect
+      .poll(() =>
+        page.evaluate(() => {
+          const scroller = document.querySelector(".cm-scroller")!;
+          return scroller.scrollWidth - scroller.clientWidth;
+        })
+      )
+      .toBeLessThanOrEqual(1);
+
+    // Fit-to-width: the transformed SVG sits inside the container
+    // (bounding boxes account for the pan/zoom CSS transform). Poll
+    // because panzoom attaches a frame after the render resolves.
+    await expect.poll(() => isInside(svg, container)).toBe(true);
+
+    // Round-trip: cursor into the fence and back out re-creates the
+    // widget from the SVG cache; it must still fit.
+    await container.click();
+    await expect(page.locator(".cm-mermaid-block")).toHaveCount(0);
+    await page.locator(".cm-line").first().click();
+    await expect(svg).toBeVisible({ timeout: 10_000 });
+    await expect.poll(() => isInside(svg, container)).toBe(true);
+  });
+
+  test("invalid source shows the error state fully visible", async ({ page, loadApp }) => {
+    await loadApp({
+      openedFile: "/tmp/test.md",
+      fileContent: INVALID_MERMAID_CONTENT,
+    });
+
+    const block = page.locator(".cm-mermaid-block");
+    const error = block.locator(".mermaid-error");
+    const container = block.locator(".mermaid-svg-container");
+    await expect(error).toBeVisible({ timeout: 10_000 });
+
+    // The error stays in flow so it grows the container past its 60px
+    // min-height instead of being clipped by overflow: hidden.
+    const containerBox = await container.boundingBox();
+    expect(containerBox).not.toBeNull();
+    expect(containerBox!.height).toBeGreaterThan(60);
+    expect(await isInside(error, container)).toBe(true);
   });
 });

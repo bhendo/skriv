@@ -191,6 +191,17 @@ body,
   transform-origin: 0 0;
 }
 
+/* Pan/zoom transforms are visual only: in flow, the wrapper keeps the SVG's
+   natural layout width and inflates the editor content plane (#83). Out of
+   flow it shrink-wraps the SVG, so the scale math still measures natural
+   size while the container keeps the pane width. Placeholder/error content
+   stays in flow (no .has-diagram) so it can grow the container. */
+.live-preview-editor .mermaid-svg-wrapper.has-diagram {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
 /* Prevent mermaid foreignObject (htmlLabels:true) from clipping node content */
 .live-preview-editor .mermaid-svg-wrapper foreignObject {
   overflow: visible;
