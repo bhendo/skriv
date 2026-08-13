@@ -57,8 +57,9 @@ make format-tauri      # cargo fmt
 
 ## Git Workflow
 
-- When working on a GitHub issue/ticket, create a new branch from `main` before making changes
+- Standard delivery loop, even for small fixes: file a GitHub issue (`gh issue create`), branch from `main`, implement with regression tests, run `make check`, polish the branch, open a PR that references the issue, and wait for review — never commit directly to `main`
 - Branch naming: `<type>/<issue-number>-<short-description>` where type is `feature`, `bug`, `chore`, `refactor`, `docs`, etc. (e.g., `feature/42-add-dark-mode`, `bug/15-fix-save-crash`)
+- Log the completed work in `docs/project_notes/issues.md` before opening the PR (see Project Memory System)
 
 ## Formatting & Linting
 
