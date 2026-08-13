@@ -39,6 +39,7 @@ import {
   mermaidPreviewExtension,
   tablePreviewExtension,
   livePreviewFormattingKeymap,
+  listIndentKeymap,
 } from "../live-preview";
 import { markdownSyntaxExtensions } from "../markdown/parser";
 import { appDefaultKeymap } from "../utils/editorKeymap";
@@ -129,6 +130,9 @@ export const LivePreviewEditor = forwardRef<EditorHandle, LivePreviewEditorProps
               // searchKeymap intentionally excluded — search is handled by SearchBar
               ...historyKeymap,
               ...completionKeymap,
+              // List-aware Tab/Shift-Tab (#85); falls through to indentWithTab
+              // outside list items.
+              ...listIndentKeymap,
               indentWithTab,
             ]),
             EditorView.lineWrapping,
