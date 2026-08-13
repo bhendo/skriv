@@ -37,17 +37,37 @@ body,
   color: var(--skriv-color-on-background, #333);
 }
 
+/* Full-bleed scroll region (#90): the wrapper spans the pane so .cm-scroller
+   does too — scrollbar at the window edge, wheel and clicks work in the
+   margins. The prose column is centered on .cm-content below instead. */
 .source-editor,
 .live-preview-editor {
-  /* border-box so height: 100% includes the vertical padding — content-box
-     made the box 40px taller than the pane, giving the wrapper a second
-     scrollbar over the editor's own (.cm-scroller must stay the only scroll
-     container). max-width compensates to keep the prose column width. */
+  height: 100%;
+}
+
+/* Prose column: max-width + auto margins on the content, not the wrapper.
+   border-box with compensated max-width keeps the column width including
+   padding. Extra .cm-editor depth out-ranks CodeMirror's injected base rules
+   (margin: 0, padding: 4px 0) regardless of stylesheet order. */
+.source-editor .cm-editor .cm-content,
+.live-preview-editor .cm-editor .cm-content {
   box-sizing: border-box;
   max-width: calc(var(--skriv-editor-max-width) + 2 * var(--skriv-editor-padding-x));
-  margin: 0 auto;
   padding: var(--skriv-editor-padding-y) var(--skriv-editor-padding-x);
-  height: 100%;
+  margin: 0 auto;
+}
+
+/* A gutter (line numbers in source mode) is a flex sibling of the content
+   inside .cm-scroller and would stay pinned to the pane's far-left edge while
+   the column centers. Key on gutter presence, not editor identity, so either
+   editor gaining or losing gutters keeps the pair centered together: pull the
+   gutter in with an auto left margin and zero the content's own. */
+:is(.source-editor, .live-preview-editor) .cm-gutters {
+  margin-left: auto;
+}
+
+:is(.source-editor, .live-preview-editor) .cm-scroller:has(.cm-gutters) .cm-content {
+  margin-left: 0;
 }
 
 /* Background overrides for source editor — oneDark provides syntax colors,

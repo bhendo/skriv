@@ -46,6 +46,7 @@ import { markdownSyntaxExtensions } from "../markdown/parser";
 import { appDefaultKeymap } from "../utils/editorKeymap";
 import { holdScrollAnchor } from "../utils/editorPosition";
 import type { EditorPosition } from "../utils/editorPosition";
+import { marginClickExtension } from "../utils/marginClick";
 import { searchExtensions } from "../utils/searchHighlight";
 import type { EditorHandle } from "../types/editor";
 
@@ -129,6 +130,7 @@ export const LivePreviewEditor = forwardRef<EditorHandle, LivePreviewEditorProps
               indentWithTab,
             ]),
             EditorView.lineWrapping,
+            marginClickExtension,
             markdown({
               codeLanguages: languages,
               extensions: markdownSyntaxExtensions,
