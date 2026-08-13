@@ -68,6 +68,7 @@ vi.mock("../../live-preview", () => ({
   mermaidPreviewExtension: {},
   tablePreviewExtension: {},
   livePreviewFormattingKeymap: [],
+  listIndentKeymap: [],
 }));
 
 vi.mock("../../markdown/parser", () => ({
