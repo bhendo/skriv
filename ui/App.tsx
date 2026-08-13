@@ -10,6 +10,7 @@ import { ReloadBanner } from "./components/ReloadBanner";
 import { ShortcutCheatsheet } from "./components/ShortcutCheatsheet";
 import { Sidebar } from "./components/Sidebar";
 import { SidebarToggle } from "./components/SidebarToggle";
+import { useAutoSave } from "./hooks/useAutoSave";
 import { useEditorView } from "./hooks/useEditorView";
 import { useFile } from "./hooks/useFile";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
@@ -17,12 +18,18 @@ import { useMenuEvents } from "./hooks/useMenuEvents";
 import { useSearch } from "./hooks/useSearch";
 import { useToc } from "./hooks/useToc";
 import { useWindowClose } from "./hooks/useWindowClose";
+import { loadAutoSavePref, storeAutoSavePref } from "./utils/autoSavePref";
 import { promptUnsavedChanges } from "./utils/unsavedChanges";
 import type { ShortcutHandlers } from "./utils/shortcuts";
 import { captureEditorPosition } from "./utils/editorPosition";
 import type { EditorPosition } from "./utils/editorPosition";
 import type { EditorHandle } from "./types/editor";
 import type { SidebarTab } from "./types/toc";
+
+/** Mirror the persisted auto-save preference into the native menu checkbox. */
+function pushAutoSaveMenuState() {
+  void invoke("sync_auto_save_menu", { enabled: loadAutoSavePref() });
+}
 
 function App() {
   const editorRef = useRef<EditorHandle>(null);
@@ -31,6 +38,7 @@ function App() {
     content,
     path,
     fileName,
+    docVersion,
     isModified,
     error,
     openFile,
@@ -51,10 +59,15 @@ function App() {
   // never pair with a document it wasn't captured from. The mounting editor
   // applies it, not an App effect: StrictMode's dev remount rebuilds the view
   // after parent effects have run, which would silently discard the restore.
+  // Stamped with the docVersion it was captured under and discarded in render
+  // when the shell has since replaced the document — the effect that clears it
+  // runs after child effects, too late to stop a stale handoff being applied.
   const [editorHandoff, setEditorHandoff] = useState<{
     markdown: string;
     position: EditorPosition;
+    docVersion: number;
   } | null>(null);
+  const handoff = editorHandoff?.docVersion === docVersion ? editorHandoff : null;
   const isModifiedRef = useRef(isModified);
   useEffect(() => {
     isModifiedRef.current = isModified;
@@ -67,14 +80,9 @@ function App() {
   const { headings, activeIndex, navigateToHeading, notifyDocChanged } = useToc({
     editorRef,
     sourceMode,
-    content,
+    docVersion,
     enabled: sidebarVisible && sidebarTab === "outline",
   });
-
-  const handleChange = useCallback(() => {
-    markModified();
-    notifyDocChanged();
-  }, [markModified, notifyDocChanged]);
 
   const handleSaveAs = useCallback(
     async (markdown?: string): Promise<boolean> => {
@@ -103,6 +111,18 @@ function App() {
 
     return saveFile(markdown);
   }, [path, saveFile, handleSaveAs]);
+
+  const { notifyChange, shouldAutoSave } = useAutoSave({
+    hasPath: path !== null,
+    isModified,
+    onSave: handleSave,
+  });
+
+  const handleChange = useCallback(() => {
+    markModified();
+    notifyDocChanged();
+    notifyChange();
+  }, [markModified, notifyDocChanged, notifyChange]);
 
   const handleNewWindow = useCallback(async () => {
     await invoke("create_window");
@@ -165,10 +185,11 @@ function App() {
       setEditorHandoff({
         markdown: view.state.doc.toString(),
         position: captureEditorPosition(view),
+        docVersion,
       });
     }
     setSourceMode((prev) => !prev);
-  }, [getView]);
+  }, [getView, docVersion]);
 
   const {
     isSearchOpen,
@@ -201,6 +222,12 @@ function App() {
     "toggle-source-mode": handleToggleSourceMode,
     "toggle-sidebar": handleToggleSidebar,
     "toggle-outline": handleToggleOutline,
+    // Menu-only checkbox; the pref is read fresh wherever it's consulted, so
+    // no React state — just persist and mirror into the native menu.
+    "toggle-auto-save": () => {
+      storeAutoSavePref(!loadAutoSavePref());
+      pushAutoSaveMenuState();
+    },
     // Toggle, so the chord that opens the cheatsheet also dismisses it.
     "keyboard-shortcuts": () => setShowCheatsheet((prev) => !prev),
   };
@@ -211,7 +238,16 @@ function App() {
   useWindowClose({
     isModified,
     onSave: handleSave,
+    // With auto-save active, closing is itself the "save now" signal — the
+    // prompt would ask about changes auto-save was about to write anyway.
+    shouldAutoSave,
   });
+
+  // The checkbox lives in native code and defaults to checked; align it with
+  // the persisted preference once per window load (idempotent across windows).
+  useEffect(() => {
+    pushAutoSaveMenuState();
+  }, []);
 
   useEffect(() => {
     invoke<string | null>("get_opened_file").then((filePath) => {
@@ -250,12 +286,18 @@ function App() {
     };
   }, [path, reloadFile]);
 
+  // Shell replaced the document (open/reload). Keyed on docVersion, not
+  // content: a save echoes content back through state, and resetting here on
+  // save kicked source mode back to live preview on every Cmd+S (worse under
+  // auto-save). Source mode is a user choice, so reloads keep it; the sync
+  // effects inside the editors swap the buffer. The render-time `handoff`
+  // guard is what invalidates a stale handoff; clearing it here only frees
+  // the old document string it holds.
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- synchronizing banner visibility with file state
     setShowReloadBanner(false);
     setEditorHandoff(null);
-    setSourceMode(false);
-  }, [path, content]);
+  }, [docVersion]);
 
   return (
     <div style={{ height: "100vh", display: "flex", flexDirection: "column" }}>
@@ -305,16 +347,18 @@ function App() {
             {sourceMode ? (
               <SourceEditor
                 ref={editorRef}
-                defaultValue={editorHandoff?.markdown ?? content}
+                defaultValue={handoff?.markdown ?? content}
+                docVersion={docVersion}
                 onChange={handleChange}
-                restorePosition={editorHandoff?.position ?? null}
+                restorePosition={handoff?.position ?? null}
               />
             ) : (
               <LivePreviewEditor
                 ref={editorRef}
-                defaultValue={editorHandoff?.markdown ?? content}
+                defaultValue={handoff?.markdown ?? content}
+                docVersion={docVersion}
                 onChange={handleChange}
-                restorePosition={editorHandoff?.position ?? null}
+                restorePosition={handoff?.position ?? null}
               />
             )}
           </div>

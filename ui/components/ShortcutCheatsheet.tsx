@@ -31,7 +31,9 @@ function rowsForGroup(group: ShortcutGroup | "Formatting"): Row[] {
       chords: f.keys.map(displayEditorChord),
     }));
   }
-  return SHORTCUTS.filter((s) => s.group === group).map((s) => ({
+  // Chordless entries are menu-only toggles — nothing to list on a keyboard
+  // cheatsheet.
+  return SHORTCUTS.filter((s) => s.group === group && s.chord !== undefined).map((s) => ({
     // Menu labels carry the dialog ellipsis ("Open…"); a reference list doesn't.
     label: s.label.replace(/…$/, ""),
     chords: [displayChord(s.id)],

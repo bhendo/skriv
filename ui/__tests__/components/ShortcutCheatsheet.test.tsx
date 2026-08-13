@@ -20,12 +20,15 @@ describe("ShortcutCheatsheet", () => {
     vi.restoreAllMocks();
   });
 
-  it("lists every registry shortcut with its display chord", () => {
+  // Chordless registry entries are menu-only toggles with no key to list.
+  const chorded = SHORTCUTS.filter((s) => s.chord !== undefined);
+
+  it("lists every chorded registry shortcut with its display chord", () => {
     stubPlatform(MAC_UA);
     const { container } = render(<ShortcutCheatsheet onClose={vi.fn()} />);
 
     const rows = renderedRows(container);
-    for (const s of SHORTCUTS) {
+    for (const s of chorded) {
       expect(rows, `row for ${s.id}`).toContainEqual({
         label: s.label.replace(/…$/, ""),
         chords: [displayChord(s.id)],
@@ -41,8 +44,8 @@ describe("ShortcutCheatsheet", () => {
     for (const f of FORMATTING_SHORTCUTS) {
       expect(labels).toContain(f.label);
     }
-    // Registry rows + formatting rows account for the whole sheet.
-    expect(labels).toHaveLength(SHORTCUTS.length + FORMATTING_SHORTCUTS.length);
+    // Chorded registry rows + formatting rows account for the whole sheet.
+    expect(labels).toHaveLength(chorded.length + FORMATTING_SHORTCUTS.length);
   });
 
   it("closes on Escape", async () => {

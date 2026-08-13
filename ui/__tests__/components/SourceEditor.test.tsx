@@ -10,6 +10,7 @@ vi.mock("@codemirror/view", () => {
     state = { doc: { toString: () => "mock markdown" } };
     destroy = vi.fn();
     dispatch = vi.fn();
+    setState = vi.fn();
     static lineWrapping = {};
     static theme = vi.fn(() => ({}));
     static updateListener = { of: vi.fn(() => ({})) };
@@ -80,22 +81,46 @@ describe("SourceEditor", () => {
   it("renders without crashing", () => {
     const ref = createRef<EditorHandle>();
     const { container } = render(
-      <SourceEditor ref={ref} defaultValue="# Hello" onChange={vi.fn()} />
+      <SourceEditor ref={ref} defaultValue="# Hello" docVersion={1} onChange={vi.fn()} />
     );
     expect(container.querySelector(".source-editor")).not.toBeNull();
   });
 
   it("exposes getMarkdown via ref", () => {
     const ref = createRef<EditorHandle>();
-    render(<SourceEditor ref={ref} defaultValue="# Hello" onChange={vi.fn()} />);
+    render(<SourceEditor ref={ref} defaultValue="# Hello" docVersion={1} onChange={vi.fn()} />);
     expect(ref.current).not.toBeNull();
     expect(typeof ref.current!.getMarkdown).toBe("function");
   });
 
   it("getMarkdown returns editor content", () => {
     const ref = createRef<EditorHandle>();
-    render(<SourceEditor ref={ref} defaultValue="# Hello" onChange={vi.fn()} />);
+    render(<SourceEditor ref={ref} defaultValue="# Hello" docVersion={1} onChange={vi.fn()} />);
     const result = ref.current!.getMarkdown();
     expect(result).toBe("mock markdown");
+  });
+
+  it("resets the buffer when docVersion changes (reload while source mode stays active)", () => {
+    const ref = createRef<EditorHandle>();
+    const { rerender } = render(
+      <SourceEditor ref={ref} defaultValue="a" docVersion={1} onChange={vi.fn()} />
+    );
+    const view = ref.current!.getCodeMirrorView!() as unknown as {
+      setState: ReturnType<typeof vi.fn>;
+    };
+    rerender(<SourceEditor ref={ref} defaultValue="b" docVersion={2} onChange={vi.fn()} />);
+    expect(view.setState).toHaveBeenCalledTimes(1);
+  });
+
+  it("ignores a defaultValue change without a docVersion bump (save echo)", () => {
+    const ref = createRef<EditorHandle>();
+    const { rerender } = render(
+      <SourceEditor ref={ref} defaultValue="a" docVersion={1} onChange={vi.fn()} />
+    );
+    const view = ref.current!.getCodeMirrorView!() as unknown as {
+      setState: ReturnType<typeof vi.fn>;
+    };
+    rerender(<SourceEditor ref={ref} defaultValue="b" docVersion={1} onChange={vi.fn()} />);
+    expect(view.setState).not.toHaveBeenCalled();
   });
 });

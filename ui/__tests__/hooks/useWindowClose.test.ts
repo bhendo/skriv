@@ -39,6 +39,7 @@ describe("useWindowClose", () => {
       useWindowClose({
         isModified: false,
         onSave: vi.fn(),
+        shouldAutoSave: () => false,
       })
     );
 
@@ -50,6 +51,7 @@ describe("useWindowClose", () => {
       useWindowClose({
         isModified: false,
         onSave: vi.fn(),
+        shouldAutoSave: () => false,
       })
     );
 
@@ -59,7 +61,9 @@ describe("useWindowClose", () => {
   const fireQuitRequested = () => fireListeners("quit-requested");
 
   it("closes without prompting when not modified", async () => {
-    renderHook(() => useWindowClose({ isModified: false, onSave: vi.fn() }));
+    renderHook(() =>
+      useWindowClose({ isModified: false, onSave: vi.fn(), shouldAutoSave: () => false })
+    );
 
     await fireQuitRequested();
 
@@ -70,7 +74,7 @@ describe("useWindowClose", () => {
   it("closes after a successful save", async () => {
     const onSave = vi.fn().mockResolvedValue(true);
     mockMessage.mockResolvedValue("Save");
-    renderHook(() => useWindowClose({ isModified: true, onSave }));
+    renderHook(() => useWindowClose({ isModified: true, onSave, shouldAutoSave: () => false }));
 
     await fireQuitRequested();
 
@@ -81,7 +85,7 @@ describe("useWindowClose", () => {
   it("keeps the window open when the save fails or is cancelled", async () => {
     const onSave = vi.fn().mockResolvedValue(false);
     mockMessage.mockResolvedValue("Save");
-    renderHook(() => useWindowClose({ isModified: true, onSave }));
+    renderHook(() => useWindowClose({ isModified: true, onSave, shouldAutoSave: () => false }));
 
     await fireQuitRequested();
 
@@ -92,7 +96,7 @@ describe("useWindowClose", () => {
   it("closes without saving on Don't Save", async () => {
     const onSave = vi.fn();
     mockMessage.mockResolvedValue("Don't Save");
-    renderHook(() => useWindowClose({ isModified: true, onSave }));
+    renderHook(() => useWindowClose({ isModified: true, onSave, shouldAutoSave: () => false }));
 
     await fireQuitRequested();
 
@@ -102,10 +106,35 @@ describe("useWindowClose", () => {
 
   it("keeps the window open on Cancel", async () => {
     mockMessage.mockResolvedValue("Cancel");
-    renderHook(() => useWindowClose({ isModified: true, onSave: vi.fn() }));
+    renderHook(() =>
+      useWindowClose({ isModified: true, onSave: vi.fn(), shouldAutoSave: () => false })
+    );
 
     await fireQuitRequested();
 
+    expect(invoke).not.toHaveBeenCalledWith("close_window");
+  });
+
+  it("saves and closes silently when auto-save is active", async () => {
+    const onSave = vi.fn().mockResolvedValue(true);
+    renderHook(() => useWindowClose({ isModified: true, onSave, shouldAutoSave: () => true }));
+
+    await fireQuitRequested();
+
+    expect(onSave).toHaveBeenCalledOnce();
+    expect(mockMessage).not.toHaveBeenCalled();
+    expect(invoke).toHaveBeenCalledWith("close_window");
+  });
+
+  it("falls back to the prompt when the auto-save close fails to save", async () => {
+    const onSave = vi.fn().mockResolvedValue(false);
+    mockMessage.mockResolvedValue("Cancel");
+    renderHook(() => useWindowClose({ isModified: true, onSave, shouldAutoSave: () => true }));
+
+    await fireQuitRequested();
+
+    expect(onSave).toHaveBeenCalledOnce();
+    expect(mockMessage).toHaveBeenCalledOnce();
     expect(invoke).not.toHaveBeenCalledWith("close_window");
   });
 });

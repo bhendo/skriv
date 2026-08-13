@@ -128,6 +128,11 @@ export async function injectTauriMock(
         case "unwatch_file":
           return undefined;
 
+        // Mirrors the auto-save pref into the native menu checkbox; no
+        // menu exists in the browser harness.
+        case "sync_auto_save_menu":
+          return undefined;
+
         // Clipboard plugin
         case "plugin:clipboard-manager|read_text":
           return cfg.clipboardText;

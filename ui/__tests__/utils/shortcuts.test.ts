@@ -32,10 +32,21 @@ describe("shortcut registry invariants", () => {
 
   it("chords follow the accelerator grammar", () => {
     for (const s of SHORTCUTS) {
+      if (s.chord === undefined) {
+        // Menu-only entry: no binding at all, so a nonMacChord would be dead.
+        expect(s.nonMacChord, `nonMacChord of chordless ${s.id}`).toBeUndefined();
+        continue;
+      }
       expect(s.chord, `chord of ${s.id}`).toMatch(CHORD_GRAMMAR);
       if (s.nonMacChord !== undefined) {
         expect(s.nonMacChord, `nonMacChord of ${s.id}`).toMatch(NON_MAC_CHORD_GRAMMAR);
       }
+    }
+  });
+
+  it("chordless entries derive no keydown bindings", () => {
+    for (const s of SHORTCUTS.filter((s) => s.chord === undefined)) {
+      expect(shortcutBindings(s), `bindings of ${s.id}`).toEqual([]);
     }
   });
 
@@ -130,6 +141,10 @@ describe("menu.rs parity", () => {
   // rustfmt may split this across lines, so whitespace is flexible everywhere.
   const ACCEL_ITEM =
     /let\s+(\w+)\s*=\s*accel\(\s*MenuItemBuilder::with_id\(\s*"([^"]+)",\s*"([^"]+)",?\s*\)\s*,\s*"([^"]+)"\s*,?\s*\)/g;
+  // let <var> = CheckMenuItemBuilder::with_id("id", "Label") — checkbox
+  // items are menu-only (chordless in the registry) and carry no accelerator.
+  const CHECK_ITEM =
+    /let\s+(\w+)\s*=\s*CheckMenuItemBuilder::with_id\(\s*"([^"]+)",\s*"([^"]+)",?\s*\)/g;
   const EMIT = /"([\w-]+)"\s*=>\s*emit_to_focused\(\s*app,\s*"([\w-]+)",?\s*\)/g;
   // Every match arm id in on_menu_event (the file's only match statement).
   const MATCH_ARM = /"([\w-]+)"\s*=>/g;
@@ -137,6 +152,10 @@ describe("menu.rs parity", () => {
   const menuItems = new Map<string, { varName: string; label: string; accelerator: string }>();
   for (const m of menuRs.matchAll(ACCEL_ITEM)) {
     menuItems.set(m[2], { varName: m[1], label: m[3], accelerator: m[4] });
+  }
+  const checkItems = new Map<string, { varName: string; label: string }>();
+  for (const m of menuRs.matchAll(CHECK_ITEM)) {
+    checkItems.set(m[2], { varName: m[1], label: m[3] });
   }
   const menuEmits = new Map<string, string>();
   for (const m of menuRs.matchAll(EMIT)) {
@@ -151,12 +170,22 @@ describe("menu.rs parity", () => {
     // If menu.rs is restructured such that the patterns stop matching, fail
     // loudly here instead of vacuously passing the diffs below.
     expect(menuItems.size).toBeGreaterThan(0);
+    expect(checkItems.size).toBeGreaterThan(0);
     expect(menuEmits.size).toBeGreaterThan(0);
     expect(matchArmIds.size).toBeGreaterThan(0);
   });
 
   it("every registry menu shortcut has a menu.rs item with the same label and accelerator", () => {
     for (const s of menuShortcuts) {
+      if (s.chord === undefined) {
+        // Chordless registry entries are checkbox items: same label, no
+        // accelerator anywhere.
+        const item = checkItems.get(s.id);
+        if (!item) throw new Error(`menu.rs has no check item "${s.id}"`);
+        expect(item.label, `label of ${s.id}`).toBe(s.label);
+        expect(menuItems.has(s.id), `${s.id} is chordless but accelerated in menu.rs`).toBe(false);
+        continue;
+      }
       const item = menuItems.get(s.id);
       if (!item) throw new Error(`menu.rs has no accelerated item "${s.id}"`);
       expect(item.label, `label of ${s.id}`).toBe(s.label);
@@ -167,7 +196,7 @@ describe("menu.rs parity", () => {
   it("every menu.rs item is attached to a submenu", () => {
     // Constructing an item without .item(&x) compiles and passes the other
     // checks, but the menu entry silently never appears.
-    for (const [id, item] of menuItems) {
+    for (const [id, item] of [...menuItems, ...checkItems]) {
       expect(
         menuRs.includes(`.item(&${item.varName})`),
         `"${id}" is built but never attached`
@@ -187,6 +216,9 @@ describe("menu.rs parity", () => {
     const ids = new Set<string>(menuShortcuts.map((s) => s.id));
     for (const id of menuItems.keys()) {
       expect(ids.has(id), `menu.rs item "${id}" is not in the shortcut registry`).toBe(true);
+    }
+    for (const id of checkItems.keys()) {
+      expect(ids.has(id), `menu.rs check item "${id}" is not in the shortcut registry`).toBe(true);
     }
   });
 

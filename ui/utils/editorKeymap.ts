@@ -8,7 +8,9 @@ function editorKey(chord: string): string {
   return parts.join("-");
 }
 
-const reservedKeys = new Set(SHORTCUTS.map((s) => editorKey(s.chord)));
+const reservedKeys = new Set(
+  SHORTCUTS.flatMap((s) => (s.chord === undefined ? [] : [editorKey(s.chord)]))
+);
 
 /**
  * CodeMirror's default keymap minus bindings on registry chords, which are

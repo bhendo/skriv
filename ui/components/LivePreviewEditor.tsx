@@ -41,6 +41,7 @@ import {
   livePreviewFormattingKeymap,
   listIndentKeymap,
 } from "../live-preview";
+import { useShellDocSync } from "../hooks/useShellDocSync";
 import { markdownSyntaxExtensions } from "../markdown/parser";
 import { appDefaultKeymap } from "../utils/editorKeymap";
 import { holdScrollAnchor } from "../utils/editorPosition";
@@ -50,20 +51,18 @@ import type { EditorHandle } from "../types/editor";
 
 interface LivePreviewEditorProps {
   defaultValue: string;
+  /** Shell document version: the editor resets its buffer only when this changes. */
+  docVersion: number;
   onChange: () => void;
   /** Position carried over from the editor this one replaces. */
   restorePosition?: EditorPosition | null;
 }
 
 export const LivePreviewEditor = forwardRef<EditorHandle, LivePreviewEditorProps>(
-  ({ defaultValue, onChange, restorePosition }, ref) => {
+  ({ defaultValue, docVersion, onChange, restorePosition }, ref) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const viewRef = useRef<EditorView | null>(null);
     const onChangeRef = useRef(onChange);
-    // Last document string exchanged with the shell; null once the user
-    // edits. Snapshot round-trips hand the same string back, so the sync
-    // effect can skip resetting the editor (a reference-equality check).
-    const lastSyncedRef = useRef<string | null>(null);
 
     useEffect(() => {
       onChangeRef.current = onChange;
@@ -72,13 +71,7 @@ export const LivePreviewEditor = forwardRef<EditorHandle, LivePreviewEditorProps
     useImperativeHandle(
       ref,
       () => ({
-        getMarkdown: () => {
-          const view = viewRef.current;
-          if (!view) return undefined;
-          const doc = view.state.doc.toString();
-          lastSyncedRef.current = doc;
-          return doc;
-        },
+        getMarkdown: () => viewRef.current?.state.doc.toString(),
         getCodeMirrorView: () => viewRef.current,
       }),
       []
@@ -142,7 +135,6 @@ export const LivePreviewEditor = forwardRef<EditorHandle, LivePreviewEditorProps
             }),
             EditorView.updateListener.of((update) => {
               if (update.docChanged) {
-                lastSyncedRef.current = null;
                 onChangeRef.current();
               }
             }),
@@ -166,7 +158,6 @@ export const LivePreviewEditor = forwardRef<EditorHandle, LivePreviewEditorProps
           : undefined,
       });
       viewRef.current = view;
-      lastSyncedRef.current = defaultValue;
       let cancelHold: (() => void) | undefined;
       if (restorePosition) {
         view.focus();
@@ -181,15 +172,7 @@ export const LivePreviewEditor = forwardRef<EditorHandle, LivePreviewEditorProps
       // eslint-disable-next-line react-hooks/exhaustive-deps -- only create editor on mount
     }, []);
 
-    // A new document arrived from the shell (file open / external reload).
-    // setState reuses the view and its DOM, and drops undo history so Cmd+Z
-    // can't restore the previous file.
-    useEffect(() => {
-      const view = viewRef.current;
-      if (!view || lastSyncedRef.current === defaultValue) return;
-      view.setState(createState(defaultValue));
-      lastSyncedRef.current = defaultValue;
-    }, [defaultValue, createState]);
+    useShellDocSync(viewRef, docVersion, defaultValue, createState);
 
     return <div ref={containerRef} className="live-preview-editor" />;
   }
