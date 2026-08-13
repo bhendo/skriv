@@ -37,6 +37,17 @@ export async function getMockWrites(
   );
 }
 
+/** Poll until at least one mocked write lands, then return all of them. */
+export async function waitForWrite(
+  page: Page,
+  timeout = 10_000,
+): Promise<Array<{ path: string; content: string }>> {
+  await expect
+    .poll(() => getMockWrites(page).then((w) => w.length), { timeout })
+    .toBeGreaterThan(0);
+  return getMockWrites(page);
+}
+
 export const test = base.extend<{
   loadApp: (config?: TauriMockConfig) => Promise<void>;
 }>({

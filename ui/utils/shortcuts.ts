@@ -31,8 +31,12 @@ export interface ShortcutDef {
   group: ShortcutGroup;
   /** For menu shortcuts, must match the menu.rs item label exactly (parity-tested). */
   label: string;
-  /** Tauri accelerator syntax; for menu shortcuts, menu.rs must use this exact string (parity-tested). */
-  chord: string;
+  /**
+   * Tauri accelerator syntax; for menu shortcuts, menu.rs must use this exact
+   * string (parity-tested). Absent for menu-only entries (checkbox items):
+   * no keyboard binding, and the cheatsheet skips them.
+   */
+  chord?: string;
   /** Extra non-mac chord where the convention differs (Ctrl+H for replace): both the displayed and the bound chord there. */
   nonMacChord?: string;
   /** "event": the menu.rs item emits `menu-${id}`; "native": handled in Rust. Absent: no menu item. */
@@ -66,6 +70,14 @@ const REGISTRY = [
     group: "File",
     label: "Save As…",
     chord: "CmdOrCtrl+Shift+S",
+    menu: "event",
+  },
+  {
+    // Menu-only checkbox (#2): auto-save has no chord anywhere (Typora,
+    // VS Code); the on/off state lives in the File menu.
+    id: "toggle-auto-save",
+    group: "File",
+    label: "Auto Save",
     menu: "event",
   },
   {
@@ -162,6 +174,7 @@ export function parseChord(chord: string): KeyBinding {
 
 /** A shortcut's keydown matchers: its chord, plus its non-mac chord where one exists. */
 export function shortcutBindings(shortcut: Shortcut): readonly KeyBinding[] {
+  if (shortcut.chord === undefined) return [];
   const bindings = [parseChord(shortcut.chord)];
   if (shortcut.nonMacChord) {
     bindings.push({ ...parseChord(shortcut.nonMacChord), mac: false });
@@ -203,7 +216,7 @@ function displayParts(parts: readonly string[]): string {
 /** Chord for tooltips: mac symbols, Ctrl+Shift+X text elsewhere (honoring nonMacChord). */
 export function displayChord(id: ShortcutId): string {
   const shortcut = SHORTCUTS.find((s) => s.id === id);
-  if (!shortcut) throw new Error(`Unknown shortcut: ${id}`);
+  if (!shortcut?.chord) throw new Error(`No chord to display for shortcut: ${id}`);
   const chord = isMacPlatform() ? shortcut.chord : (shortcut.nonMacChord ?? shortcut.chord);
   return displayParts(chord.split("+"));
 }

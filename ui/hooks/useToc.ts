@@ -12,8 +12,8 @@ interface UseTocOptions {
   editorRef: RefObject<EditorHandle | null>;
   /** Effects re-key on this: Cmd+M destroys one EditorView and builds the other. */
   sourceMode: boolean;
-  /** Shell-synced document — changes on open/reload/save, not on keystrokes. */
-  content: string;
+  /** Bumped when the shell replaces the document (open/reload), never on keystrokes or saves. */
+  docVersion: number;
   /** Sidebar visible with the outline tab active. Gates all extraction and listeners. */
   enabled: boolean;
 }
@@ -25,7 +25,12 @@ interface UseTocResult {
   notifyDocChanged: () => void;
 }
 
-export function useToc({ editorRef, sourceMode, content, enabled }: UseTocOptions): UseTocResult {
+export function useToc({
+  editorRef,
+  sourceMode,
+  docVersion,
+  enabled,
+}: UseTocOptions): UseTocResult {
   const [headings, setHeadings] = useState<TocHeading[]>([]);
   const [activeIndex, setActiveIndex] = useState(-1);
   const headingsRef = useRef<TocHeading[]>([]);
@@ -70,8 +75,8 @@ export function useToc({ editorRef, sourceMode, content, enabled }: UseTocOption
     computeActive();
   }, [getView, computeActive]);
 
-  // Keystrokes: debounced re-extract from the live document. App's content
-  // state only changes on open/reload/save, so it can't drive this.
+  // Keystrokes: debounced re-extract from the live document. docVersion only
+  // changes on open/reload, so it can't drive this.
   const notifyDocChanged = useCallback(() => {
     if (!enabled) return;
     clearTimeout(debounceRef.current);
@@ -84,7 +89,7 @@ export function useToc({ editorRef, sourceMode, content, enabled }: UseTocOption
     if (!enabled) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- synchronizing headings from the editor document (external system); headingsEqual prevents cascading updates
     extractNow();
-  }, [enabled, sourceMode, content, extractNow]);
+  }, [enabled, sourceMode, docVersion, extractNow]);
 
   // Cleanup-only: clears the pending extract on disable and unmount.
   useEffect(() => () => clearTimeout(debounceRef.current), [enabled]);

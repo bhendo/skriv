@@ -100,20 +100,48 @@ describe("LivePreviewEditor", () => {
   it("renders without crashing", () => {
     const ref = createRef<EditorHandle>();
     const { container } = render(
-      <LivePreviewEditor ref={ref} defaultValue="# Hello" onChange={vi.fn()} />
+      <LivePreviewEditor ref={ref} defaultValue="# Hello" docVersion={1} onChange={vi.fn()} />
     );
     expect(container.querySelector(".live-preview-editor")).not.toBeNull();
   });
 
   it("getMarkdown returns editor content", () => {
     const ref = createRef<EditorHandle>();
-    render(<LivePreviewEditor ref={ref} defaultValue="# Hello" onChange={vi.fn()} />);
+    render(
+      <LivePreviewEditor ref={ref} defaultValue="# Hello" docVersion={1} onChange={vi.fn()} />
+    );
     expect(ref.current!.getMarkdown()).toBe("mock markdown");
   });
 
   it("getCodeMirrorView returns the CodeMirror view", () => {
     const ref = createRef<EditorHandle>();
-    render(<LivePreviewEditor ref={ref} defaultValue="# Hello" onChange={vi.fn()} />);
+    render(
+      <LivePreviewEditor ref={ref} defaultValue="# Hello" docVersion={1} onChange={vi.fn()} />
+    );
     expect(ref.current!.getCodeMirrorView!()).not.toBeNull();
+  });
+
+  it("resets the buffer when docVersion changes", () => {
+    const ref = createRef<EditorHandle>();
+    const { rerender } = render(
+      <LivePreviewEditor ref={ref} defaultValue="a" docVersion={1} onChange={vi.fn()} />
+    );
+    const view = ref.current!.getCodeMirrorView!() as unknown as {
+      setState: ReturnType<typeof vi.fn>;
+    };
+    rerender(<LivePreviewEditor ref={ref} defaultValue="b" docVersion={2} onChange={vi.fn()} />);
+    expect(view.setState).toHaveBeenCalledTimes(1);
+  });
+
+  it("ignores a defaultValue change without a docVersion bump (save echo)", () => {
+    const ref = createRef<EditorHandle>();
+    const { rerender } = render(
+      <LivePreviewEditor ref={ref} defaultValue="a" docVersion={1} onChange={vi.fn()} />
+    );
+    const view = ref.current!.getCodeMirrorView!() as unknown as {
+      setState: ReturnType<typeof vi.fn>;
+    };
+    rerender(<LivePreviewEditor ref={ref} defaultValue="b" docVersion={1} onChange={vi.fn()} />);
+    expect(view.setState).not.toHaveBeenCalled();
   });
 });

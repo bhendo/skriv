@@ -1,5 +1,23 @@
-use tauri::menu::{MenuBuilder, MenuItemBuilder, SubmenuBuilder};
-use tauri::{Emitter, Manager};
+use tauri::menu::{
+    CheckMenuItem, CheckMenuItemBuilder, MenuBuilder, MenuItemBuilder, SubmenuBuilder,
+};
+use tauri::{Emitter, Manager, Wry};
+
+/// Handle to the File ▸ Auto Save checkbox, managed in app state so the
+/// frontend (which owns the preference) can mirror it via
+/// `sync_auto_save_menu`. Menu items are Send + Sync; mutations dispatch to
+/// the main thread internally.
+pub struct AutoSaveMenuItem(pub CheckMenuItem<Wry>);
+
+/// Reflect the frontend-owned auto-save preference in the menu checkbox.
+/// Called on every window load and after each toggle; idempotent.
+#[tauri::command]
+pub fn sync_auto_save_menu(
+    item: tauri::State<'_, AutoSaveMenuItem>,
+    enabled: bool,
+) -> Result<(), String> {
+    item.0.set_checked(enabled).map_err(|e| e.to_string())
+}
 
 /// Attach an accelerator only on macOS. There, WKWebView sees the keydown
 /// first and useKeyboardShortcuts' preventDefault suppresses the menu key
@@ -57,6 +75,12 @@ pub fn init(app: &tauri::App) -> tauri::Result<()> {
         "CmdOrCtrl+Shift+S",
     )
     .build(handle)?;
+    // Checked is a placeholder: the preference lives in the frontend
+    // (localStorage), which pushes the real state via sync_auto_save_menu on
+    // window load and after each toggle.
+    let auto_save = CheckMenuItemBuilder::with_id("toggle-auto-save", "Auto Save")
+        .checked(true)
+        .build(handle)?;
 
     let file_menu = SubmenuBuilder::new(handle, "File")
         .item(&new_window)
@@ -64,9 +88,12 @@ pub fn init(app: &tauri::App) -> tauri::Result<()> {
         .separator()
         .item(&save)
         .item(&save_as)
+        .item(&auto_save)
         .separator()
         .close_window()
         .build()?;
+
+    app.manage(AutoSaveMenuItem(auto_save));
 
     let find = accel(MenuItemBuilder::with_id("find", "Find…"), "CmdOrCtrl+F").build(handle)?;
     // Cmd+Alt+F is the macOS convention for replace (Cmd+H belongs to Hide);
@@ -144,6 +171,9 @@ pub fn init(app: &tauri::App) -> tauri::Result<()> {
         "open" => emit_to_focused(app, "menu-open"),
         "save" => emit_to_focused(app, "menu-save"),
         "save-as" => emit_to_focused(app, "menu-save-as"),
+        // muda auto-toggles the checkbox on click; the frontend flips the
+        // stored preference and pushes the authoritative state back.
+        "toggle-auto-save" => emit_to_focused(app, "menu-toggle-auto-save"),
         "toggle-sidebar" => emit_to_focused(app, "menu-toggle-sidebar"),
         "toggle-outline" => emit_to_focused(app, "menu-toggle-outline"),
         "find" => emit_to_focused(app, "menu-find"),

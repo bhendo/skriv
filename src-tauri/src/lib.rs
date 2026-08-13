@@ -106,6 +106,7 @@ pub fn run() {
             commands::focus_existing_window,
             commands::list_markdown_files,
             commands::get_recent_files,
+            menu::sync_auto_save_menu,
         ])
         .setup(|app| {
             let config_dir = app.path().app_config_dir()?;

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
+import { deferred } from "../mocks/async";
 import { invoke, resetTauriMocks } from "../mocks/tauri";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke }));
@@ -131,6 +132,68 @@ describe("useFile", () => {
     expect(result.current.path).toBe("/docs/new.md");
     expect(result.current.fileName).toBe("new.md");
     expect(result.current.content).toBe("# New");
+  });
+
+  it("bumps docVersion on open and reload, never on save", async () => {
+    const { result } = await renderWithFile("/docs/a.md", "A");
+    const opened = result.current.docVersion;
+
+    invoke.mockResolvedValueOnce(undefined); // write_file
+    await act(async () => {
+      await result.current.saveFile("B");
+    });
+    expect(result.current.docVersion).toBe(opened);
+
+    invoke.mockResolvedValueOnce("C"); // open_document (reload)
+    await act(() => result.current.reloadFile("/docs/a.md"));
+    expect(result.current.docVersion).toBe(opened + 1);
+  });
+
+  it("keeps isModified when an edit lands while the save is in flight", async () => {
+    const { result } = await renderWithFile("/docs/a.md", "A");
+    act(() => result.current.markModified());
+
+    const write = deferred();
+    invoke.mockImplementationOnce(() => write.promise);
+    let savePromise!: Promise<boolean>;
+    act(() => {
+      savePromise = result.current.saveFile("B");
+    });
+
+    // The keystroke outruns the write: it is not in the saved bytes.
+    act(() => result.current.markModified());
+
+    await act(async () => {
+      write.resolve();
+      await savePromise;
+    });
+    expect(result.current.isModified).toBe(true);
+  });
+
+  it("a save resolving after the document was replaced leaves state alone", async () => {
+    const { result } = await renderWithFile("/docs/a.md", "A");
+    act(() => result.current.markModified());
+
+    const write = deferred();
+    invoke.mockImplementationOnce(() => write.promise);
+    let savePromise!: Promise<boolean>;
+    act(() => {
+      savePromise = result.current.saveFile("B");
+    });
+
+    invoke.mockResolvedValueOnce("NEW"); // open_document for the next file
+    await act(() => result.current.openFile("/docs/b.md"));
+
+    let saved: boolean | undefined;
+    await act(async () => {
+      write.resolve();
+      saved = await savePromise;
+    });
+
+    expect(saved).toBe(true); // the write itself landed
+    expect(result.current.path).toBe("/docs/b.md");
+    expect(result.current.content).toBe("NEW");
+    expect(result.current.isModified).toBe(false);
   });
 
   it("markModified is idempotent", () => {
