@@ -3,16 +3,23 @@ import { EditorState, EditorSelection } from "@codemirror/state";
 import type { Extension, StateCommand, Transaction } from "@codemirror/state";
 import { history, undo } from "@codemirror/commands";
 import { markdown } from "@codemirror/lang-markdown";
+import { ensureSyntaxTree } from "@codemirror/language";
 import { markdownSyntaxExtensions } from "../../markdown/parser";
 import { indentListItem, dedentListItem } from "../../live-preview/list-indent";
 
 /** An editor state parsing markdown exactly like LivePreviewEditor does. */
 function makeState(doc: string, anchor: number, head = anchor, extra: Extension = []) {
-  return EditorState.create({
+  const state = EditorState.create({
     doc,
     selection: EditorSelection.single(anchor, head),
     extensions: [markdown({ extensions: markdownSyntaxExtensions }), extra],
   });
+  // The commands under test read syntaxTree(state), which only returns what
+  // the initial parse's time budget covered — on a cold, starved CI runner
+  // that can be nothing (#92). Force a complete parse so assertions exercise
+  // command semantics, not parse scheduling.
+  ensureSyntaxTree(state, doc.length, 5000);
+  return state;
 }
 
 /** Run a command against a doc with the cursor placed inside `at`. */

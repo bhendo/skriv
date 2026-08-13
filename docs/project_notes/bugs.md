@@ -4,6 +4,13 @@ Recurring bugs, root causes, and solutions. Focus on what was learned.
 
 ## Entries
 
+### 2026-08-13 - Flaky Test UI: list-indent command saw an empty syntax tree on a cold CI runner (#92)
+
+- **Issue**: `list-indent.test.ts › nests a middle item under its previous sibling` failed on CI (run 31722605090, PR #91 — a branch touching nothing list-related) with `indentListItem` returning false; same test green locally every run and on CI that morning. Only the file's FIRST test failed.
+- **Root Cause**: The harness built a headless `EditorState` and immediately ran the command, but `ui/live-preview/list-indent.ts` reads `syntaxTree(state)`, which returns only what the initial parse's time budget covered. On a cold, CPU-starved runner the budget can expire before even a 31-char doc parses — the lezer modules are still JIT-compiling during the file's first test, which is why later tests passed — so `resolveInner` found no list nodes and the command bailed.
+- **Solution**: `makeState` now calls `ensureSyntaxTree(state, doc.length, 5000)` after `EditorState.create`, forcing a complete parse before the command runs (fixed with #92).
+- **Prevention**: Any headless-state test whose subject reads `syntaxTree(state)` must `ensureSyntaxTree` first — assertions should exercise command semantics, not parse scheduling. `syntaxTree()` is budget-limited everywhere, including tiny docs.
+
 ### 2026-08-13 - Mermaid diagram's natural width inflated the editor content plane (#83)
 
 - **Issue**: With one wide flowchart in a document, every mermaid diagram rendered pushed off the right window edge: the wide one hung past the pane at ~1:1 scale instead of fitting to width, and a small sequence diagram sat centered in an oversized box. Measured: both `.mermaid-svg-container`s at 1327.3px in a ~1030px pane (the flowchart SVG's width attribute plus 2px border)

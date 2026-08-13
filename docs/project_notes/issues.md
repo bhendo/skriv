@@ -2,9 +2,16 @@
 
 ## Entries
 
+### 2026-08-13 - #92: Flaky Test UI: list-indent tests can see an incomplete syntax tree on slow runners
+
+- **Status**: Completed on branch `bug/92-list-indent-flaky-parse` (PR pending review)
+- **Description**: CI-only flake: the headless test harness ran commands against a state whose initial parse budget hadn't necessarily covered the doc, so `syntaxTree(state)` consumers could see no list nodes and bail. `makeState` now forces a full parse with `ensureSyntaxTree` before the command runs. Root-cause analysis in bugs.md.
+- **URL**: https://github.com/bhendo/skriv/issues/92
+- **Notes**: Surfaced on PR #91's CI run; only `ui/live-preview/list-indent.ts` reads `syntaxTree`, so the other headless harnesses (links, editorPosition) don't need the guard.
+
 ### 2026-08-13 - #90: Scroll region stops at the prose column instead of the window edge
 
-- **Status**: Completed on branch `feature/90-scroll-region-to-window-edge` (PR pending review)
+- **Status**: Completed — merged in PR #91
 - **Description**: The centering `max-width` + auto margins moved from the editor wrappers to `.cm-content` (`ui/theme/skriv.css`), so `.cm-scroller` spans the pane: scrollbar at the window edge, wheel scrolling works over the side margins. A `.cm-scroller:has(.cm-gutters)` rule centers a gutter together with the column (keyed on gutter presence, not editor identity, so either editor gaining or losing gutters keeps the layout). New `marginClickExtension` (`ui/utils/marginClick.ts`, installed in both editors) re-dispatches bare scroller mousedowns as clones on the content DOM — CodeMirror's own mouse handling listens there and resolves everything from event coordinates, so margin click, shift-click, double-click, and drag all keep native semantics.
 - **URL**: https://github.com/bhendo/skriv/issues/90
 - **Notes**: Regression spec `e2e/tests/scroll-region.spec.ts` covers scroller geometry, margin wheel + click, and source-mode gutter adjacency. The `@codemirror/view` mocks in the component tests gained `ViewPlugin.define`. Visible side effect: source mode's surface background now fills the whole pane instead of a centered column.
