@@ -2,6 +2,13 @@
 
 ## Entries
 
+### 2026-08-13 - #83: Mermaid layout width leak
+
+- **Status**: Completed on branch `bug/83-mermaid-layout-width-leak` (not yet merged)
+- **Description**: A wide mermaid diagram's natural render width sat in layout flow (the pan/zoom fit is a visual-only CSS transform on `.mermaid-svg-wrapper`) and inflated `.cm-content` past the pane, so the wide diagram never scaled down and every other diagram stretched to the inflated width. Fixed by floating the wrapper out of flow (`position: absolute` via a `.has-diagram` class in `ui/theme/skriv.css`) while it hosts an SVG; `render()` in `ui/mermaid/surface.ts` toggles the class per state — on for fresh/cached/last-good SVG, off for placeholder and error content, which stay in flow (with any stale explicit container height cleared) so those states still grow the container past its 60px min-height. E2e regression tests in `e2e/tests/mermaid.spec.ts`: the issue's wide flowchart must not widen `.cm-scroller` and must fit inside its container (including a fold/unfold round-trip through the SVG cache), and an invalid fence's `.mermaid-error` must be fully visible, not clipped
+- **URL**: https://github.com/bhendo/skriv/issues/83
+- **Notes**: Wide-flowchart test verified red without the fix (CSS rule temporarily neutralized) and green with it. The surface's `hide()`/`show()` display toggle doesn't disturb the fix — the class lives on the wrapper's classList and `show()` reattaches panzoom, which recomputes scale from post-fix geometry. `.mermaid-overlay-wrapper` (expand overlay) untouched: its content box is fixed-size, so it never had the leak
+
 ### 2026-08-12 - #77: Atomic open_document command
 
 - **Status**: Completed on branch `refactor/77-atomic-open-document` (not yet merged)

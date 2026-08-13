@@ -4,6 +4,13 @@ Recurring bugs, root causes, and solutions. Focus on what was learned.
 
 ## Entries
 
+### 2026-08-13 - Mermaid diagram's natural width inflated the editor content plane (#83)
+
+- **Issue**: With one wide flowchart in a document, every mermaid diagram rendered pushed off the right window edge: the wide one hung past the pane at ~1:1 scale instead of fitting to width, and a small sequence diagram sat centered in an oversized box. Measured: both `.mermaid-svg-container`s at 1327.3px in a ~1030px pane (the flowchart SVG's width attribute plus 2px border)
+- **Root Cause**: Pan/zoom fit-to-width is a CSS transform on `.mermaid-svg-wrapper`, and transforms are visual only — the in-flow wrapper kept the SVG's natural layout width (~1325px is easy with the flowchart config `nodeSpacing: 120, rankSpacing: 160, useMaxWidth: false`), inflating `.cm-content`, a flex item with `min-width: auto`. Knock-on: `attachPanZoom` computes `scale = min(containerWidth / svgWidth, 1)` against the already-inflated container, yielding ~0.9998, so the wide diagram never scaled down and centering offsets were computed against the oversized box
+- **Solution**: Take the wrapper out of flow while it hosts an SVG: `.mermaid-svg-wrapper.has-diagram { position: absolute; top: 0; left: 0 }`, class toggled from `render()` in `ui/mermaid/surface.ts`. Out of flow the wrapper shrink-wraps the SVG, so `svgEl.getBoundingClientRect()` still measures natural size for the scale math while `svgContainer.clientWidth` becomes the true pane width. Placeholder/error states drop the class (and the stale explicit container height a previous diagram set) so they stay in flow and keep growing the container past its 60px min-height
+- **Prevention**: A CSS transform never changes layout size — any transform-scaled child rendered inside CodeMirror content must be out of flow or width-constrained, because `.cm-content` inherits the widest child's natural width. E2e regression guards both invariants: `.cm-scroller` scrollWidth ≤ clientWidth, and the transformed SVG's bounding rect contained in its container's
+
 ### 2026-08-12 - Mode-toggle scroll restore snapped to block starts (worst with large tables)
 
 - **Issue**: After the #65 position restore landed, toggling source → live preview rendered "a bit off": the viewport jumped to the top of whatever block was at the viewport top, most visibly snapping to the start of a large table the user had scrolled partway past. Cursor position was correct.
