@@ -33,6 +33,7 @@ test-e2e:
 ## Typecheck
 typecheck-ui:
 	pnpm tsc --noEmit
+	pnpm tsc -p e2e
 
 ## Lint
 lint: lint-ui lint-tauri
@@ -59,6 +60,7 @@ check-ui:
 	pnpm format:check
 	pnpm lint
 	pnpm tsc --noEmit
+	pnpm tsc -p e2e
 	pnpm test
 
 check-tauri:
