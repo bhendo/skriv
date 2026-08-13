@@ -2,6 +2,13 @@
 
 ## Entries
 
+### 2026-08-13 - #85: Ordered lists renumber on Tab/Shift-Tab indent
+
+- **Status**: Completed on branch `feature/85-ordered-list-renumber-indent` (not yet merged)
+- **Description**: New `ui/live-preview/list-indent.ts` exports `indentListItem`/`dedentListItem` (StateCommands) and `listIndentKeymap`, bound ahead of `indentWithTab` in LivePreviewEditor. Tab nests a list item under its previous sibling — the whole `ListItem` extent moves, children and continuation lines included — indented to the sibling's content column (marker column + marker length + 1, so lezer actually parses it as nested; multi-digit markers give wider indents). Ordered runs renumber on both sides: the run left behind closes its gap, the joined run continues from its predecessor, and an item first at a new depth restarts at 1. Shift-Tab dedents to the parent item's column; the moved item's former following siblings become its children, realigned and renumbered from 1. Bullets move without number changes. Implementation is two-stage inside one dispatched transaction: whitespace-shift ChangeSet first, then the affected outermost list is reparsed from the shifted text with `sourceMarkdownParser` and every ordered run renumbered (first item keeps the run's start number unless flagged as newly placed); the two ChangeSets compose, so undo is a single step and selection maps through. A renumbered marker that changes digit count (9→10) shifts its item's continuation lines by the delta so children keep their nesting column.
+- **URL**: https://github.com/bhendo/skriv/issues/85
+- **Notes**: Deliberate choices: Tab on a run's first item and Shift-Tab at top level are swallowed (return true, no dispatch) rather than falling through — `indentWithTab` would distort the list; a selection spanning a paragraph and list items moves only the list items; code blocks/tables (even inside a list item) and blockquoted lists return false to the defaults (blockquoted list lines start with `> `, so line-start whitespace edits don't apply — a future `>`-aware variant could lift this). Mixed-delimiter edge: an ordered item indented after a differently-delimited or bullet run starts its own run at 1 rather than adopting the neighbor's delimiter. Unit tests build states with `markdown({ extensions: markdownSyntaxExtensions })` so `syntaxTree` matches editor parsing; the e2e asserts exact buffer text through the Cmd+S write mock.
+
 ### 2026-08-13 - #84: Depth-aware bullet markers for nested lists
 
 - **Status**: Completed on branch `feature/84-depth-aware-bullet-markers` (not yet merged)
