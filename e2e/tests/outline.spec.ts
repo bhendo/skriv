@@ -92,10 +92,7 @@ test.describe("Outline", () => {
     const sidebar = page.locator(".sidebar");
     const outlineTab = page.getByRole("tab", { name: "Outline" });
     await expect(sidebar).toBeVisible();
-    await expect(page.getByRole("tab", { name: "Files" })).toHaveAttribute(
-      "aria-selected",
-      "true"
-    );
+    await expect(page.getByRole("tab", { name: "Files" })).toHaveAttribute("aria-selected", "true");
 
     // Visible on Files → switch to Outline
     await page.keyboard.press(`${MOD}+Shift+l`);

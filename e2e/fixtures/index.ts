@@ -1,5 +1,5 @@
 import { test as base, expect, type Page } from "@playwright/test";
-import { injectTauriMock, type TauriMockConfig } from "./tauri-mock";
+import { injectTauriMock, type MockWrite, type TauriMockConfig } from "./tauri-mock";
 
 export { expect };
 export type { TauriMockConfig };
@@ -25,23 +25,12 @@ export function headingLine(n: number): RegExp {
   return new RegExp(`^(# )?Section ${n}$`);
 }
 
-export async function getMockWrites(
-  page: Page,
-): Promise<Array<{ path: string; content: string }>> {
-  return page.evaluate(
-    () =>
-      ((window as Record<string, unknown>).__TAURI_MOCK_WRITES__ as Array<{
-        path: string;
-        content: string;
-      }>) ?? [],
-  );
+export async function getMockWrites(page: Page): Promise<MockWrite[]> {
+  return page.evaluate(() => window.__TAURI_MOCK_WRITES__ ?? []);
 }
 
 /** Poll until at least one mocked write lands, then return all of them. */
-export async function waitForWrite(
-  page: Page,
-  timeout = 10_000,
-): Promise<Array<{ path: string; content: string }>> {
+export async function waitForWrite(page: Page, timeout = 10_000): Promise<MockWrite[]> {
   await expect
     .poll(() => getMockWrites(page).then((w) => w.length), { timeout })
     .toBeGreaterThan(0);

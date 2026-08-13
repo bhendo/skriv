@@ -69,13 +69,9 @@ test.describe("Source mode toggle (Cmd+M)", () => {
 });
 
 test.describe("Position preserved across mode toggle (#65)", () => {
-  const PARAGRAPHS =
-    "# Title\n\nFirst paragraph.\n\nSecond paragraph.\n\nThird paragraph.\n";
+  const PARAGRAPHS = "# Title\n\nFirst paragraph.\n\nSecond paragraph.\n\nThird paragraph.\n";
 
-  test("cursor survives a round trip and typing continues in place", async ({
-    page,
-    loadApp,
-  }) => {
+  test("cursor survives a round trip and typing continues in place", async ({ page, loadApp }) => {
     await loadApp({ openedFile: "/tmp/test.md", fileContent: PARAGRAPHS });
 
     // Anchored regex: hasText is a case-insensitive substring match.
@@ -105,10 +101,7 @@ test.describe("Position preserved across mode toggle (#65)", () => {
     ).toBeVisible();
   });
 
-  test("scroll position is preserved without moving the cursor", async ({
-    page,
-    loadApp,
-  }) => {
+  test("scroll position is preserved without moving the cursor", async ({ page, loadApp }) => {
     await loadApp({ openedFile: "/tmp/test.md", fileContent: longDoc(8) });
 
     const lastLine = /^Paragraph 25 of section 8/;
@@ -118,7 +111,9 @@ test.describe("Position preserved across mode toggle (#65)", () => {
     await preview.evaluate((el) => {
       el.scrollTop = el.scrollHeight;
     });
-    await expect(page.locator(".live-preview-editor .cm-line", { hasText: lastLine })).toBeInViewport();
+    await expect(
+      page.locator(".live-preview-editor .cm-line", { hasText: lastLine })
+    ).toBeInViewport();
 
     await page.keyboard.press(`${MOD}+m`);
     await expect(page.locator(".source-editor .cm-editor")).toBeVisible({ timeout: 5_000 });

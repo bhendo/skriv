@@ -1,5 +1,20 @@
 import { type Page } from "@playwright/test";
 
+/** A write captured by the mocked write_file / write_new_file commands. */
+export interface MockWrite {
+  path: string;
+  content: string;
+}
+
+declare global {
+  // Mock globals injected into the page; scoped to the e2e tsconfig project.
+  interface Window {
+    __TAURI_MOCK_WRITES__?: MockWrite[];
+    __TAURI_INTERNALS__?: unknown;
+    __TAURI_EVENT_PLUGIN_INTERNALS__?: unknown;
+  }
+}
+
 /**
  * Mock responses keyed by Tauri command name.
  * Tests configure this before navigating.
@@ -45,26 +60,20 @@ const DEFAULT_CONFIG: Required<TauriMockConfig> = {
  * which are required by `@tauri-apps/api/core`, `@tauri-apps/api/event`,
  * `@tauri-apps/api/window`, and `@tauri-apps/plugin-dialog`.
  */
-export async function injectTauriMock(
-  page: Page,
-  config: TauriMockConfig = {},
-): Promise<void> {
+export async function injectTauriMock(page: Page, config: TauriMockConfig = {}): Promise<void> {
   const merged = { ...DEFAULT_CONFIG, ...config };
 
   await page.addInitScript((cfg) => {
     const writes: Array<{ path: string; content: string }> = [];
 
     // Expose writes array so tests can read it
-    (window as Record<string, unknown>).__TAURI_MOCK_WRITES__ = writes;
+    window.__TAURI_MOCK_WRITES__ = writes;
 
     // --- Callback system (mirrors @tauri-apps/api/mocks) ---
     const callbacks = new Map<number, (data: unknown) => void>();
     let nextEventId = 1;
 
-    function transformCallback(
-      callback?: (data: unknown) => void,
-      once = false,
-    ): number {
+    function transformCallback(callback?: (data: unknown) => void, once = false): number {
       const identifier = crypto.getRandomValues(new Uint32Array(1))[0];
       callbacks.set(identifier, (data: unknown) => {
         if (once) {
@@ -80,10 +89,7 @@ export async function injectTauriMock(
     }
 
     // --- Invoke handler ---
-    async function invoke(
-      cmd: string,
-      args?: Record<string, unknown>,
-    ): Promise<unknown> {
+    async function invoke(cmd: string, args?: Record<string, unknown>): Promise<unknown> {
       switch (cmd) {
         // App commands
         case "get_opened_file":
@@ -208,7 +214,7 @@ export async function injectTauriMock(
     }
 
     // --- Set up __TAURI_INTERNALS__ ---
-    (window as Record<string, unknown>).__TAURI_INTERNALS__ = {
+    window.__TAURI_INTERNALS__ = {
       invoke,
       transformCallback,
       unregisterCallback,
@@ -224,7 +230,7 @@ export async function injectTauriMock(
     };
 
     // --- Set up __TAURI_EVENT_PLUGIN_INTERNALS__ ---
-    (window as Record<string, unknown>).__TAURI_EVENT_PLUGIN_INTERNALS__ = {
+    window.__TAURI_EVENT_PLUGIN_INTERNALS__ = {
       unregisterListener: (_event: string, eventId: number) => {
         unregisterCallback(eventId);
       },
