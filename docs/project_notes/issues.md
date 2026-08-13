@@ -2,7 +2,12 @@
 
 ## Entries
 
-### 2026-08-13 - #61: Wrap Makefile commands through mise exec and add sccache fallback
+### 2026-08-13 - #2: Auto-save with on/off toggle
+
+- **Status**: Completed on branch `feature/2-auto-save` (not yet merged)
+- **Description**: New `ui/hooks/useAutoSave.ts` saves 1s (`AUTO_SAVE_DEBOUNCE_MS`) after the last edit and immediately on window blur; untitled documents never auto-save. The preference (`skriv:auto-save` in localStorage via `ui/utils/autoSavePref.ts`, default on) is read at schedule and fire time — not cached in React state — so every window follows a toggle with no cross-window sync. The toggle is a native File ▸ Auto Save checkbox: the shortcut registry gained chordless menu-only entries (excluded from keydown bindings and the cheatsheet), and a `sync_auto_save_menu` command mirrors the pref into the `CheckMenuItem` (handle managed in app state; frontend pushes state on window load and after each toggle). Closing a modified window with auto-save active saves silently and only falls back to the unsaved-changes prompt when that save fails.
+- **URL**: https://github.com/bhendo/skriv/issues/2
+- **Notes**: Prerequisite save-echo fixes, since auto-save turns latent races routine: `useFile` gained `docVersion` (bumped only on open/reload, never save) and both editors key their buffer resets on it instead of comparing content strings — via the shared `useShellDocSync` hook — so a keystroke outrunning an in-flight write can no longer trigger a buffer reset, and Cmd+S in source mode no longer kicks back to live preview (App's reset effect keyed [path, content] → [docVersion]; source mode now also survives open/reload; SourceEditor previously relied on the kickout remount for reloads). `useToc` keys on docVersion too (its `content` prop is gone). Saves guard `isModified` with an edit-generation counter and skip their state update entirely when the document was replaced mid-write; `editorHandoff` is stamped with its docVersion and invalidated during render (the clearing effect runs after child effects — too late). `saveFile` still echoes `content` into state so a mounting editor's no-handoff fallback is no staler than the last save. New `useLatestRef` hook replaces the hand-rolled prop-mirror refs in useAutoSave/useWindowClose. Debounce interval is deliberately not user-configurable (scope decision on the issue).
 
 - **Status**: Closed (not planned)
 - **Description**: Proposed wrapping Makefile targets in `mise exec` and adding an sccache fallback for environments without it. Closed without implementation: the plain Makefile + mise activation has been reliable across local and CI runs since the issue was filed, and the sccache failure mode it guarded against hasn't recurred.
