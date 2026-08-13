@@ -92,6 +92,15 @@ export function createMermaidSurface(opts: MermaidSurfaceOptions): MermaidSurfac
     }
   }
 
+  // While the wrapper hosts an SVG it is taken out of layout flow (see
+  // .has-diagram in skriv.css) so the diagram's natural width cannot inflate
+  // the editor content plane. Placeholder/error content goes back in flow
+  // and drops the diagram's explicit container height so it sizes naturally.
+  function setHostsDiagram(hostsDiagram: boolean): void {
+    svgWrapper.classList.toggle("has-diagram", hostsDiagram);
+    if (!hostsDiagram) svgContainer.style.height = "";
+  }
+
   function attachPanZoom(overrideTransform?: Transform): void {
     disposePanZoom();
     // Clear stale CSS transform left by the previous panzoom instance so
@@ -227,12 +236,14 @@ export function createMermaidSurface(opts: MermaidSurfaceOptions): MermaidSurfac
     lastRenderedContent = source;
 
     if (!source.trim()) {
+      setHostsDiagram(false);
       svgWrapper.innerHTML = '<div class="mermaid-placeholder">Empty mermaid diagram</div>';
       return;
     }
 
     const cached = getCachedSvg(source);
     if (cached) {
+      setHostsDiagram(true);
       svgWrapper.innerHTML = cached;
       lastSvg = cached;
       attachPanZoomWhenSized();
@@ -243,6 +254,7 @@ export function createMermaidSurface(opts: MermaidSurfaceOptions): MermaidSurfac
     try {
       const { svg } = await mermaid.render(id, source);
       if (disposed || lastRenderedContent !== source) return; // superseded
+      setHostsDiagram(true);
       svgWrapper.innerHTML = svg;
       const svgEl = svgWrapper.querySelector("svg");
       if (svgEl) fixViewBox(svgEl);
@@ -255,9 +267,11 @@ export function createMermaidSurface(opts: MermaidSurfaceOptions): MermaidSurfac
       document.getElementById(`d${id}`)?.remove();
       if (disposed) return;
       if (lastSvg) {
+        setHostsDiagram(true);
         svgWrapper.innerHTML = lastSvg;
         attachPanZoomWhenSized();
       } else {
+        setHostsDiagram(false);
         const msg = err instanceof Error ? err.message : "Invalid mermaid syntax";
         const errorDiv = document.createElement("div");
         errorDiv.className = "mermaid-error";
