@@ -2,6 +2,13 @@
 
 ## Entries
 
+### 2026-08-13 - #61: Wrap Makefile commands through mise exec and add sccache fallback
+
+- **Status**: Closed (not planned)
+- **Description**: Proposed wrapping Makefile targets in `mise exec` and adding an sccache fallback for environments without it. Closed without implementation: the plain Makefile + mise activation has been reliable across local and CI runs since the issue was filed, and the sccache failure mode it guarded against hasn't recurred.
+- **URL**: https://github.com/bhendo/skriv/issues/61
+- **Notes**: Reopen if toolchain drift or sccache flakiness reappears.
+
 ### 2026-08-13 - #85: Ordered lists renumber on Tab/Shift-Tab indent
 
 - **Status**: Completed on branch `feature/85-ordered-list-renumber-indent` (not yet merged)
