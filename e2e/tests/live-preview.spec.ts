@@ -52,6 +52,44 @@ test.describe("Live preview syntax folding", () => {
     await expect(page.locator(".cm-content input[type=checkbox]")).toBeVisible();
   });
 
+  test("cycles bullet glyphs by nesting depth, leaving task marks alone", async ({
+    page,
+    loadApp,
+  }) => {
+    const listDoc = [
+      "# Lists",
+      "",
+      "- level one",
+      "  - level two",
+      "    - level three",
+      "      - level four",
+      "  - [ ] nested task",
+      "",
+    ].join("\n");
+    await loadApp({ openedFile: "/tmp/test.md", fileContent: listDoc });
+
+    // Cursor loads on the heading line, so every list mark below is folded.
+    // The task item's mark is not: it renders a checkbox, not a glyph.
+    await expect(page.locator(".cm-rendered-list-mark")).toHaveCount(4);
+    const marks = await page.evaluate(() =>
+      Array.from(document.querySelectorAll(".cm-line"))
+        .map((line) => ({
+          glyph: line.querySelector(".cm-rendered-list-mark")?.textContent ?? null,
+          text: line.textContent ?? "",
+        }))
+        .filter((mark) => mark.glyph !== null)
+    );
+    expect(marks.map((m) => m.glyph)).toEqual(["•", "◦", "▪", "•"]);
+    expect(marks[0].text).toContain("level one");
+    expect(marks[1].text).toContain("level two");
+    expect(marks[2].text).toContain("level three");
+    expect(marks[3].text).toContain("level four");
+
+    const taskLine = page.locator(".cm-line", { hasText: "nested task" });
+    await expect(taskLine.locator("input[type=checkbox]")).toBeVisible();
+    await expect(taskLine.locator(".cm-rendered-list-mark")).toHaveCount(0);
+  });
+
   test("saves the document byte-identical via Cmd+S", async ({ page, loadApp }) => {
     await loadApp({ openedFile: "/tmp/test.md", fileContent: DOC });
 

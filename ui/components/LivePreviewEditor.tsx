@@ -20,7 +20,12 @@ import { markdown } from "@codemirror/lang-markdown";
 import { languages } from "@codemirror/language-data";
 import {
   defaultHideExtensions,
-  defaultFoldableSyntaxExtensions,
+  blockQuoteExtension,
+  taskExtension,
+  imageExtension,
+  emojiExtension,
+  horizonalRuleExtension,
+  dashExtension,
   revealBlockOnArrowExtension,
   clickLinkExtension,
   defaultClickLinkHandler,
@@ -30,6 +35,7 @@ import {
   prosemarkBaseThemeSetup,
 } from "@prosemark/core";
 import {
+  depthAwareBulletExtension,
   mermaidPreviewExtension,
   tablePreviewExtension,
   livePreviewFormattingKeymap,
@@ -85,9 +91,19 @@ export const LivePreviewEditor = forwardRef<EditorHandle, LivePreviewEditorProps
           extensions: [
             // ProseMark live-preview core: prosemarkBasicSetup() from
             // @prosemark/core 0.0.9, minus searchKeymap (Cmd+F belongs to
-            // SearchBar), foldGutter, and lintKeymap. Re-diff on upgrades.
+            // SearchBar), foldGutter, and lintKeymap. The
+            // defaultFoldableSyntaxExtensions bundle is unpacked below so
+            // bulletListExtension (fixed "•" at every depth) can be swapped
+            // for the local depthAwareBulletExtension. Re-diff both the setup
+            // and the bundle members on upgrades.
             defaultHideExtensions,
-            defaultFoldableSyntaxExtensions,
+            blockQuoteExtension,
+            depthAwareBulletExtension, // in place of bulletListExtension
+            taskExtension,
+            imageExtension,
+            emojiExtension,
+            horizonalRuleExtension, // upstream export name really is missing the "t"
+            dashExtension,
             revealBlockOnArrowExtension,
             clickLinkExtension,
             defaultClickLinkHandler,

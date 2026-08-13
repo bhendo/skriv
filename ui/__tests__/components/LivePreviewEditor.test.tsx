@@ -64,6 +64,7 @@ vi.mock("@codemirror/autocomplete", () => ({
 }));
 
 vi.mock("../../live-preview", () => ({
+  depthAwareBulletExtension: {},
   mermaidPreviewExtension: {},
   tablePreviewExtension: {},
   livePreviewFormattingKeymap: [],
@@ -76,7 +77,12 @@ vi.mock("../../markdown/parser", () => ({
 
 vi.mock("@prosemark/core", () => ({
   defaultHideExtensions: [],
-  defaultFoldableSyntaxExtensions: [],
+  blockQuoteExtension: {},
+  taskExtension: [],
+  imageExtension: [],
+  emojiExtension: {},
+  horizonalRuleExtension: [],
+  dashExtension: {},
   revealBlockOnArrowExtension: [],
   clickLinkExtension: {},
   defaultClickLinkHandler: {},
