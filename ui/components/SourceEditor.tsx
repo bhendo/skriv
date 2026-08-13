@@ -37,6 +37,7 @@ import { useShellDocSync } from "../hooks/useShellDocSync";
 import { appDefaultKeymap } from "../utils/editorKeymap";
 import { holdScrollAnchor } from "../utils/editorPosition";
 import type { EditorPosition } from "../utils/editorPosition";
+import { marginClickExtension } from "../utils/marginClick";
 import { searchExtensions } from "../utils/searchHighlight";
 import type { EditorHandle } from "../types/editor";
 
@@ -99,6 +100,7 @@ export const SourceEditor = forwardRef<EditorHandle, SourceEditorProps>(
               ...completionKeymap,
             ]),
             EditorView.lineWrapping,
+            marginClickExtension,
             markdown({ codeLanguages: languages }),
             oneDark,
             EditorView.updateListener.of((update) => {

@@ -2,6 +2,13 @@
 
 ## Entries
 
+### 2026-08-13 - #90: Scroll region stops at the prose column instead of the window edge
+
+- **Status**: Completed on branch `feature/90-scroll-region-to-window-edge` (PR pending review)
+- **Description**: The centering `max-width` + auto margins moved from the editor wrappers to `.cm-content` (`ui/theme/skriv.css`), so `.cm-scroller` spans the pane: scrollbar at the window edge, wheel scrolling works over the side margins. A `.cm-scroller:has(.cm-gutters)` rule centers a gutter together with the column (keyed on gutter presence, not editor identity, so either editor gaining or losing gutters keeps the layout). New `marginClickExtension` (`ui/utils/marginClick.ts`, installed in both editors) re-dispatches bare scroller mousedowns as clones on the content DOM — CodeMirror's own mouse handling listens there and resolves everything from event coordinates, so margin click, shift-click, double-click, and drag all keep native semantics.
+- **URL**: https://github.com/bhendo/skriv/issues/90
+- **Notes**: Regression spec `e2e/tests/scroll-region.spec.ts` covers scroller geometry, margin wheel + click, and source-mode gutter adjacency. The `@codemirror/view` mocks in the component tests gained `ViewPlugin.define`. Visible side effect: source mode's surface background now fills the whole pane instead of a centered column.
+
 ### 2026-08-13 - #2: Auto-save with on/off toggle
 
 - **Status**: Completed on branch `feature/2-auto-save` (not yet merged)

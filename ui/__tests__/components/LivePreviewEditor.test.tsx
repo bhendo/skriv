@@ -22,7 +22,7 @@ vi.mock("@codemirror/view", () => {
     highlightSpecialChars: vi.fn(() => ({})),
     placeholder: vi.fn(() => ({})),
     Decoration: { mark: vi.fn(() => ({})), none: {} },
-    ViewPlugin: { fromClass: vi.fn(() => ({})) },
+    ViewPlugin: { fromClass: vi.fn(() => ({})), define: vi.fn(() => ({})) },
   };
 });
 
