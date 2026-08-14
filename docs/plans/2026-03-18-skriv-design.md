@@ -74,7 +74,7 @@ Skriv ("write" in Norwegian) — a Typora-style WYSIWYG markdown editor built wi
 
 - Rendered inline via Crepe's ImageBlock feature
 - Images loaded via Tauri's asset protocol with dynamic scoping — when a file is opened, the file's parent directory is added to the allowed scope (non-recursive)
-- Sensitive subdirectories (`.ssh`, `.gnupg`, `.aws`, etc.) are explicitly forbidden after each scope expansion
+- ~~Sensitive subdirectories (`.ssh`, `.gnupg`, `.aws`, etc.) are explicitly forbidden after each scope expansion~~ (removed by ADR-005, #96)
 - **Post-MVP:** Drag-and-drop to insert images
 
 ### Tables (GFM)
@@ -140,7 +140,7 @@ Restrictive CSP configured in `tauri.conf.json`:
 
 ### Asset protocol scoping
 
-Dynamic scoping: when a markdown file is opened, its parent directory is added to the asset protocol's allowed scope (non-recursive). This ensures relative image paths work regardless of where the file lives. Sensitive directories (`.ssh`, `.gnupg`, `.aws`, `.config`, `.kube`) are explicitly forbidden after each expansion. The scope function is internal to the Rust backend — never exposed as a Tauri command. Scope accumulates per session (Tauri v2 has no revocation API); restarting the app resets it.
+Dynamic scoping: when a markdown file is opened, its parent directory is added to the asset protocol's allowed scope (non-recursive). This ensures relative image paths work regardless of where the file lives. Sensitive directories (`.ssh`, `.gnupg`, `.aws`, `.config`, `.kube`) were originally forbidden after each expansion; ADR-005 (#96) removed that blocklist. The scope function is internal to the Rust backend — never exposed as a Tauri command. Scope accumulates per session (Tauri v2 has no revocation API); restarting the app resets it.
 
 ### HTML sanitization
 

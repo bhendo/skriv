@@ -170,7 +170,6 @@ pub async fn list_markdown_files(path: String) -> Result<Vec<DirEntryInfo>, Stri
     let dir = validated
         .parent_dir()
         .ok_or("File has no parent directory")?;
-    let dir = crate::scope::authorize_dir(&dir)?;
 
     let entries = std::fs::read_dir(&dir)
         .map_err(|e| format!("Failed to read directory '{}': {}", dir.display(), e))?;
@@ -362,17 +361,19 @@ mod tests {
         assert!(result.iter().all(|e| e.path.ends_with(&e.name)));
     }
 
+    // Regression for #96: dot-directories are ordinary directories — the
+    // sensitive-dir blocklist that rejected them was removed.
     #[test]
-    fn test_list_markdown_files_rejects_sensitive_dir() {
+    fn test_list_markdown_files_allows_dot_dir() {
         let dir = tempfile::tempdir().unwrap();
-        let ssh_dir = dir.path().join(".ssh");
-        fs::create_dir(&ssh_dir).unwrap();
-        let file_path = ssh_dir.join("notes.md");
+        let dot_dir = dir.path().join(".config");
+        fs::create_dir(&dot_dir).unwrap();
+        let file_path = dot_dir.join("notes.md");
         fs::write(&file_path, "").unwrap();
 
-        let result = list_markdown_files_blocking(file_path.to_string_lossy().to_string());
-        assert!(result.is_err());
-        assert!(result.unwrap_err().contains("sensitive"));
+        let result = list_markdown_files_blocking(file_path.to_string_lossy().to_string()).unwrap();
+        let names: Vec<&str> = result.iter().map(|e| e.name.as_str()).collect();
+        assert_eq!(names, vec!["notes.md"]);
     }
 
     #[test]

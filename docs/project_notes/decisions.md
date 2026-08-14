@@ -2,6 +2,25 @@
 
 ## Entries
 
+### ADR-005: Remove the sensitive-directory blocklist (2026-08-14)
+
+**Context:**
+
+- Since the original security pass, `scope.rs` rejected any path containing a `.ssh`, `.gnupg`, `.aws`, `.config`, or `.kube` component, on open, save-as, and the sidebar listing (#96)
+- The blocklist fired on markdown the user explicitly chose to open — `.config` in particular holds real notes and READMEs — which defeats the purpose of a markdown editor
+- The protection was largely redundant: `ValidatedPath` restricts all file I/O to `.md`/`.markdown`, so the app can never read key material regardless of directory
+
+**Decision:**
+
+- Delete `SENSITIVE_DIRS`, `is_inside_sensitive_dir`, and the `forbid_directory` defense-in-depth loop
+- Directory policy now lives only where it has a rationale: `authorize_scope_dir` (private to `scope.rs`) canonicalizes and refuses the filesystem root before asset-scope expansion, because allowing `/` even non-recursively would expose every root-level file to the webview. The sidebar listing (`list_markdown_files`) no longer routes through directory policy at all — it lists the already-canonical parent of the validated open file
+- Keep the markdown extension allowlist and the empty-by-default, non-recursive, per-opened-file asset-protocol scope — those remain the actual security boundary
+
+**Consequences:**
+
+- Any markdown anywhere now opens, with one edge exception: a file directly at the filesystem root (e.g. `/notes.md`) still fails, per the asset-scope rationale above
+- Accepted residual risk: opening a markdown file inside a secrets directory adds that directory (non-recursively) to the webview's asset scope, exposing sibling files to the renderer. This requires the user to deliberately open such a file, and a markdown editor second-guessing that choice was judged worse than the exposure
+
 ### ADR-004: React search bar over the @codemirror/search panel (2026-08-12)
 
 **Context:**

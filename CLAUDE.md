@@ -29,7 +29,7 @@ docs/plans/       # Design doc and implementation plan
 
 - **CodeMirror 6 live preview, not a rich-text tree** (ADR-003 in `docs/project_notes/decisions.md`) — the buffer IS the markdown source, so Typora-style syntax reveal is decoration removal, saves are lossless, and there is no WYSIWYG↔source serialization. The previous Milkdown/ProseMirror editor was removed in #68; custom fold widgets (mermaid, tables) live in `ui/live-preview/`, the editor-agnostic mermaid core in `ui/mermaid/`
 - **ValidatedPath** (`src-tauri/src/validated_path.rs`) — all file I/O commands validate and canonicalize paths, restricting to `.md`/`.markdown` files only
-- **Dynamic asset scoping** (`src-tauri/src/scope.rs`) — asset protocol scope starts empty; directories are added when files are opened, with sensitive dirs (`.ssh`, `.gnupg`, etc.) explicitly forbidden
+- **Dynamic asset scoping** (`src-tauri/src/scope.rs`) — asset protocol scope starts empty; the parent directory of each opened file is added non-recursively (ADR-005 removed the former sensitive-dir blocklist)
 - **Self-write suppression** in file watcher — prevents save from triggering spurious "reload?" prompts
 
 ## Commands
