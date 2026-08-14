@@ -2,6 +2,7 @@ import { useEffect, useCallback, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { homeDir } from "@tauri-apps/api/path";
 import { LivePreviewEditor } from "./components/LivePreviewEditor";
 import { SourceEditor } from "./components/SourceEditor";
 import { SearchBar } from "./components/SearchBar";
@@ -20,6 +21,7 @@ import { useToc } from "./hooks/useToc";
 import { useWindowClose } from "./hooks/useWindowClose";
 import { loadAutoSavePref, storeAutoSavePref } from "./utils/autoSavePref";
 import { promptUnsavedChanges } from "./utils/unsavedChanges";
+import { windowTitle } from "./utils/path";
 import type { ShortcutHandlers } from "./utils/shortcuts";
 import { captureEditorPosition } from "./utils/editorPosition";
 import type { EditorPosition } from "./utils/editorPosition";
@@ -37,7 +39,6 @@ function App() {
   const {
     content,
     path,
-    fileName,
     docVersion,
     isModified,
     error,
@@ -268,10 +269,16 @@ function App() {
     };
   }, [openFile]);
 
+  // null until resolved (or forever outside Tauri, e.g. e2e in a browser);
+  // windowTitle then shows the unabbreviated directory.
+  const [home, setHome] = useState<string | null>(null);
   useEffect(() => {
-    const title = isModified ? `${fileName} — Edited` : fileName;
-    getCurrentWindow().setTitle(title);
-  }, [fileName, isModified]);
+    homeDir().then(setHome, () => {});
+  }, []);
+
+  useEffect(() => {
+    getCurrentWindow().setTitle(windowTitle(path, home, isModified));
+  }, [path, home, isModified]);
 
   useEffect(() => {
     const unlisten = getCurrentWindow().listen<string>("file-changed", () => {

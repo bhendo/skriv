@@ -1,5 +1,6 @@
 mod commands;
 mod menu;
+mod platform;
 mod recents;
 mod scope;
 mod validated_path;

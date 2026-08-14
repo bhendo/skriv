@@ -2,6 +2,13 @@
 
 ## Entries
 
+### 2026-08-14 - #98: Show file location: macOS proxy icon and folder path in window title
+
+- **Status**: Completed on branch `feature/98-file-location-hints` (PR pending review)
+- **Description**: The window title showed only the file's basename, so same-named files in different folders were indistinguishable. Two hints added: (1) the window title now includes the home-abbreviated parent directory (`ideas.md — ~/Documents/notes — Edited`), composed by a pure `windowTitle()` in `ui/utils/path.ts` with home from `homeDir()`; (2) the macOS title-bar proxy icon now points at the document (`NSWindow setRepresentedFilename` via objc2-app-kit, confined to the new `src-tauri/src/platform.rs`), giving cmd-click ancestor navigation and Finder-style icon dragging. The backend sets it inside `open_document`/`write_new_file` where the path is already validated — no frontend round-trip, no new command. No-op off macOS.
+- **URL**: https://github.com/bhendo/skriv/issues/98
+- **Notes**: `useFile` no longer returns `fileName` (title composition derives it; the hook's only consumer stopped using it). E2E Tauri mock answers `plugin:path|resolve_directory` for BaseDirectory.Home only, so other directory helpers still hit the unhandled-command warning. `homeDir()` failure (e.g. browser harness) falls back to the unabbreviated directory. objc2 crates are declared with `default-features = false` — the default feature would drag every AppKit binding module into the shared build.
+
 ### 2026-08-14 - #96: Remove the sensitive-directory blocklist
 
 - **Status**: Completed on branch `bug/96-remove-sensitive-dir-blocklist` (PR pending review)

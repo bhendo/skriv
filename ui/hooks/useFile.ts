@@ -1,6 +1,5 @@
-import { useState, useCallback, useMemo, useRef } from "react";
+import { useState, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { fileNameFromPath } from "../utils/path";
 
 interface FileState {
   path: string | null;
@@ -33,8 +32,6 @@ export function useFile() {
   // Mirrors fileState.docVersion for async guards: a save that resolves
   // after the document was replaced must not touch state at all.
   const docVersionRef = useRef(0);
-
-  const fileName = useMemo(() => fileNameFromPath(fileState.path), [fileState.path]);
 
   const clearError = useCallback(() => {
     setFileState((prev) => ({ ...prev, error: null }));
@@ -138,7 +135,6 @@ export function useFile() {
 
   return {
     ...fileState,
-    fileName,
     openFile,
     reloadFile,
     saveFile,

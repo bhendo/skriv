@@ -139,6 +139,18 @@ export async function injectTauriMock(page: Page, config: TauriMockConfig = {}):
         case "sync_auto_save_menu":
           return undefined;
 
+        // Path plugin — every directory helper multiplexes through this
+        // command; answer only homeDir() (used for the abbreviated title)
+        // so a future helper still hits the unhandled-command warning.
+        case "plugin:path|resolve_directory": {
+          const HOME_BASE_DIRECTORY = 21; // BaseDirectory.Home
+          if (args?.directory === HOME_BASE_DIRECTORY) {
+            return "/Users/test";
+          }
+          console.warn(`[tauri-mock] unhandled command: ${cmd}`, args);
+          return null;
+        }
+
         // Clipboard plugin
         case "plugin:clipboard-manager|read_text":
           return cfg.clipboardText;

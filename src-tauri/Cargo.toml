@@ -22,6 +22,21 @@ tauri-plugin-clipboard-manager = "2.3.2"
 notify = "8"
 tauri-plugin-single-instance = "2"
 
+# Title-bar proxy icon (NSWindow representedFilename); already in Tauri's
+# macOS dependency tree, declared here for direct use in platform.rs.
+# default-features = false: the default feature enables every binding
+# module, which feature-unification would force onto the shared build.
+[target."cfg(target_os = \"macos\")".dependencies]
+objc2-app-kit = { version = "0.3", default-features = false, features = [
+    "std",
+    "NSWindow",
+    "NSResponder",
+] }
+objc2-foundation = { version = "0.3", default-features = false, features = [
+    "std",
+    "NSString",
+] }
+
 [dev-dependencies]
 tauri = { version = "2", features = ["test"] }
 tempfile = "3"

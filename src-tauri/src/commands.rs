@@ -42,6 +42,7 @@ pub fn open_document(
             if record_recent {
                 crate::recents::record_open(&app_handle, validated.as_path());
             }
+            crate::platform::set_represented_filename(&window, validated.as_path());
             Ok(content)
         }
         Err(e) => {
@@ -86,6 +87,7 @@ pub fn write_new_file(
     manager.watch_and_track(&label, validated.as_path(), app_handle.clone())?;
     // Save As creates a file that was never read — record it as recent here.
     crate::recents::record_open(&app_handle, validated.as_path());
+    crate::platform::set_represented_filename(&window, validated.as_path());
 
     Ok(())
 }
