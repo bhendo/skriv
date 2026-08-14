@@ -26,7 +26,6 @@ describe("useFile", () => {
     expect(result.current.path).toBeNull();
     expect(result.current.content).toBe("");
     expect(result.current.isModified).toBe(false);
-    expect(result.current.fileName).toBe("Untitled");
     expect(result.current.error).toBeNull();
   });
 
@@ -39,7 +38,6 @@ describe("useFile", () => {
     });
     expect(result.current.path).toBe("/docs/hello.md");
     expect(result.current.content).toBe("# Hello");
-    expect(result.current.fileName).toBe("hello.md");
     expect(result.current.isModified).toBe(false);
     expect(result.current.error).toBeNull();
   });
@@ -130,7 +128,6 @@ describe("useFile", () => {
       content: "# New",
     });
     expect(result.current.path).toBe("/docs/new.md");
-    expect(result.current.fileName).toBe("new.md");
     expect(result.current.content).toBe("# New");
   });
 

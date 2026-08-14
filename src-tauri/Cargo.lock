@@ -3660,6 +3660,8 @@ name = "skriv"
 version = "0.1.0"
 dependencies = [
  "notify",
+ "objc2-app-kit",
+ "objc2-foundation",
  "serde",
  "serde_json",
  "tauri",
