@@ -2,6 +2,13 @@
 
 ## Entries
 
+### 2026-08-14 - #94: Modernize and refine the app icon
+
+- **Status**: Completed on branch `chore/94-modernize-app-icon` (PR pending review)
+- **Description**: Replaced the painted stone-slab bitmap icon with a vector master: a gold Sowilo rune inlaid in a slate squircle (Big Sur-style margin and baked shadow). The letterform keeps the original's character — blunt peak, hooked top arm, steep zigzag, chisel-point exit stroke (proportions extracted from the old bitmap's gold-pixel geometry) — rendered as clean computed fills with a carve inner-shadow, directional lips, and subtle grain/striations instead of photographic texture. All platform assets (icns, ico, PNG sizes, iOS/Android sets) regenerated via `tauri icon`.
+- **URL**: https://github.com/bhendo/skriv/issues/94
+- **Notes**: Master at `src-tauri/icons/icon.svg`; `make icon` re-renders and regenerates everything. Rune outline paths come from `src-tauri/icons/rune_outline.py` (see key_facts.md, App Icon).
+
 ### 2026-08-13 - #92: Flaky Test UI: list-indent tests can see an incomplete syntax tree on slow runners
 
 - **Status**: Completed on branch `bug/92-list-indent-flaky-parse` (PR pending review)
