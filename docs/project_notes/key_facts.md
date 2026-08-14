@@ -4,6 +4,11 @@ Project configuration and important reference information.
 (ProseMirror/Milkdown internals notes were removed with the editor-core
 pivot, ADR-003; see git history if archaeology is ever needed.)
 
+## App Icon
+
+- **Master is vector**: `src-tauri/icons/icon.svg` (gold Sowilo rune inlaid in a slate squircle, Big Sur-style margin with baked shadow). Never hand-edit the PNG/icns/ico assets — regenerate them all with `make icon` (renders the SVG with Playwright's Chromium — needs the e2e browser install, `pnpm exec playwright install chromium` — then runs `pnpm tauri icon`; Chromium because resvg behind `tauri icon <svg>` can't render the SVG's filter stack).
+- **Rune outline paths are generated**: `uv run src-tauri/icons/rune_outline.py 88 98` prints the two fill paths pasted into the SVG's defs (`#rune88` gold inlay, `#rune98` backing/lip). Every layer references them via `<use>`, so those two defs entries are the only paste sites. Tune the letterform by editing the centerline vertices in that script, then re-render.
+
 ## CodeMirror / ProseMark Internals
 
 - **Fold driver guard**: ProseMark's `foldableSyntaxFacet` driver only calls a spec's `buildDecorations` while the selection is OUTSIDE the node, unless `keepDecorationOnUnfold` is set. No touch-guard needed inside specs.

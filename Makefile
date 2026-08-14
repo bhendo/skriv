@@ -3,7 +3,7 @@
 	format format-ui format-tauri \
 	check check-ui check-tauri \
 	test test-ui test-tauri test-e2e \
-	typecheck-ui
+	typecheck-ui icon
 
 ## Setup — install all dependencies (run once after clone)
 setup:
@@ -72,3 +72,6 @@ check-tauri:
 clean:
 	rm -rf ui/dist
 	cd src-tauri && cargo clean
+
+icon:
+	node src-tauri/icons/render-icon.mjs
