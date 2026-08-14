@@ -2,6 +2,13 @@
 
 ## Entries
 
+### 2026-08-14 - #96: Remove the sensitive-directory blocklist
+
+- **Status**: Completed on branch `bug/96-remove-sensitive-dir-blocklist` (PR pending review)
+- **Description**: `scope.rs` rejected any path containing `.ssh`, `.gnupg`, `.aws`, `.config`, or `.kube`, which blocked legitimate markdown the user explicitly opened (reported against a Claude scratchpad file). Removed `SENSITIVE_DIRS`, `is_inside_sensitive_dir`, and the `forbid_directory` loop. Remaining directory policy is scoped to what it protects: `authorize_scope_dir` (canonicalize + refuse `/`) guards asset-scope expansion only, and the sidebar listing no longer routes through it. The markdown extension allowlist and the empty-by-default, non-recursive asset-protocol scope remain the security boundary. Decision recorded as ADR-005.
+- **URL**: https://github.com/bhendo/skriv/issues/96
+- **Notes**: The reported failure path was under `/private/tmp`, which the old blocklist should never have matched — if opening there still fails after this change, the error banner text is needed to find the real cause.
+
 ### 2026-08-14 - #94: Modernize and refine the app icon
 
 - **Status**: Completed on branch `chore/94-modernize-app-icon` (PR pending review)
